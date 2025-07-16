@@ -1,9 +1,5 @@
 # Sea-Ping Warfare
 
-<p align="center">
-  <img src="assets/images/ss-v1-game.png" alt="Sea-Ping Warfare Screenshot" width="500"/>
-</p>
-
 > A thrilling 2D top-down battleship combat game inspired by Wii Play: Tanks! Navigate treacherous waters, master ricochet physics, and outmaneuver enemy fleets in this action-packed naval warfare experience.
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
@@ -13,6 +9,10 @@
 ## Gameplay
 
 **Sea-Ping Warfare** puts you in command of a powerful battleship in a strategic naval combat arena. Your mission: eliminate all enemy vessels using tactical ricochet shots while avoiding their deadly cannon fire.
+
+<p>
+  <img src="assets/images/ss-v1-game.png" alt="Sea-Ping Warfare Screenshot" width="500"/>
+</p>
 
 ### Key Features
 - **Precise Aiming System** - Smooth 360° turret rotation with keyboard controls
