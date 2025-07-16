@@ -10,13 +10,13 @@ from game.entities.enemy import Enemy
 def get_level_data(level):
     """Return enemy positions and obstacles for a given level."""
     if level == 1:
-        enemies = [Enemy(120, 120), Enemy(700, 120), Enemy(400, 300)]
+        enemies = [Enemy(400, 200)]
         obstacles = make_level_1_obstacles()
     elif level == 2:
-        enemies = [Enemy(100, 100), Enemy(700, 100), Enemy(400, 200), Enemy(200, 400)]
+        enemies = [Enemy(400, 200)]
         obstacles = make_level_2_obstacles()
     elif level == 3:
-        enemies = [Enemy(80, 80), Enemy(720, 80), Enemy(400, 150), Enemy(150, 350), Enemy(650, 350)]
+        enemies = [Enemy(400, 200)]
         obstacles = make_level_3_obstacles()
     else:
         # For levels beyond 3, generate random enemies and obstacles
@@ -61,7 +61,7 @@ def make_level_3_obstacles():
 def generate_random_level(level):
     """Generate random enemies and obstacles for levels beyond 3."""
     enemies = []
-    for _ in range(min(3 + level, 8)):  # Cap at 8 enemies
+    for _ in range(min(1 + level // 3, 3)):  # 1 enemy for most levels, max 3
         x = random.randint(50, WIDTH - 50)
         y = random.randint(50, HEIGHT // 2)
         enemies.append(Enemy(x, y))
