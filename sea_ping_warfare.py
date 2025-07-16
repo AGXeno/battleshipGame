@@ -17,6 +17,8 @@ ENEMY_SPEED = 1.5
 ENEMY_FIRE_INTERVAL = 180  # Increased from 120 to 180 (slower firing)
 OBSTACLE_COLOR = (80, 80, 80)
 MAX_CANNONBALLS = 2  # Limit active cannonballs
+MAX_HEALTH = 3  # Health system
+HIT_FLASH_DURATION = 30  # Frames to flash when hit
 
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -129,11 +131,18 @@ class Player:
         self.turret_angle = 0
         self.cooldown = 0
         self.alive = True
+        self.health = MAX_HEALTH
+        self.hit_flash_timer = 0
         self.aim_speed = 0.1  # Speed for arrow key aiming
 
     def update(self, keys, mouse_pos, mouse_buttons, obstacles, cannonballs):
         if not self.alive:
             return None
+        
+        # Update hit flash timer
+        if self.hit_flash_timer > 0:
+            self.hit_flash_timer -= 1
+            
         # Movement with WASD
         dx = (keys[pygame.K_d]) - (keys[pygame.K_a])
         dy = (keys[pygame.K_s]) - (keys[pygame.K_w])
@@ -174,8 +183,14 @@ class Player:
         return None
 
     def draw(self, surf):
+        # Determine ship color based on hit flash
+        if self.hit_flash_timer > 0 and self.hit_flash_timer % 6 < 3:
+            ship_color = (255, 255, 255)  # White flash when hit
+        else:
+            ship_color = (0, 200, 255)  # Normal cyan color
+            
         # Draw ship body
-        pygame.draw.circle(surf, (0, 200, 255), (int(self.x), int(self.y)), PLAYER_RADIUS)
+        pygame.draw.circle(surf, ship_color, (int(self.x), int(self.y)), PLAYER_RADIUS)
         # Draw turret (longer and bright cyan color)
         tx = self.x + math.cos(self.turret_angle) * (TURRET_LENGTH + 10)
         ty = self.y + math.sin(self.turret_angle) * (TURRET_LENGTH + 10)
@@ -184,10 +199,35 @@ class Player:
         reticle_x = self.x + math.cos(self.turret_angle) * 120
         reticle_y = self.y + math.sin(self.turret_angle) * 120
         pygame.draw.circle(surf, (0, 255, 255), (int(reticle_x), int(reticle_y)), 6, 2)
+        
+        # Draw health bar
+        self.draw_health_bar(surf)
+
+    def draw_health_bar(self, surf):
+        # Health bar position (above the ship)
+        bar_width = 60
+        bar_height = 8
+        bar_x = self.x - bar_width // 2
+        bar_y = self.y - PLAYER_RADIUS - 20
+        
+        # Background (gray)
+        pygame.draw.rect(surf, (80, 80, 80), (bar_x, bar_y, bar_width, bar_height))
+        
+        # Health segments (3 segments)
+        segment_width = bar_width // 3
+        for i in range(self.health):
+            segment_x = bar_x + i * segment_width
+            pygame.draw.rect(surf, (0, 255, 0), (segment_x, bar_y, segment_width - 1, bar_height))
+        
+        # Border
+        pygame.draw.rect(surf, (255, 255, 255), (bar_x, bar_y, bar_width, bar_height), 1)
 
     def hit(self):
-        # One-hit kill
-        self.alive = False
+        # Reduce health instead of instant death
+        self.health -= 1
+        self.hit_flash_timer = HIT_FLASH_DURATION
+        if self.health <= 0:
+            self.alive = False
 
     def pos(self):
         return (self.x, self.y)
@@ -199,10 +239,17 @@ class Enemy:
         self.turret_angle = 0
         self.cooldown = random.randint(0, ENEMY_FIRE_INTERVAL)
         self.alive = True
+        self.health = MAX_HEALTH
+        self.hit_flash_timer = 0
 
     def update(self, player, obstacles, cannonballs):
         if not self.alive:
             return None
+            
+        # Update hit flash timer
+        if self.hit_flash_timer > 0:
+            self.hit_flash_timer -= 1
+            
         # Simple AI: rotate turret toward player
         self.turret_angle = math.atan2(player.y - self.y, player.x - self.x)
         # Firing (limit active cannonballs)
@@ -215,14 +262,23 @@ class Enemy:
         return None
 
     def draw(self, surf):
-        pygame.draw.circle(surf, (255, 80, 80), (int(self.x), int(self.y)), ENEMY_RADIUS)
+        # Determine ship color based on hit flash
+        if self.hit_flash_timer > 0 and self.hit_flash_timer % 6 < 3:
+            ship_color = (255, 255, 255)  # White flash when hit
+        else:
+            ship_color = (255, 80, 80)  # Normal red color
+            
+        pygame.draw.circle(surf, ship_color, (int(self.x), int(self.y)), ENEMY_RADIUS)
         tx = self.x + math.cos(self.turret_angle) * TURRET_LENGTH
         ty = self.y + math.sin(self.turret_angle) * TURRET_LENGTH
         pygame.draw.line(surf, (200, 0, 0), (self.x, self.y), (tx, ty), 8)
 
     def hit(self):
-        # One-hit kill
-        self.alive = False
+        # Reduce health instead of instant death
+        self.health -= 1
+        self.hit_flash_timer = HIT_FLASH_DURATION
+        if self.health <= 0:
+            self.alive = False
 
     def pos(self):
         return (self.x, self.y)
@@ -314,6 +370,10 @@ def main():
         # Score display
         score_text = font.render(f"Score: {score}", True, (255, 255, 255))
         screen.blit(score_text, (10, 10))
+        
+        # Player health display
+        health_text = font.render(f"Health: {player.health}/{MAX_HEALTH}", True, (255, 255, 255))
+        screen.blit(health_text, (10, 50))
         
         # Controls display
         controls_text = small_font.render("WASD: Move | Arrows: Aim | Space: Fire", True, (255, 255, 255))

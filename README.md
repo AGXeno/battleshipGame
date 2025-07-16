@@ -14,7 +14,7 @@
 - **Precise Aiming System** - Smooth 360° turret rotation with keyboard controls
 - **Physics-Based Ricochets** - Master the art of bouncing cannonballs off obstacles
 - **Strategic Naval Combat** - Use cover and positioning to outmaneuver enemies
-- **One-Hit Elimination** - Intense, fast-paced combat where every shot counts
+- **Health System** - Players have 3 health points with visual health bars
 - **Score Tracking** - Compete for high scores and perfect victories
 
 ### Game Mechanics
