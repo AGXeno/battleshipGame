@@ -6,11 +6,15 @@
 [![Pygame](https://img.shields.io/badge/Pygame-2.0+-green.svg)](https://pygame.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
+<p align="center">
+  <img src="assets/images/icon.png" alt="Sea-Ping Warfare Screenshot" width="180" heigh="auto"/>
+</p>
+
 ## Gameplay
 
 **Sea-Ping Warfare** puts you in command of a powerful battleship in a strategic naval combat arena. Your mission: eliminate all enemy vessels using tactical ricochet shots while avoiding their deadly cannon fire.
 
-<p>
+<p align="center">
   <img src="assets/images/ss-v1-game.png" alt="Sea-Ping Warfare Screenshot" width="500"/>
 </p>
 
@@ -70,6 +74,10 @@ python main.py
 | **Restart Game** | `R` |
 
 ## How to Play
+
+<p align="center">
+  <img src="assets/gifs/gameplay.gif" alt="Sea-Ping Warfare Gameplay Gif" width="450" heigh="auto"/>
+</p>
 
 ### Objective
 Destroy all enemy ships before they eliminate you. Use strategic positioning and ricochet shots to overcome numerical disadvantages.
