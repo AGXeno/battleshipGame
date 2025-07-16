@@ -16,9 +16,9 @@ class HUD:
         surf.blit(score_text, (10, 10))
 
     def draw_level(self, surf, level):
-        """Draw level display."""
+        """Draw level display on the right side."""
         level_text = self.font.render(f"Level: {level}", True, UI_TEXT_COLOR)
-        surf.blit(level_text, (10, 30))
+        surf.blit(level_text, (WIDTH - level_text.get_width() - 10, 10))
 
     def draw_health(self, surf, health, max_health):
         """Draw player health display."""
