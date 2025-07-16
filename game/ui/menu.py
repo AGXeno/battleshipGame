@@ -219,7 +219,7 @@ class Menu:
         
         # Continue button
         continue_y = HEIGHT // 2 + 50
-        self.draw_button(surf, "Continue to Next Level", center_x, continue_y)
+        self.draw_button(surf, "Continue", center_x, continue_y)
 
     def draw_button(self, surf, text, center_x, y):
         """Draw a button with hover effect."""
