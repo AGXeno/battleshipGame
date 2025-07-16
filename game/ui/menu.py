@@ -268,12 +268,12 @@ class Menu:
         body_font = pygame.font.SysFont(None, body_size)
         
         # Calculate responsive spacing
-        margin = screen_width // 20  # Responsive margins
-        section_spacing = screen_height // 8  # Responsive section spacing
-        item_spacing = screen_height // 15  # Responsive item spacing
+        margin = screen_width // 30  # Even smaller margins
+        section_spacing = screen_height // 20  # Much smaller section spacing
+        item_spacing = screen_height // 40  # Much smaller item spacing
         
-        # Start position with responsive top margin and scroll offset
-        start_y = screen_height // 8 - self.scroll_offset
+        # Start position with smaller top margin and scroll offset
+        start_y = screen_height // 20 - self.scroll_offset
         
         # Title
         title = title_font.render("How to Play", True, (255, 215, 0))
@@ -293,9 +293,11 @@ class Menu:
         objective_text = "Destroy all enemy ships using strategic ricochet shots while avoiding their cannon fire."
         self._draw_section_content_responsive(surf, objective_text, center_x, content_start_y + header_size + item_spacing, 
                                             body_font, screen_width - margin * 2)
+        # Add a little extra space after objective
+        after_objective_y = content_start_y + header_size + item_spacing + body_font.get_height() + 10
         
         # Section 2: Controls
-        controls_y = content_start_y + section_spacing * 2
+        controls_y = after_objective_y + section_spacing
         self._draw_section_header_responsive(surf, "Controls", center_x, controls_y, header_font, margin)
         
         controls_data = [
@@ -308,11 +310,11 @@ class Menu:
         control_item_y = controls_y + header_size + item_spacing
         for control_title, control_desc in controls_data:
             self._draw_control_item_responsive(surf, control_title, control_desc, center_x, control_item_y, body_font, margin)
-            # More spacing for vertical layout (title + description + gap)
-            control_item_y += item_spacing * 2.5
+            # Reduced spacing for more compact layout
+            control_item_y += item_spacing * 1.8
         
         # Section 3: Strategy
-        strategy_y = control_item_y + item_spacing
+        strategy_y = control_item_y + item_spacing + 10  # Add extra space above Strategy header
         self._draw_section_header_responsive(surf, "Strategy", center_x, strategy_y, header_font, margin)
         
         strategy_items = [
@@ -327,14 +329,10 @@ class Menu:
         strategy_item_y = strategy_y + header_size + item_spacing
         for strategy_item in strategy_items:
             self._draw_strategy_item_responsive(surf, strategy_item, center_x, strategy_item_y, body_font, margin)
-            strategy_item_y += item_spacing
+            strategy_item_y += item_spacing * 0.8  # Reduced spacing between strategy items
         
         # Calculate total content height to determine if scrolling is needed
         total_content_height = strategy_item_y - start_y + 100  # Add some padding
-        
-        # Visual separator (fixed at bottom)
-        separator_y = screen_height - screen_height // 6
-        self._draw_separator_responsive(surf, center_x, separator_y, screen_width)
         
         # Scroll instructions (show if content is taller than screen)
         if total_content_height > screen_height - 200:
@@ -347,17 +345,16 @@ class Menu:
         self._draw_back_button_responsive(surf, center_x, back_y, screen_width, screen_height)
 
     def _draw_section_header_responsive(self, surf, text, center_x, y, font, margin):
-        """Draw a section header with responsive sizing."""
+        """Draw a section header with minimal padding."""
         text_surface = font.render(text, True, (255, 215, 0))
         text_rect = text_surface.get_rect(center=(center_x, y))
         
-        # Responsive padding
-        padding = margin // 3
+        # Minimal padding for compact look
+        padding = max(2, margin // 8)
         bg_rect = pygame.Rect(text_rect.left - padding, text_rect.top - padding // 2, 
                              text_rect.width + padding * 2, text_rect.height + padding)
-        pygame.draw.rect(surf, (30, 45, 60), bg_rect, border_radius=padding // 2)
-        pygame.draw.rect(surf, (255, 215, 0), bg_rect, 2, border_radius=padding // 2)
-        
+        pygame.draw.rect(surf, (30, 45, 60), bg_rect, border_radius=padding)
+        pygame.draw.rect(surf, (255, 215, 0), bg_rect, 2, border_radius=padding)
         surf.blit(text_surface, text_rect)
 
     def _draw_section_content_responsive(self, surf, text, center_x, y, font, max_width):
@@ -388,28 +385,28 @@ class Menu:
             surf.blit(line_surface, line_rect)
 
     def _draw_control_item_responsive(self, surf, title, description, center_x, y, font, margin):
-        """Draw a control item with clean vertical stack layout."""
+        """Draw a control item with clean vertical stack layout and minimal gap."""
         # Title (centered)
         title_surface = font.render(title, True, (255, 215, 0))
         title_rect = title_surface.get_rect(center=(center_x, y))
         surf.blit(title_surface, title_rect)
         
-        # Description (centered below title)
+        # Description (centered below title, minimal gap)
         desc_surface = font.render(description, True, (200, 200, 200))
-        desc_rect = desc_surface.get_rect(center=(center_x, y + font.get_height() + 8))
+        desc_rect = desc_surface.get_rect(center=(center_x, y + font.get_height() + 2))
         surf.blit(desc_surface, desc_rect)
 
     def _draw_strategy_item_responsive(self, surf, text, center_x, y, font, margin):
-        """Draw a strategy item with responsive bullet point."""
-        # Bullet point
+        """Draw a strategy item with centered bullet and text as a group."""
+        # Measure bullet and text width
         bullet_surface = font.render("•", True, (255, 215, 0))
-        bullet_x = center_x - margin
-        surf.blit(bullet_surface, (bullet_x, y))
-        
-        # Strategy text
         text_surface = font.render(text, True, (200, 200, 200))
-        text_x = bullet_x + font.get_height() // 2
-        surf.blit(text_surface, (text_x, y))
+        total_width = bullet_surface.get_width() + 8 + text_surface.get_width()
+        start_x = center_x - total_width // 2
+        # Draw bullet
+        surf.blit(bullet_surface, (start_x, y))
+        # Draw text
+        surf.blit(text_surface, (start_x + bullet_surface.get_width() + 8, y))
 
     def _draw_separator_responsive(self, surf, center_x, y, screen_width):
         """Draw a responsive separator line."""
