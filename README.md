@@ -44,7 +44,7 @@
 
 3. **Launch the game**
    ```bash
-   python sea_ping_warfare.py
+   python main.py
    ```
 
 ### Alternative Installation
@@ -53,7 +53,7 @@ If you prefer using a virtual environment:
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
-python sea_ping_warfare.py
+python main.py
 ```
 
 ## Controls
@@ -89,8 +89,22 @@ Destroy all enemy ships before they eliminate you. Use strategic positioning and
 - **Pygame 2.0+** - Game development framework
 - **Math Module** - Physics calculations for ricochet mechanics
 
+### Project Structure
+```
+sea-ping-warfare/
+├── main.py              # Entry point, game loop
+├── game/
+│   ├── entities/        # Game objects (Player, Enemy, Cannonball)
+│   ├── levels/          # Level management and data
+│   ├── physics/         # Collision detection and physics
+│   └── ui/              # HUD and user interface
+├── config/              # Game settings and constants
+└── utils/               # Helper functions and utilities
+```
+
 ### Architecture
-- **Object-Oriented Design** - Clean separation of game entities
+- **Modular Design** - Clean separation of concerns across multiple modules
+- **Object-Oriented Design** - Well-structured game entities
 - **Event-Driven Game Loop** - Responsive input handling
 - **Collision Detection** - Precise hit detection and physics
 - **State Management** - Smooth game flow and restart functionality
@@ -150,7 +164,7 @@ We welcome contributions! Here's how you can help:
 git clone https://github.com/yourusername/sea-ping-warfare.git
 cd sea-ping-warfare
 pip install -r requirements.txt
-# Make your changes and test with: python sea_ping_warfare.py
+# Make your changes and test with: python main.py
 ```
 
 ## License

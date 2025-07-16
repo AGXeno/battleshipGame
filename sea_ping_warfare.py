@@ -295,12 +295,55 @@ def make_obstacles():
     ]
     return obstacles
 
+# --- Level Data ---
+def get_level_data(level):
+    """Return enemy positions and obstacles for a given level"""
+    if level == 1:
+        enemies = [Enemy(120, 120), Enemy(700, 120), Enemy(400, 300)]
+        obstacles = make_obstacles()
+    elif level == 2:
+        enemies = [Enemy(100, 100), Enemy(700, 100), Enemy(400, 200), Enemy(200, 400)]
+        obstacles = [
+            pygame.Rect(150, 150, 100, 200),
+            pygame.Rect(550, 100, 80, 250),
+            pygame.Rect(300, 350, 150, 50),
+            pygame.Rect(50, 450, 200, 40),
+            pygame.Rect(650, 450, 100, 40),
+        ]
+    elif level == 3:
+        enemies = [Enemy(80, 80), Enemy(720, 80), Enemy(400, 150), Enemy(150, 350), Enemy(650, 350)]
+        obstacles = [
+            pygame.Rect(200, 100, 60, 300),
+            pygame.Rect(540, 100, 60, 300),
+            pygame.Rect(350, 300, 100, 60),
+            pygame.Rect(100, 500, 150, 40),
+            pygame.Rect(550, 500, 150, 40),
+        ]
+    else:
+        # For levels beyond 3, generate random enemies and obstacles
+        import random
+        enemies = []
+        for _ in range(min(3 + level, 8)):  # Cap at 8 enemies
+            x = random.randint(50, WIDTH - 50)
+            y = random.randint(50, HEIGHT // 2)
+            enemies.append(Enemy(x, y))
+        
+        obstacles = []
+        for _ in range(3 + level // 2):  # More obstacles in higher levels
+            x = random.randint(50, WIDTH - 100)
+            y = random.randint(100, HEIGHT - 100)
+            w = random.randint(40, 120)
+            h = random.randint(40, 200)
+            obstacles.append(pygame.Rect(x, y, w, h))
+    
+    return enemies, obstacles
+
 # --- Game Loop ---
 def main():
     player = Player()
-    enemies = [Enemy(120, 120), Enemy(700, 120), Enemy(400, 300)]
+    current_level = 1
+    enemies, obstacles = get_level_data(current_level)
     cannonballs = []
-    obstacles = make_obstacles()
     game_over = False
     victory = False
     restart = False
@@ -354,7 +397,17 @@ def main():
             
             enemies = [e for e in enemies if e.alive]
             if len(enemies) == 0:
-                victory = True
+                # Level completed - progress to next level
+                current_level += 1
+                enemies, obstacles = get_level_data(current_level)
+                # Reset player position and health for new level
+                player.x, player.y = WIDTH // 2, HEIGHT - 80
+                player.health = MAX_HEALTH
+                player.hit_flash_timer = 0
+                # Clear all cannonballs for clean start
+                cannonballs = []
+                # Add some score bonus for completing level
+                score += current_level * 10
 
         # --- Draw ---
         screen.fill((30, 60, 90))
@@ -371,6 +424,10 @@ def main():
         score_text = font.render(f"Score: {score}", True, (255, 255, 255))
         screen.blit(score_text, (10, 10))
         
+        # Level display
+        level_text = font.render(f"Level: {current_level}", True, (255, 255, 255))
+        screen.blit(level_text, (10, 30))
+        
         # Player health display
         health_text = font.render(f"Health: {player.health}/{MAX_HEALTH}", True, (255, 255, 255))
         screen.blit(health_text, (10, 50))
@@ -383,9 +440,8 @@ def main():
         if game_over:
             txt = font.render("Game Over! Press R to Restart", True, (255, 255, 255))
             screen.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2 - 40))
-        elif victory:
-            txt = font.render("Victory! Press R to Restart", True, (255, 255, 0))
-            screen.blit(txt, (WIDTH//2 - txt.get_width()//2, HEIGHT//2 - 40))
+            level_txt = font.render(f"You reached Level {current_level}", True, (255, 255, 255))
+            screen.blit(level_txt, (WIDTH//2 - level_txt.get_width()//2, HEIGHT//2 + 10))
         
         pygame.display.flip()
         clock.tick(FPS)
