@@ -1,22 +1,22 @@
 # Sea-Ping Warfare
 
+<p align="center">
+  <img src="assets/images/icon.png" alt="Sea-Ping Warfare Screenshot" width="80" heigh="auto"/>
+</p>
+
 > A thrilling 2D top-down battleship combat game inspired by Wii Play: Tanks! Navigate treacherous waters, master ricochet physics, and outmaneuver enemy fleets in this action-packed naval warfare experience.
 
 [![Python](https://img.shields.io/badge/Python-3.7+-blue.svg)](https://python.org)
 [![Pygame](https://img.shields.io/badge/Pygame-2.0+-green.svg)](https://pygame.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-<p align="center">
-  <img src="assets/images/icon.png" alt="Sea-Ping Warfare Screenshot" width="180" heigh="auto"/>
-</p>
-
 ## Gameplay
 
-**Sea-Ping Warfare** puts you in command of a powerful battleship in a strategic naval combat arena. Your mission: eliminate all enemy vessels using tactical ricochet shots while avoiding their deadly cannon fire.
-
 <p align="center">
-  <img src="assets/images/ss-v1-game.png" alt="Sea-Ping Warfare Screenshot" width="500"/>
+  <img src="assets/gifs/gameplay.gif" alt="Sea-Ping Warfare Gameplay Gif" width="250" heigh="auto"/>
 </p>
+
+**Sea-Ping Warfare** puts you in command of a powerful battleship in a strategic naval combat arena. Your mission: eliminate all enemy vessels using tactical ricochet shots while avoiding their deadly cannon fire.
 
 ### Key Features
 - **Precise Aiming System** - Smooth 360° turret rotation with keyboard controls
@@ -30,6 +30,10 @@
 - **Aiming**: Use arrow keys for smooth turret rotation
 - **Firing**: Spacebar launches cannonballs that bounce up to 2 times
 - **Strategy**: Use obstacles and walls for ricochet shots to hit enemies around corners
+
+## Gameplay Video
+
+[![Watch the gameplay video](https://img.youtube.com/vi/8MdT8eYzP9Y/0.jpg)](https://youtu.be/8MdT8eYzP9Y)
 
 ## Quick Start
 
@@ -74,10 +78,6 @@ python main.py
 | **Restart Game** | `R` |
 
 ## How to Play
-
-<p align="center">
-  <img src="assets/gifs/gameplay.gif" alt="Sea-Ping Warfare Gameplay Gif" width="450" heigh="auto"/>
-</p>
 
 ### Objective
 Destroy all enemy ships before they eliminate you. Use strategic positioning and ricochet shots to overcome numerical disadvantages.
