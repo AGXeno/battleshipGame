@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naval Battle - Single Player</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+            overflow: auto;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #1a1a2e;
+            min-height: 800px;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #16213e;
+            background: #0f3460;
+            cursor: crosshair;
+            max-width: 95vw;
+            max-height: 70vh;
+        }
+        
+        #topScore {
+            display: flex;
+            justify-content: space-between;
+            width: min(1004px, 95vw);
+            margin-bottom: 5px;
+            font-size: 14px;
+            color: white;
+        }
+        
+        #gameStatus {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            color: white;
+        }
+        
+        #controlsToggle {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 100;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #16213e;
+            color: white;
+            cursor: pointer;
+        }
+        
+        #controlsPanel {
+            position: absolute;
+            left: 10px;
+            bottom: 60px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #16213e;
+            border-radius: 8px;
+            padding: 15px;
+            color: white;
+            max-width: 250px;
+            transition: transform 0.3s ease;
+            z-index: 99;
+        }
+        
+        #controlsPanel.hidden {
+            transform: translateX(-100%);
+        }
+        
+        .status {
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: rgba(0, 0, 0, 0.7);
+        }
+        
+        .player { background: rgba(0, 100, 200, 0.7); }
+        .computer { background: rgba(200, 0, 0, 0.7); }
+        .neutral { background: rgba(100, 100, 100, 0.7); }
+        
+        .score-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .player-score {
+            color: #4169E1;
+        }
+        
+        .computer-score {
+            color: #DC143C;
+        }
+        
+        .game-info {
+            color: #ccc;
+            font-size: 12px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #16213e;
+            color: white;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        button:hover {
+            background: #1a2645;
+        }
+        
+        .ship-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        input[type="range"] {
+            width: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="topScore">
+            <div class="score-item player-score">
+                Player: <span id="playerScore">0</span> | Ships: <span id="playerShips">5</span>
+            </div>
+            <div class="score-item game-info">
+                <span id="selectedShip">No Ship Selected</span> | Time: <span id="gameTime">0:00</span>
+            </div>
+            <div class="score-item computer-score">
+                Computer: <span id="computerScore">0</span> | Ships: <span id="computerShips">5</span>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        
+        <div id="gameStatus">
+            <div class="status neutral">
+                <div id="gameState">Ready to Play</div>
+                <button id="startBtn">Start Game</button>
+                <button id="resetBtn">Reset Game</button>
+            </div>
+        </div>
+        
+        <button id="controlsToggle">Controls</button>
+        
+        <div id="controlsPanel" class="hidden">
+            <div><strong>Controls:</strong></div>
+            <div>• Click ships to select them</div>
+            <div>• Click map to set cannon aim</div>
+            <div>• Left/Right arrows to steer</div>
+            <div>• Up/Down arrows to select ships</div>
+            <div>• Red lines show cannon directions</div>
+            <div>• Yellow line shows aim preview</div>
+            <div>• Scroll wheel for fine-tuning</div>
+            <div>• Ships auto-fire every 5 seconds</div>
+            
+            <div class="ship-controls">
+                <label>Heading: </label>
+                <input type="range" id="headingSlider" min="-45" max="45" value="0">
+                <span id="headingValue">0°</span>
+            </div>
+            
+            <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
+                Computer ships (red) are AI controlled
+            </div>
+            
+            <button onclick="document.getElementById('controlsPanel').classList.add('hidden')" 
+                    style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">
+                Hide Controls
+            </button>
+        </div>
+    </div>
+
+    <script>
+        class NavalBattleGame {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.gameState = {
+                    ships: [],
+                    cannonballs: [],
+                    obstacles: [],
+                    players: {
+                        player: { score: 0, spawnPoint: { x: 100, y: 620 }, shipCount: 0 },
+                        computer: { score: 0, spawnPoint: { x: 900, y: 80 }, shipCount: 0 }
+                    },
+                    selectedShip: null,
+                    gameStarted: false,
+                    gameStartTime: null
+                };
+                
+                this.lastTime = 0;
+                this.keys = {};
+                this.cannonAngleOffset = 0;
+                this.selectedShipIndex = 0;
+                this.lastUpPressed = false;
+                this.lastDownPressed = false;
+                this.mouseAimAngle = 0; // Current mouse direction for preview
+                this.aiSelectedShipIndex = 0; // AI can only control one ship at a time
+                this.aiLastShipSwitch = 0; // When AI last switched ships
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupCanvas();
+                this.setupControls();
+                this.generateObstacles();
+                this.gameLoop();
+            }
+            
+            setupCanvas() {
+                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
+                this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+                
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+            }
+            
+            setupControls() {
+                const headingSlider = document.getElementById('headingSlider');
+                const headingValue = document.getElementById('headingValue');
+                
+                headingSlider.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    headingValue.textContent = value + '°';
+                    
+                    if (this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
+                        this.gameState.selectedShip.targetRudderAngle = value * Math.PI/180;
+                    }
+                });
+                
+                document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+                
+                document.getElementById('controlsToggle').addEventListener('click', () => {
+                    const panel = document.getElementById('controlsPanel');
+                    panel.classList.toggle('hidden');
+                });
+            }
+            
+            handleMouseWheel(e) {
+                e.preventDefault();
+                
+                // Use scroll wheel to cycle through ships
+                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
+                if (playerShips.length > 0) {
+                    if (e.deltaY > 0) {
+                        // Scroll down - next ship
+                        this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
+                    } else {
+                        // Scroll up - previous ship
+                        this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
+                    }
+                    this.selectShipByIndex(playerShips);
+                }
+            }
+            
+            startGame() {
+                this.gameState.gameStarted = true;
+                this.gameState.gameStartTime = Date.now();
+                this.selectedShipIndex = 0;
+                document.getElementById('gameState').textContent = 'Game In Progress';
+                document.getElementById('startBtn').style.display = 'none';
+                
+                // Spawn ships with 3-second intervals
+                for (let i = 0; i < 5; i++) {
+                    setTimeout(() => {
+                        if (this.gameState.gameStarted) {
+                            this.spawnShip('player');
+                            this.spawnShip('computer');
+                        }
+                    }, i * 3000); // 3 seconds apart
+                }
+            }
+            
+            resetGame() {
+                this.gameState = {
+                    ships: [],
+                    cannonballs: [],
+                    obstacles: [],
+                    players: {
+                        player: { score: 0, spawnPoint: { x: 100, y: 620 }, shipCount: 0 },
+                        computer: { score: 0, spawnPoint: { x: 900, y: 80 }, shipCount: 0 }
+                    },
+                    selectedShip: null,
+                    gameStarted: false,
+                    gameStartTime: null
+                };
+                
+                this.selectedShipIndex = 0;
+                this.generateObstacles();
+                document.getElementById('gameState').textContent = 'Ready to Play';
+                document.getElementById('startBtn').style.display = 'inline-block';
+                document.getElementById('selectedShip').textContent = 'No Ship Selected';
+                document.getElementById('headingSlider').value = 0;
+                document.getElementById('headingValue').textContent = '0°';
+            }
+            
+            spawnShip(playerId) {
+                const spawn = this.gameState.players[playerId].spawnPoint;
+                const currentTime = Date.now();
+                const ship = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    playerId: playerId,
+                    x: spawn.x + (Math.random() - 0.5) * 60,
+                    y: spawn.y + (Math.random() - 0.5) * 60,
+                    angle: playerId === 'player' ? -45 * Math.PI/180 : 135 * Math.PI/180,
+                    rudderAngle: 0,
+                    targetRudderAngle: 0,
+                    cannonAngle: playerId === 'player' ? -45 * Math.PI/180 : 135 * Math.PI/180,
+                    speed: 25, // Reduced from 50 to 25 (50% slower)
+                    health: 3,
+                    maxHealth: 3,
+                    lastShot: currentTime, // Set to current time so ship waits 5 seconds
+                    shotCooldown: 5000,
+                    spawnTime: currentTime, // Track when ship was spawned
+                    aiTarget: null,
+                    aiLastDecision: 0,
+                    aiDecisionCooldown: 1000,
+                    aiState: 'patrol'
+                };
+                
+                this.gameState.ships.push(ship);
+                this.gameState.players[playerId].shipCount++;
+                return ship;
+            }
+            
+            generateObstacles() {
+                this.gameState.obstacles = [];
+                
+                // Generate 2 islands (indestructible)
+                for (let i = 0; i < 2; i++) {
+                    this.gameState.obstacles.push({
+                        type: 'island',
+                        x: 250 + Math.random() * 500,
+                        y: 150 + Math.random() * 400,
+                        radius: 30 + Math.random() * 20,
+                        destructible: false
+                    });
+                }
+                
+                // Generate 3 icebergs (destructible)
+                for (let i = 0; i < 3; i++) {
+                    this.gameState.obstacles.push({
+                        type: 'iceberg',
+                        x: 150 + Math.random() * 700,
+                        y: 100 + Math.random() * 500,
+                        radius: 20 + Math.random() * 15,
+                        destructible: true
+                    });
+                }
+            }
+            
+            handleCanvasClick(e) {
+                if (!this.gameState.gameStarted) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
+                
+                // First check if clicking on a ship to select it
+                let clickedShip = false;
+                for (let i = 0; i < playerShips.length; i++) {
+                    const ship = playerShips[i];
+                    const dx = x - ship.x;
+                    const dy = y - ship.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 15) {
+                        this.selectedShipIndex = i;
+                        this.selectShipByIndex(playerShips);
+                        clickedShip = true;
+                        break;
+                    }
+                }
+                
+                // If not clicking on a ship and we have a selected ship, set aim direction
+                if (!clickedShip && this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
+                    const ship = this.gameState.selectedShip;
+                    const dx = x - ship.x;
+                    const dy = y - ship.y;
+                    ship.cannonAngle = Math.atan2(dy, dx) + this.cannonAngleOffset;
+                }
+            }
+            
+            handleMouseMove(e) {
+                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                const ship = this.gameState.selectedShip;
+                const dx = mouseX - ship.x;
+                const dy = mouseY - ship.y;
+                
+                // Update mouse aim angle for preview (yellow line)
+                this.mouseAimAngle = Math.atan2(dy, dx) + this.cannonAngleOffset;
+            }
+            
+            updatePlayerControls() {
+                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
+                
+                // Handle ship selection with up/down arrows
+                if (this.keys['ArrowUp'] && !this.lastUpPressed) {
+                    this.lastUpPressed = true;
+                    if (playerShips.length > 0) {
+                        this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
+                        this.selectShipByIndex(playerShips);
+                    }
+                } else if (!this.keys['ArrowUp']) {
+                    this.lastUpPressed = false;
+                }
+                
+                if (this.keys['ArrowDown'] && !this.lastDownPressed) {
+                    this.lastDownPressed = true;
+                    if (playerShips.length > 0) {
+                        this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
+                        this.selectShipByIndex(playerShips);
+                    }
+                } else if (!this.keys['ArrowDown']) {
+                    this.lastDownPressed = false;
+                }
+                
+                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
+                
+                const ship = this.gameState.selectedShip;
+                
+                // Arrow key controls for rudder
+                if (this.keys['ArrowLeft']) {
+                    ship.targetRudderAngle = Math.max(ship.targetRudderAngle - 0.02, -Math.PI/4);
+                }
+                if (this.keys['ArrowRight']) {
+                    ship.targetRudderAngle = Math.min(ship.targetRudderAngle + 0.02, Math.PI/4);
+                }
+                
+                // Update slider
+                const degrees = Math.round(ship.targetRudderAngle * 180/Math.PI);
+                document.getElementById('headingSlider').value = degrees;
+                document.getElementById('headingValue').textContent = degrees + '°';
+            }
+            
+            selectShipByIndex(playerShips) {
+                if (playerShips.length > 0 && this.selectedShipIndex < playerShips.length) {
+                    this.gameState.selectedShip = playerShips[this.selectedShipIndex];
+                    this.cannonAngleOffset = 0;
+                    document.getElementById('selectedShip').textContent = 
+                        `Player Ship ${this.gameState.selectedShip.id.substr(0, 4)} (${this.selectedShipIndex + 1}/${playerShips.length})`;
+                    
+                    const degrees = Math.round(this.gameState.selectedShip.targetRudderAngle * 180/Math.PI);
+                    document.getElementById('headingSlider').value = degrees;
+                    document.getElementById('headingValue').textContent = degrees + '°';
+                }
+            }
+            
+            updateAI(deltaTime) {
+                const currentTime = Date.now();
+                const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer');
+                
+                // AI switches between ships every 2-4 seconds
+                if (currentTime - this.aiLastShipSwitch > (2000 + Math.random() * 2000)) {
+                    if (computerShips.length > 0) {
+                        this.aiSelectedShipIndex = Math.floor(Math.random() * computerShips.length);
+                        this.aiLastShipSwitch = currentTime;
+                    }
+                }
+                
+                // AI only controls one ship at a time
+                if (computerShips.length > 0 && this.aiSelectedShipIndex < computerShips.length) {
+                    const selectedAIShip = computerShips[this.aiSelectedShipIndex];
+                    
+                    if (currentTime - selectedAIShip.aiLastDecision > selectedAIShip.aiDecisionCooldown) {
+                        this.makeAIDecision(selectedAIShip);
+                        selectedAIShip.aiLastDecision = currentTime;
+                    }
+                    
+                    this.executeAIBehavior(selectedAIShip);
+                }
+            }
+            
+            makeAIDecision(ship) {
+                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
+                
+                if (playerShips.length === 0) return;
+                
+                let closestShip = null;
+                let closestDistance = Infinity;
+                
+                for (let playerShip of playerShips) {
+                    const dx = ship.x - playerShip.x;
+                    const dy = ship.y - playerShip.y;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestShip = playerShip;
+                    }
+                }
+                
+                ship.aiTarget = closestShip;
+                
+                if (closestDistance < 150) {
+                    ship.aiState = ship.health <= 1 ? 'evade' : 'attack';
+                } else {
+                    ship.aiState = 'patrol';
+                }
+            }
+            
+            executeAIBehavior(ship) {
+                if (!ship.aiTarget) return;
+                
+                const dx = ship.aiTarget.x - ship.x;
+                const dy = ship.aiTarget.y - ship.y;
+                const angleToTarget = Math.atan2(dy, dx);
+                
+                switch (ship.aiState) {
+                    case 'attack':
+                        ship.cannonAngle = angleToTarget;
+                        const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
+                        ship.targetRudderAngle = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.5, Math.PI/6);
+                        break;
+                        
+                    case 'evade':
+                        ship.cannonAngle = angleToTarget;
+                        const evadeAngle = angleToTarget + Math.PI;
+                        const evadeAngleDiff = this.normalizeAngle(evadeAngle - ship.angle);
+                        ship.targetRudderAngle = Math.sign(evadeAngleDiff) * Math.min(Math.abs(evadeAngleDiff) * 0.5, Math.PI/5);
+                        break;
+                        
+                    case 'patrol':
+                        ship.cannonAngle = angleToTarget;
+                        const patrolAngleDiff = this.normalizeAngle(angleToTarget - ship.angle);
+                        ship.targetRudderAngle = Math.sign(patrolAngleDiff) * Math.min(Math.abs(patrolAngleDiff) * 0.3, Math.PI/8);
+                        
+                        if (Math.random() < 0.05) {
+                            ship.targetRudderAngle += (Math.random() - 0.5) * 0.2;
+                        }
+                        break;
+                }
+                
+                this.avoidObstacles(ship);
+            }
+            
+            avoidObstacles(ship) {
+                const avoidanceRadius = 80;
+                let avoidanceForceX = 0;
+                let avoidanceForceY = 0;
+                
+                for (let obstacle of this.gameState.obstacles) {
+                    const dx = ship.x - obstacle.x;
+                    const dy = ship.y - obstacle.y;
+                    const distance = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (distance < avoidanceRadius) {
+                        const force = (avoidanceRadius - distance) / avoidanceRadius;
+                        avoidanceForceX += (dx / distance) * force;
+                        avoidanceForceY += (dy / distance) * force;
+                    }
+                }
+                
+                if (ship.x < 100) avoidanceForceX += 1;
+                if (ship.x > this.canvas.width - 100) avoidanceForceX -= 1;
+                if (ship.y < 100) avoidanceForceY += 1;
+                if (ship.y > this.canvas.height - 100) avoidanceForceY -= 1;
+                
+                if (avoidanceForceX !== 0 || avoidanceForceY !== 0) {
+                    const avoidanceAngle = Math.atan2(avoidanceForceY, avoidanceForceX);
+                    const angleDiff = this.normalizeAngle(avoidanceAngle - ship.angle);
+                    ship.targetRudderAngle = Math.sign(angleDiff) * Math.PI/5;
+                }
+            }
+            
+            normalizeAngle(angle) {
+                while (angle > Math.PI) angle -= 2 * Math.PI;
+                while (angle < -Math.PI) angle += 2 * Math.PI;
+                return angle;
+            }
+            
+            update(deltaTime) {
+                if (!this.gameState.gameStarted) return;
+                
+                this.updatePlayerControls();
+                this.updateAI(deltaTime);
+                this.updateShips(deltaTime);
+                this.updateCannonballs(deltaTime);
+                this.checkCollisions();
+                this.cleanupDeadObjects();
+                this.handleShooting();
+                this.updateGameStatus();
+            }
+            
+            updateShips(deltaTime) {
+                for (let ship of this.gameState.ships) {
+                    // Smoothly interpolate rudder angle
+                    const rudderSpeed = 2.0;
+                    const rudderDiff = ship.targetRudderAngle - ship.rudderAngle;
+                    ship.rudderAngle += Math.sign(rudderDiff) * Math.min(Math.abs(rudderDiff), rudderSpeed * deltaTime * 0.001);
+                    
+                    // Apply turning
+                    const turnRate = 0.8;
+                    ship.angle += ship.rudderAngle * turnRate * deltaTime * 0.001;
+                    
+                    // Move forward
+                    ship.x += Math.cos(ship.angle) * ship.speed * deltaTime * 0.001;
+                    ship.y += Math.sin(ship.angle) * ship.speed * deltaTime * 0.001;
+                    
+                    // Check boundaries
+                    if (ship.x < 0 || ship.x > this.canvas.width || 
+                        ship.y < 0 || ship.y > this.canvas.height) {
+                        ship.health -= 0.1;
+                        
+                        if (ship.x < 0) ship.x = 0;
+                        if (ship.x > this.canvas.width) ship.x = this.canvas.width;
+                        if (ship.y < 0) ship.y = 0;
+                        if (ship.y > this.canvas.height) ship.y = this.canvas.height;
+                        
+                        ship.angle += Math.PI;
+                    }
+                }
+            }
+            
+            updateCannonballs(deltaTime) {
+                for (let cannonball of this.gameState.cannonballs) {
+                    cannonball.x += Math.cos(cannonball.angle) * cannonball.speed * deltaTime * 0.001;
+                    cannonball.y += Math.sin(cannonball.angle) * cannonball.speed * deltaTime * 0.001;
+                    
+                    if (cannonball.x < -10 || cannonball.x > this.canvas.width + 10 || 
+                        cannonball.y < -10 || cannonball.y > this.canvas.height + 10) {
+                        cannonball.dead = true;
+                    }
+                }
+            }
+            
+            checkCollisions() {
+                // Ship-obstacle collisions
+                for (let ship of this.gameState.ships) {
+                    for (let obstacle of this.gameState.obstacles) {
+                        const dx = ship.x - obstacle.x;
+                        const dy = ship.y - obstacle.y;
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (distance < obstacle.radius + 12) {
+                            ship.health -= 0.1;
+                            const pushX = (dx / distance) * 15;
+                            const pushY = (dy / distance) * 15;
+                            ship.x += pushX;
+                            ship.y += pushY;
+                        }
+                    }
+                }
+                
+                // Cannonball-obstacle collisions
+                for (let cannonball of this.gameState.cannonballs) {
+                    for (let obstacle of this.gameState.obstacles) {
+                        const dx = cannonball.x - obstacle.x;
+                        const dy = cannonball.y - obstacle.y;
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (distance < obstacle.radius + 3) {
+                            cannonball.dead = true;
+                            
+                            if (obstacle.destructible) {
+                                obstacle.radius -= 5;
+                                if (obstacle.radius <= 10) {
+                                    obstacle.dead = true;
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Cannonball-ship collisions (no friendly fire)
+                for (let cannonball of this.gameState.cannonballs) {
+                    for (let ship of this.gameState.ships) {
+                        if (cannonball.shooterId === ship.id) continue;
+                        if (cannonball.shooterPlayerId === ship.playerId) continue;
+                        
+                        const dx = cannonball.x - ship.x;
+                        const dy = cannonball.y - ship.y;
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (distance < 15) {
+                            cannonball.dead = true;
+                            ship.health -= 1;
+                            
+                            if (ship.health <= 0 && cannonball.shooterPlayerId) {
+                                this.gameState.players[cannonball.shooterPlayerId].score++;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            cleanupDeadObjects() {
+                for (let i = this.gameState.ships.length - 1; i >= 0; i--) {
+                    const ship = this.gameState.ships[i];
+                    if (ship.health <= 0) {
+                        if (ship === this.gameState.selectedShip) {
+                            this.gameState.selectedShip = null;
+                            document.getElementById('selectedShip').textContent = 'No Ship Selected';
+                        }
+                        
+                        this.gameState.players[ship.playerId].shipCount--;
+                        this.gameState.ships.splice(i, 1);
+                        
+                        setTimeout(() => {
+                            if (this.gameState.gameStarted) {
+                                this.spawnShip(ship.playerId);
+                            }
+                        }, 3000);
+                    }
+                }
+                
+                this.gameState.cannonballs = this.gameState.cannonballs.filter(c => !c.dead);
+                this.gameState.obstacles = this.gameState.obstacles.filter(o => !o.dead);
+            }
+            
+            handleShooting() {
+                const currentTime = Date.now();
+                
+                for (let ship of this.gameState.ships) {
+                    // Check if ship has waited 5 seconds since spawn and cooldown has passed
+                    const timeSinceSpawn = currentTime - ship.spawnTime;
+                    const timeSinceLastShot = currentTime - ship.lastShot;
+                    
+                    if (timeSinceSpawn >= 5000 && timeSinceLastShot >= ship.shotCooldown) {
+                        const cannonball = {
+                            id: Math.random().toString(36).substr(2, 9),
+                            shooterId: ship.id,
+                            shooterPlayerId: ship.playerId,
+                            x: ship.x + Math.cos(ship.cannonAngle) * 25,
+                            y: ship.y + Math.sin(ship.cannonAngle) * 25,
+                            angle: ship.cannonAngle,
+                            speed: 150,
+                            dead: false
+                        };
+                        
+                        this.gameState.cannonballs.push(cannonball);
+                        ship.lastShot = currentTime;
+                    }
+                }
+            }
+            
+            updateGameStatus() {
+                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player').length;
+                const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer').length;
+                
+                document.getElementById('playerShips').textContent = playerShips;
+                document.getElementById('computerShips').textContent = computerShips;
+                
+                if (this.gameState.gameStartTime) {
+                    const elapsed = Math.floor((Date.now() - this.gameState.gameStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    document.getElementById('gameTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+                
+                if (this.gameState.players.player.score >= 15) {
+                    document.getElementById('gameState').textContent = 'Player Wins!';
+                    this.gameState.gameStarted = false;
+                } else if (this.gameState.players.computer.score >= 15) {
+                    document.getElementById('gameState').textContent = 'Computer Wins!';
+                    this.gameState.gameStarted = false;
+                }
+                
+                document.getElementById('playerScore').textContent = this.gameState.players.player.score;
+                document.getElementById('computerScore').textContent = this.gameState.players.computer.score;
+            }
+            
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw water background
+                this.ctx.fillStyle = '#0f3460';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw obstacles
+                for (let obstacle of this.gameState.obstacles) {
+                    this.ctx.save();
+                    this.ctx.translate(obstacle.x, obstacle.y);
+                    
+                    if (obstacle.type === 'island') {
+                        this.ctx.fillStyle = '#8B4513';
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        this.ctx.fillStyle = '#228B22';
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, obstacle.radius * 0.7, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    } else {
+                        this.ctx.fillStyle = '#E0FFFF';
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        this.ctx.fillStyle = '#ADD8E6';
+                        this.ctx.beginPath();
+                        this.ctx.arc(-5, -5, obstacle.radius * 0.6, 0, Math.PI * 2);
+                        this.ctx.fill();
+                    }
+                    
+                    this.ctx.restore();
+                }
+                
+                // Draw ships
+                for (let ship of this.gameState.ships) {
+                    this.ctx.save();
+                    this.ctx.translate(ship.x, ship.y);
+                    this.ctx.rotate(ship.angle);
+                    
+                    // Ship hull (smaller)
+                    this.ctx.fillStyle = ship.playerId === 'player' ? '#4169E1' : '#DC143C';
+                    this.ctx.fillRect(-10, -5, 20, 10);
+                    
+                    // Ship bow (smaller)
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(10, 0);
+                    this.ctx.lineTo(14, -3);
+                    this.ctx.lineTo(14, 3);
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                    
+                    // Health indicator
+                    const healthRatio = ship.health / ship.maxHealth;
+                    this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
+                    this.ctx.fillRect(-8, -8, healthRatio * 16, 2);
+                    
+                    // Health border
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(-8, -8, 16, 2);
+                    
+                    // Selection indicator
+                    if (ship === this.gameState.selectedShip) {
+                        this.ctx.strokeStyle = '#FFD700';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.strokeRect(-12, -8, 24, 16);
+                    }
+                    
+                    this.ctx.restore();
+                }
+                
+                // Draw cannon aim lines for all player ships
+                for (let ship of this.gameState.ships) {
+                    if (ship.playerId === 'player') {
+                        // Red line: Current aim direction (where cannon will fire)
+                        this.ctx.strokeStyle = '#FF0000';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(ship.x, ship.y);
+                        this.ctx.lineTo(
+                            ship.x + Math.cos(ship.cannonAngle) * 50,
+                            ship.y + Math.sin(ship.cannonAngle) * 50
+                        );
+                        this.ctx.stroke();
+                        
+                        // Yellow line: Mouse preview for selected ship only
+                        if (ship === this.gameState.selectedShip) {
+                            this.ctx.strokeStyle = '#FFFF00';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.setLineDash([5, 5]); // Dashed line for preview
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(ship.x, ship.y);
+                            this.ctx.lineTo(
+                                ship.x + Math.cos(this.mouseAimAngle) * 50,
+                                ship.y + Math.sin(this.mouseAimAngle) * 50
+                            );
+                            this.ctx.stroke();
+                            this.ctx.setLineDash([]); // Reset line dash
+                        }
+                    }
+                }
+                
+                // Draw cannonballs
+                for (let cannonball of this.gameState.cannonballs) {
+                    this.ctx.fillStyle = '#1a1a1a';
+                    this.ctx.beginPath();
+                    this.ctx.arc(cannonball.x, cannonball.y, 4, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    
+                    this.ctx.strokeStyle = '#fff';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.stroke();
+                }
+                
+                // Draw spawn points
+                this.ctx.fillStyle = 'rgba(65, 105, 225, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.arc(this.gameState.players.player.spawnPoint.x, this.gameState.players.player.spawnPoint.y, 30, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = 'rgba(220, 20, 60, 0.3)';
+                this.ctx.beginPath();
+                this.ctx.arc(this.gameState.players.computer.spawnPoint.x, this.gameState.players.computer.spawnPoint.y, 30, 0, Math.PI * 2);
+                this.ctx.fill();
+            }
+            
+            gameLoop() {
+                const currentTime = performance.now();
+                const deltaTime = currentTime - this.lastTime;
+                this.lastTime = currentTime;
+                
+                this.update(deltaTime);
+                this.render();
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+        
+        // Initialize game when page loads
+        window.addEventListener('load', () => {
+            new NavalBattleGame();
+        });
+    </script>
+</body>
+</html>
