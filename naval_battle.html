@@ -166,10 +166,10 @@
         
         <div id="controlsPanel" class="hidden">
             <div><strong>Controls:</strong></div>
-            <div>• Click ships to select them</div>
-            <div>• Click map to set cannon aim</div>
-            <div>• Left/Right arrows to steer</div>
-            <div>• Up/Down arrows to select ships</div>
+            <div>• <strong>Left-click:</strong> Select ships</div>
+            <div>• <strong>Right-click:</strong> Set cannon aim</div>
+            <div>• <strong>A/D keys:</strong> Steer left/right</div>
+            <div>• <strong>W/S keys:</strong> Select ships</div>
             <div>• Red lines show cannon directions</div>
             <div>• Yellow line shows aim preview</div>
             <div>• Scroll wheel for fine-tuning</div>
@@ -214,11 +214,11 @@
                 this.keys = {};
                 this.cannonAngleOffset = 0;
                 this.selectedShipIndex = 0;
-                this.lastUpPressed = false;
-                this.lastDownPressed = false;
-                this.mouseAimAngle = 0; // Current mouse direction for preview
-                this.aiSelectedShipIndex = 0; // AI can only control one ship at a time
-                this.aiLastShipSwitch = 0; // When AI last switched ships
+                this.lastWPressed = false;
+                this.lastSPressed = false;
+                this.mouseAimAngle = 0;
+                this.aiSelectedShipIndex = 0;
+                this.aiLastShipSwitch = 0;
                 
                 this.init();
             }
@@ -232,9 +232,12 @@
             
             setupCanvas() {
                 this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                this.canvas.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.handleCanvasRightClick(e);
+                });
                 this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
                 this.canvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
-                this.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
                 
                 document.addEventListener('keydown', (e) => {
                     this.keys[e.code] = true;
@@ -270,14 +273,11 @@
             handleMouseWheel(e) {
                 e.preventDefault();
                 
-                // Use scroll wheel to cycle through ships
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
                 if (playerShips.length > 0) {
                     if (e.deltaY > 0) {
-                        // Scroll down - next ship
                         this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
                     } else {
-                        // Scroll up - previous ship
                         this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
                     }
                     this.selectShipByIndex(playerShips);
@@ -291,14 +291,13 @@
                 document.getElementById('gameState').textContent = 'Game In Progress';
                 document.getElementById('startBtn').style.display = 'none';
                 
-                // Spawn ships with 3-second intervals
                 for (let i = 0; i < 5; i++) {
                     setTimeout(() => {
                         if (this.gameState.gameStarted) {
                             this.spawnShip('player');
                             this.spawnShip('computer');
                         }
-                    }, i * 3000); // 3 seconds apart
+                    }, i * 3000);
                 }
             }
             
@@ -337,12 +336,13 @@
                     rudderAngle: 0,
                     targetRudderAngle: 0,
                     cannonAngle: playerId === 'player' ? -45 * Math.PI/180 : 135 * Math.PI/180,
-                    speed: 25, // Reduced from 50 to 25 (50% slower)
+                    speed: 25,
                     health: 3,
                     maxHealth: 3,
-                    lastShot: currentTime, // Set to current time so ship waits 5 seconds
+                    lastShot: currentTime,
                     shotCooldown: 5000,
-                    spawnTime: currentTime, // Track when ship was spawned
+                    spawnTime: currentTime,
+                    lastRamTime: 0, // Track last ramming time to prevent spam
                     aiTarget: null,
                     aiLastDecision: 0,
                     aiDecisionCooldown: 1000,
@@ -357,7 +357,6 @@
             generateObstacles() {
                 this.gameState.obstacles = [];
                 
-                // Generate 2 islands (indestructible)
                 for (let i = 0; i < 2; i++) {
                     this.gameState.obstacles.push({
                         type: 'island',
@@ -368,7 +367,6 @@
                     });
                 }
                 
-                // Generate 3 icebergs (destructible)
                 for (let i = 0; i < 3; i++) {
                     this.gameState.obstacles.push({
                         type: 'iceberg',
@@ -384,13 +382,13 @@
                 if (!this.gameState.gameStarted) return;
                 
                 const rect = this.canvas.getBoundingClientRect();
-                const x = e.clientX - rect.left;
-                const y = e.clientY - rect.top;
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
                 
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
                 
-                // First check if clicking on a ship to select it
-                let clickedShip = false;
                 for (let i = 0; i < playerShips.length; i++) {
                     const ship = playerShips[i];
                     const dx = x - ship.x;
@@ -398,72 +396,77 @@
                     if (Math.sqrt(dx*dx + dy*dy) < 15) {
                         this.selectedShipIndex = i;
                         this.selectShipByIndex(playerShips);
-                        clickedShip = true;
                         break;
                     }
                 }
+            }
+            
+            handleCanvasRightClick(e) {
+                if (!this.gameState.gameStarted) return;
+                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
                 
-                // If not clicking on a ship and we have a selected ship, set aim direction
-                if (!clickedShip && this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
-                    const ship = this.gameState.selectedShip;
-                    const dx = x - ship.x;
-                    const dy = y - ship.y;
-                    ship.cannonAngle = Math.atan2(dy, dx) + this.cannonAngleOffset;
-                }
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
+                const ship = this.gameState.selectedShip;
+                const dx = x - ship.x;
+                const dy = y - ship.y;
+                ship.cannonAngle = Math.atan2(dy, dx);
             }
             
             handleMouseMove(e) {
                 if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
                 
                 const rect = this.canvas.getBoundingClientRect();
-                const mouseX = e.clientX - rect.left;
-                const mouseY = e.clientY - rect.top;
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
                 
                 const ship = this.gameState.selectedShip;
                 const dx = mouseX - ship.x;
                 const dy = mouseY - ship.y;
                 
-                // Update mouse aim angle for preview (yellow line)
-                this.mouseAimAngle = Math.atan2(dy, dx) + this.cannonAngleOffset;
+                this.mouseAimAngle = Math.atan2(dy, dx);
             }
             
             updatePlayerControls() {
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
                 
-                // Handle ship selection with up/down arrows
-                if (this.keys['ArrowUp'] && !this.lastUpPressed) {
-                    this.lastUpPressed = true;
+                if (this.keys['KeyW'] && !this.lastWPressed) {
+                    this.lastWPressed = true;
                     if (playerShips.length > 0) {
                         this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
                         this.selectShipByIndex(playerShips);
                     }
-                } else if (!this.keys['ArrowUp']) {
-                    this.lastUpPressed = false;
+                } else if (!this.keys['KeyW']) {
+                    this.lastWPressed = false;
                 }
                 
-                if (this.keys['ArrowDown'] && !this.lastDownPressed) {
-                    this.lastDownPressed = true;
+                if (this.keys['KeyS'] && !this.lastSPressed) {
+                    this.lastSPressed = true;
                     if (playerShips.length > 0) {
                         this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
                         this.selectShipByIndex(playerShips);
                     }
-                } else if (!this.keys['ArrowDown']) {
-                    this.lastDownPressed = false;
+                } else if (!this.keys['KeyS']) {
+                    this.lastSPressed = false;
                 }
                 
                 if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
                 
                 const ship = this.gameState.selectedShip;
                 
-                // Arrow key controls for rudder
-                if (this.keys['ArrowLeft']) {
+                if (this.keys['KeyA']) {
                     ship.targetRudderAngle = Math.max(ship.targetRudderAngle - 0.02, -Math.PI/4);
                 }
-                if (this.keys['ArrowRight']) {
+                if (this.keys['KeyD']) {
                     ship.targetRudderAngle = Math.min(ship.targetRudderAngle + 0.02, Math.PI/4);
                 }
                 
-                // Update slider
                 const degrees = Math.round(ship.targetRudderAngle * 180/Math.PI);
                 document.getElementById('headingSlider').value = degrees;
                 document.getElementById('headingValue').textContent = degrees + '°';
@@ -486,7 +489,6 @@
                 const currentTime = Date.now();
                 const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer');
                 
-                // AI switches between ships every 2-4 seconds
                 if (currentTime - this.aiLastShipSwitch > (2000 + Math.random() * 2000)) {
                     if (computerShips.length > 0) {
                         this.aiSelectedShipIndex = Math.floor(Math.random() * computerShips.length);
@@ -494,7 +496,6 @@
                     }
                 }
                 
-                // AI only controls one ship at a time
                 if (computerShips.length > 0 && this.aiSelectedShipIndex < computerShips.length) {
                     const selectedAIShip = computerShips[this.aiSelectedShipIndex];
                     
@@ -620,30 +621,51 @@
             
             updateShips(deltaTime) {
                 for (let ship of this.gameState.ships) {
-                    // Smoothly interpolate rudder angle
                     const rudderSpeed = 2.0;
                     const rudderDiff = ship.targetRudderAngle - ship.rudderAngle;
                     ship.rudderAngle += Math.sign(rudderDiff) * Math.min(Math.abs(rudderDiff), rudderSpeed * deltaTime * 0.001);
                     
-                    // Apply turning
                     const turnRate = 0.8;
                     ship.angle += ship.rudderAngle * turnRate * deltaTime * 0.001;
                     
-                    // Move forward
                     ship.x += Math.cos(ship.angle) * ship.speed * deltaTime * 0.001;
                     ship.y += Math.sin(ship.angle) * ship.speed * deltaTime * 0.001;
                     
-                    // Check boundaries
-                    if (ship.x < 0 || ship.x > this.canvas.width || 
-                        ship.y < 0 || ship.y > this.canvas.height) {
-                        ship.health -= 0.1;
+                    // Check boundaries with ricochet physics
+                    let bounced = false;
+                    
+                    if (ship.x < 0) {
+                        ship.x = 0;
+                        // Reflect angle off left wall (vertical surface)
+                        ship.angle = Math.PI - ship.angle;
+                        bounced = true;
+                    } else if (ship.x > this.canvas.width) {
+                        ship.x = this.canvas.width;
+                        // Reflect angle off right wall (vertical surface)
+                        ship.angle = Math.PI - ship.angle;
+                        bounced = true;
+                    }
+                    
+                    if (ship.y < 0) {
+                        ship.y = 0;
+                        // Reflect angle off top wall (horizontal surface)
+                        ship.angle = -ship.angle;
+                        bounced = true;
+                    } else if (ship.y > this.canvas.height) {
+                        ship.y = this.canvas.height;
+                        // Reflect angle off bottom wall (horizontal surface)
+                        ship.angle = -ship.angle;
+                        bounced = true;
+                    }
+                    
+                    // Normalize the angle after reflection
+                    if (bounced) {
+                        while (ship.angle > Math.PI) ship.angle -= 2 * Math.PI;
+                        while (ship.angle < -Math.PI) ship.angle += 2 * Math.PI;
                         
-                        if (ship.x < 0) ship.x = 0;
-                        if (ship.x > this.canvas.width) ship.x = this.canvas.width;
-                        if (ship.y < 0) ship.y = 0;
-                        if (ship.y > this.canvas.height) ship.y = this.canvas.height;
-                        
-                        ship.angle += Math.PI;
+                        // Reset rudder to prevent immediate turning after bounce
+                        ship.rudderAngle = 0;
+                        ship.targetRudderAngle = 0;
                     }
                 }
             }
@@ -661,6 +683,103 @@
             }
             
             checkCollisions() {
+                // Ship-ship ramming collisions (new feature)
+                for (let i = 0; i < this.gameState.ships.length; i++) {
+                    for (let j = i + 1; j < this.gameState.ships.length; j++) {
+                        const ship1 = this.gameState.ships[i];
+                        const ship2 = this.gameState.ships[j];
+                        
+                        // Only check ramming between enemy ships
+                        if (ship1.playerId === ship2.playerId) continue;
+                        
+                        const dx = ship2.x - ship1.x;
+                        const dy = ship2.y - ship1.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < 20) { // Ships are close enough for potential ramming
+                            // Calculate front positions
+                            const ship1FrontX = ship1.x + Math.cos(ship1.angle) * 14;
+                            const ship1FrontY = ship1.y + Math.sin(ship1.angle) * 14;
+                            const ship2FrontX = ship2.x + Math.cos(ship2.angle) * 14;
+                            const ship2FrontY = ship2.y + Math.sin(ship2.angle) * 14;
+                            
+                            // Calculate distances from each front to the other ship's center
+                            const ship1FrontToShip2 = Math.sqrt((ship1FrontX - ship2.x) ** 2 + (ship1FrontY - ship2.y) ** 2);
+                            const ship2FrontToShip1 = Math.sqrt((ship2FrontX - ship1.x) ** 2 + (ship2FrontY - ship1.y) ** 2);
+                            
+                            // Only the ship hit closer to its sides takes damage
+                            if (ship1FrontToShip2 < 12 && ship2FrontToShip1 < 12) {
+                                // Head-on collision - determine who hits more directly
+                                if (ship1FrontToShip2 < ship2FrontToShip1) {
+                                    // Ship1's front hits ship2 more directly
+                                    if (!ship1.lastRamTime || Date.now() - ship1.lastRamTime > 2000) {
+                                        ship2.health -= 1;
+                                        ship1.lastRamTime = Date.now();
+                                        
+                                        // Push ship2 away
+                                        const pushX = (dx / distance) * 20;
+                                        const pushY = (dy / distance) * 20;
+                                        ship2.x += pushX;
+                                        ship2.y += pushY;
+                                        
+                                        if (ship2.health <= 0) {
+                                            this.gameState.players[ship1.playerId].score++;
+                                        }
+                                    }
+                                } else {
+                                    // Ship2's front hits ship1 more directly
+                                    if (!ship2.lastRamTime || Date.now() - ship2.lastRamTime > 2000) {
+                                        ship1.health -= 1;
+                                        ship2.lastRamTime = Date.now();
+                                        
+                                        // Push ship1 away
+                                        const pushX = (-dx / distance) * 20;
+                                        const pushY = (-dy / distance) * 20;
+                                        ship1.x += pushX;
+                                        ship1.y += pushY;
+                                        
+                                        if (ship1.health <= 0) {
+                                            this.gameState.players[ship2.playerId].score++;
+                                        }
+                                    }
+                                }
+                            } else if (ship1FrontToShip2 < 12) {
+                                // Only ship1's front hits ship2
+                                if (!ship1.lastRamTime || Date.now() - ship1.lastRamTime > 2000) {
+                                    ship2.health -= 1;
+                                    ship1.lastRamTime = Date.now();
+                                    
+                                    // Push ship2 away
+                                    const pushX = (dx / distance) * 20;
+                                    const pushY = (dy / distance) * 20;
+                                    ship2.x += pushX;
+                                    ship2.y += pushY;
+                                    
+                                    if (ship2.health <= 0) {
+                                        this.gameState.players[ship1.playerId].score++;
+                                    }
+                                }
+                            } else if (ship2FrontToShip1 < 12) {
+                                // Only ship2's front hits ship1
+                                if (!ship2.lastRamTime || Date.now() - ship2.lastRamTime > 2000) {
+                                    ship1.health -= 1;
+                                    ship2.lastRamTime = Date.now();
+                                    
+                                    // Push ship1 away
+                                    const pushX = (-dx / distance) * 20;
+                                    const pushY = (-dy / distance) * 20;
+                                    ship1.x += pushX;
+                                    ship1.y += pushY;
+                                    
+                                    if (ship1.health <= 0) {
+                                        this.gameState.players[ship2.playerId].score++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Ship-obstacle collisions
                 for (let ship of this.gameState.ships) {
                     for (let obstacle of this.gameState.obstacles) {
@@ -748,7 +867,6 @@
                 const currentTime = Date.now();
                 
                 for (let ship of this.gameState.ships) {
-                    // Check if ship has waited 5 seconds since spawn and cooldown has passed
                     const timeSinceSpawn = currentTime - ship.spawnTime;
                     const timeSinceLastShot = currentTime - ship.lastShot;
                     
@@ -799,11 +917,9 @@
             render() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                // Draw water background
                 this.ctx.fillStyle = '#0f3460';
                 this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                // Draw obstacles
                 for (let obstacle of this.gameState.obstacles) {
                     this.ctx.save();
                     this.ctx.translate(obstacle.x, obstacle.y);
@@ -833,17 +949,14 @@
                     this.ctx.restore();
                 }
                 
-                // Draw ships
                 for (let ship of this.gameState.ships) {
                     this.ctx.save();
                     this.ctx.translate(ship.x, ship.y);
                     this.ctx.rotate(ship.angle);
                     
-                    // Ship hull (smaller)
                     this.ctx.fillStyle = ship.playerId === 'player' ? '#4169E1' : '#DC143C';
                     this.ctx.fillRect(-10, -5, 20, 10);
                     
-                    // Ship bow (smaller)
                     this.ctx.beginPath();
                     this.ctx.moveTo(10, 0);
                     this.ctx.lineTo(14, -3);
@@ -851,17 +964,14 @@
                     this.ctx.closePath();
                     this.ctx.fill();
                     
-                    // Health indicator
                     const healthRatio = ship.health / ship.maxHealth;
                     this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
                     this.ctx.fillRect(-8, -8, healthRatio * 16, 2);
                     
-                    // Health border
                     this.ctx.strokeStyle = '#000';
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(-8, -8, 16, 2);
                     
-                    // Selection indicator
                     if (ship === this.gameState.selectedShip) {
                         this.ctx.strokeStyle = '#FFD700';
                         this.ctx.lineWidth = 2;
@@ -871,10 +981,8 @@
                     this.ctx.restore();
                 }
                 
-                // Draw cannon aim lines for all player ships
                 for (let ship of this.gameState.ships) {
                     if (ship.playerId === 'player') {
-                        // Red line: Current aim direction (where cannon will fire)
                         this.ctx.strokeStyle = '#FF0000';
                         this.ctx.lineWidth = 2;
                         this.ctx.beginPath();
@@ -885,11 +993,10 @@
                         );
                         this.ctx.stroke();
                         
-                        // Yellow line: Mouse preview for selected ship only
                         if (ship === this.gameState.selectedShip) {
                             this.ctx.strokeStyle = '#FFFF00';
                             this.ctx.lineWidth = 2;
-                            this.ctx.setLineDash([5, 5]); // Dashed line for preview
+                            this.ctx.setLineDash([5, 5]);
                             this.ctx.beginPath();
                             this.ctx.moveTo(ship.x, ship.y);
                             this.ctx.lineTo(
@@ -897,12 +1004,11 @@
                                 ship.y + Math.sin(this.mouseAimAngle) * 50
                             );
                             this.ctx.stroke();
-                            this.ctx.setLineDash([]); // Reset line dash
+                            this.ctx.setLineDash([]);
                         }
                     }
                 }
                 
-                // Draw cannonballs
                 for (let cannonball of this.gameState.cannonballs) {
                     this.ctx.fillStyle = '#1a1a1a';
                     this.ctx.beginPath();
@@ -914,7 +1020,6 @@
                     this.ctx.stroke();
                 }
                 
-                // Draw spawn points
                 this.ctx.fillStyle = 'rgba(65, 105, 225, 0.3)';
                 this.ctx.beginPath();
                 this.ctx.arc(this.gameState.players.player.spawnPoint.x, this.gameState.players.player.spawnPoint.y, 30, 0, Math.PI * 2);
@@ -938,7 +1043,6 @@
             }
         }
         
-        // Initialize game when page loads
         window.addEventListener('load', () => {
             new NavalBattleGame();
         });
