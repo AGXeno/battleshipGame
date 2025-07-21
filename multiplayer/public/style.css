@@ -1,0 +1,115 @@
+body {
+    margin: 0;
+    padding: 0;
+    font-family: Arial, sans-serif;
+    background-color: #001f3f;
+    color: white;
+    overflow: hidden;
+}
+
+.screen {
+    width: 100vw;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.hidden {
+    display: none !important;
+}
+
+h1 {
+    font-size: 48px;
+    margin-bottom: 10px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+h2 {
+    font-size: 24px;
+    margin-bottom: 30px;
+    color: #ffd700;
+}
+
+.menu-options {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.menu-btn {
+    padding: 15px 30px;
+    font-size: 20px;
+    background-color: #ffd700;
+    color: #001f3f;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.menu-btn:hover {
+    background-color: #ffed4e;
+    transform: scale(1.05);
+}
+
+#room-input {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+}
+
+#room-code {
+    padding: 10px;
+    font-size: 18px;
+    border: 2px solid #ffd700;
+    border-radius: 5px;
+    background-color: #003366;
+    color: white;
+}
+
+#room-info {
+    margin-top: 30px;
+    text-align: center;
+}
+
+#room-code-display {
+    font-size: 24px;
+    font-weight: bold;
+    color: #ffd700;
+}
+
+#gameCanvas {
+    border: 2px solid #ffd700;
+    display: block;
+}
+
+#game-ui {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    right: 10px;
+}
+
+.player-info {
+    display: flex;
+    justify-content: space-between;
+    padding: 0 20px;
+}
+
+.player-health {
+    font-size: 20px;
+    font-weight: bold;
+}
+
+#game-status {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 48px;
+    font-weight: bold;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    display: none;
+}
