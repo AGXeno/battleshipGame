@@ -166,32 +166,39 @@
         
         <div id="controlsPanel" class="hidden">
             <div><strong>Controls:</strong></div>
-            <div>• <strong>Left-click:</strong> Select ships</div>
-            <div>• <strong>Right-click:</strong> Set cannon aim</div>
-            <div>• <strong>A/D keys:</strong> Steer left/right</div>
-            <div>• <strong>W/S keys:</strong> Select ships</div>
-            <div>• <strong>Q/E keys:</strong> Decrease/Increase speed</div>
-            <div>• <strong>Speed Slider:</strong> Adjust speed</div>
-            <div>• <strong>Spacebar:</strong> Manual fire (shoot cannon)</div>
-            <div>• <strong>Arrow Left/Right:</strong> Aim cannon</div>
-            <div>• <strong>Arrow Up/Down:</strong> Fine-tune cannon aim</div>
-            <div>• <strong>Tab/Shift+Tab:</strong> Cycle player ships</div>
-            <div>• <strong>Enter:</strong> Select highlighted ship</div>
-            <div>• Red lines show cannon directions</div>
-            <div>• Yellow line shows aim preview</div>
-            <div>• Scroll wheel for fine-tuning</div>
-            <div>• Ships auto-fire every 5 seconds</div>
-            
-            <div class="ship-controls">
+            <div style="margin-top: 10px;">
+                <strong>Keyboard Controls:</strong>
+                <div>• <strong>W/S keys:</strong> Select ships</div>
+                <div>• <strong>A/D keys:</strong> Steer left/right</div>
+                <div>• <strong>Q/E keys:</strong> Decrease/Increase speed</div>
+                <div>• <strong>Arrow Left/Right:</strong> Aim cannon</div>
+                <div>• <strong>Arrow Up/Down:</strong> Fine-tune cannon aim</div>
+                <div>• <strong>Tab/Shift+Tab:</strong> Cycle player ships</div>
+                <div>• <strong>1-5:</strong> Hotkey select ships</div>
+                <div>• <strong>Spacebar/Enter:</strong> Manual fire (shoot cannon)</div>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>Mouse Controls:</strong>
+                <div>• <strong>Left-click:</strong> Cycle/select ships</div>
+                <div>• <strong>Right-click:</strong> Fire cannon</div>
+                <div>• <strong>Mouse move:</strong> Aim cannon (active ship)</div>
+                <div>• <strong>Scroll wheel:</strong> Adjust speed of selected ship</div>
+            </div>
+            <div style="margin-top: 10px;">
+                <strong>Other:</strong>
+                <div>• Red lines show cannon directions</div>
+                <div>• Yellow line shows aim preview</div>
+                <div>• Ships auto-fire every 5 seconds</div>
+                <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
+                    Computer ships (red) are AI controlled
+                </div>
+            </div>
+            <!-- Hidden speed slider for JS compatibility -->
+            <div class="ship-controls" style="display: none;">
                 <label>Speed: </label>
                 <input type="range" id="speedSlider" min="10" max="60" value="25">
                 <span id="speedValue">25</span>
             </div>
-            
-            <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
-                Computer ships (red) are AI controlled
-            </div>
-            
             <button onclick="document.getElementById('controlsPanel').classList.add('hidden')" 
                     style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">
                 Hide Controls
@@ -310,15 +317,21 @@
             
             handleMouseWheel(e) {
                 e.preventDefault();
-                
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                if (playerShips.length > 0) {
+                if (this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
+                    // Adjust speed with scroll wheel
                     if (e.deltaY > 0) {
-                        this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
+                        this.gameState.selectedShip.speed = Math.max(10, this.gameState.selectedShip.speed - 2);
                     } else {
-                        this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
+                        this.gameState.selectedShip.speed = Math.min(60, this.gameState.selectedShip.speed + 2);
                     }
-                    this.selectShipByIndex(playerShips);
+                    // Update speed slider display
+                    const speedSlider = document.getElementById('speedSlider');
+                    const speedValue = document.getElementById('speedValue');
+                    if (speedSlider && speedValue) {
+                        speedSlider.value = Math.round(this.gameState.selectedShip.speed);
+                        speedValue.textContent = Math.round(this.gameState.selectedShip.speed);
+                    }
                 }
             }
             
