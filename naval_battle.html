@@ -172,6 +172,7 @@
             <div>• <strong>W/S keys:</strong> Select ships</div>
             <div>• <strong>Q/E keys:</strong> Decrease/Increase speed</div>
             <div>• <strong>Speed Slider:</strong> Adjust speed</div>
+            <div>• <strong>Spacebar:</strong> Manual fire (shoot cannon)</div>
             <div>• Red lines show cannon directions</div>
             <div>• Yellow line shows aim preview</div>
             <div>• Scroll wheel for fine-tuning</div>
@@ -244,6 +245,10 @@
                 
                 document.addEventListener('keydown', (e) => {
                     this.keys[e.code] = true;
+                    // Manual shooting with spacebar
+                    if (e.code === 'Space') {
+                        this.handleManualShoot();
+                    }
                 });
                 
                 document.addEventListener('keyup', (e) => {
@@ -352,7 +357,8 @@
                     aiTarget: null,
                     aiLastDecision: 0,
                     aiDecisionCooldown: 1000,
-                    aiState: 'patrol'
+                    aiState: 'patrol',
+                    lastManualShot: 0 // Track last manual shot time
                 };
                 
                 this.gameState.ships.push(ship);
@@ -925,6 +931,31 @@
                 }
             }
             
+            handleManualShoot() {
+                if (!this.gameState.gameStarted) return;
+                const ship = this.gameState.selectedShip;
+                if (!ship || ship.playerId !== 'player') return;
+                const currentTime = Date.now();
+                // Manual shot cooldown (separate from auto-fire)
+                if (!ship.lastManualShot) ship.lastManualShot = 0;
+                const manualCooldown = 800; // ms
+                const timeSinceManual = currentTime - ship.lastManualShot;
+                if (timeSinceManual >= manualCooldown) {
+                    const cannonball = {
+                        id: Math.random().toString(36).substr(2, 9),
+                        shooterId: ship.id,
+                        shooterPlayerId: ship.playerId,
+                        x: ship.x + Math.cos(ship.cannonAngle) * 25,
+                        y: ship.y + Math.sin(ship.cannonAngle) * 25,
+                        angle: ship.cannonAngle,
+                        speed: 150,
+                        dead: false
+                    };
+                    this.gameState.cannonballs.push(cannonball);
+                    ship.lastManualShot = currentTime;
+                }
+            }
+            
             updateGameStatus() {
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player').length;
                 const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer').length;
@@ -994,12 +1025,19 @@
                     this.ctx.fillStyle = ship.playerId === 'player' ? '#4169E1' : '#DC143C';
                     this.ctx.fillRect(-10, -5, 20, 10);
                     
+                    // Draw the tip (triangle) for player and computer ships
+                    this.ctx.save();
+                    if (ship.playerId === 'computer') {
+                        // Rotate tip to match cannonAngle
+                        this.ctx.rotate(ship.cannonAngle - ship.angle);
+                    }
                     this.ctx.beginPath();
                     this.ctx.moveTo(10, 0);
                     this.ctx.lineTo(14, -3);
                     this.ctx.lineTo(14, 3);
                     this.ctx.closePath();
                     this.ctx.fill();
+                    this.ctx.restore();
                     
                     const healthRatio = ship.health / ship.maxHealth;
                     this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
@@ -1017,9 +1055,10 @@
                     
                     this.ctx.restore();
                 }
-                
+
+                // Draw cannon aim lines for all ships
                 for (let ship of this.gameState.ships) {
-                    if (ship.playerId === 'player') {
+                    if (ship.playerId === 'player' || ship.playerId === 'computer') {
                         this.ctx.strokeStyle = '#FF0000';
                         this.ctx.lineWidth = 2;
                         this.ctx.beginPath();
@@ -1029,7 +1068,11 @@
                             ship.y + Math.sin(ship.cannonAngle) * 50
                         );
                         this.ctx.stroke();
-                        
+                    }
+                }
+
+                for (let ship of this.gameState.ships) {
+                    if (ship.playerId === 'player') {
                         if (ship === this.gameState.selectedShip) {
                             this.ctx.strokeStyle = '#FFFF00';
                             this.ctx.lineWidth = 2;
