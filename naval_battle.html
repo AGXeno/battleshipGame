@@ -152,7 +152,7 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <canvas id="gameCanvas" width="1000" height="700" tabindex="0" aria-label="Naval Battle Game Canvas"></canvas>
         
         <div id="gameStatus">
             <div class="status neutral">
@@ -173,6 +173,10 @@
             <div>• <strong>Q/E keys:</strong> Decrease/Increase speed</div>
             <div>• <strong>Speed Slider:</strong> Adjust speed</div>
             <div>• <strong>Spacebar:</strong> Manual fire (shoot cannon)</div>
+            <div>• <strong>Arrow Left/Right:</strong> Aim cannon</div>
+            <div>• <strong>Arrow Up/Down:</strong> Fine-tune cannon aim</div>
+            <div>• <strong>Tab/Shift+Tab:</strong> Cycle player ships</div>
+            <div>• <strong>Enter:</strong> Select highlighted ship</div>
             <div>• Red lines show cannon directions</div>
             <div>• Yellow line shows aim preview</div>
             <div>• Scroll wheel for fine-tuning</div>
@@ -223,6 +227,7 @@
                 this.aiSelectedShipIndex = 0;
                 this.aiLastShipSwitch = 0;
                 this.lastNumberPressed = [false, false, false, false, false]; // For 1-5
+                this.tabHighlightIndex = 0; // For Tab/Shift+Tab cycling
                 
                 this.init();
             }
@@ -242,15 +247,41 @@
                 });
                 this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
                 this.canvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
-                
+                // Focus canvas on load for keyboard accessibility
+                window.addEventListener('load', () => {
+                    this.canvas.focus();
+                });
+                // Keyboard controls
                 document.addEventListener('keydown', (e) => {
                     this.keys[e.code] = true;
-                    // Manual shooting with spacebar
-                    if (e.code === 'Space') {
+                    // Manual shooting with spacebar or enter
+                    if (e.code === 'Space' || e.code === 'Enter') {
                         this.handleManualShoot();
                     }
+                    // Tab/Shift+Tab for cycling ships
+                    if (e.code === 'Tab') {
+                        const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
+                        if (playerShips.length > 0) {
+                            if (e.shiftKey) {
+                                this.tabHighlightIndex = (this.tabHighlightIndex - 1 + playerShips.length) % playerShips.length;
+                            } else {
+                                this.tabHighlightIndex = (this.tabHighlightIndex + 1) % playerShips.length;
+                            }
+                            this.selectedShipIndex = this.tabHighlightIndex;
+                            this.selectShipByIndex(playerShips);
+                            e.preventDefault();
+                        }
+                    }
+                    // Enter to select highlighted ship (redundant, but for accessibility)
+                    if (e.code === 'Enter') {
+                        const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
+                        if (playerShips.length > 0) {
+                            this.selectedShipIndex = this.tabHighlightIndex;
+                            this.selectShipByIndex(playerShips);
+                            e.preventDefault();
+                        }
+                    }
                 });
-                
                 document.addEventListener('keyup', (e) => {
                     this.keys[e.code] = false;
                 });
@@ -392,57 +423,31 @@
             
             handleCanvasClick(e) {
                 if (!this.gameState.gameStarted) return;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                
-                for (let i = 0; i < playerShips.length; i++) {
-                    const ship = playerShips[i];
-                    const dx = x - ship.x;
-                    const dy = y - ship.y;
-                    if (Math.sqrt(dx*dx + dy*dy) < 15) {
-                        this.selectedShipIndex = i;
-                        this.selectShipByIndex(playerShips);
-                        break;
-                    }
+                if (playerShips.length > 0) {
+                    this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
+                    this.selectShipByIndex(playerShips);
                 }
             }
-            
             handleCanvasRightClick(e) {
                 if (!this.gameState.gameStarted) return;
                 if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                const ship = this.gameState.selectedShip;
-                const dx = x - ship.x;
-                const dy = y - ship.y;
-                ship.cannonAngle = Math.atan2(dy, dx);
+                this.handleManualShoot();
             }
             
             handleMouseMove(e) {
                 if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
-                
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
                 const scaleY = this.canvas.height / rect.height;
                 const mouseX = (e.clientX - rect.left) * scaleX;
                 const mouseY = (e.clientY - rect.top) * scaleY;
-                
                 const ship = this.gameState.selectedShip;
                 const dx = mouseX - ship.x;
                 const dy = mouseY - ship.y;
-                
                 this.mouseAimAngle = Math.atan2(dy, dx);
+                // Set the cannonAngle to follow the mouse for active ship
+                ship.cannonAngle = this.mouseAimAngle;
             }
             
             updatePlayerControls() {
@@ -494,6 +499,19 @@
                 if (this.keys['KeyD']) {
                     ship.targetRudderAngle = Math.min(Math.PI/4, ship.targetRudderAngle + 0.03);
                 }
+                // Arrow keys for smooth cannon aiming
+                if (this.keys['ArrowLeft']) {
+                    ship.cannonAngle -= 0.08;
+                }
+                if (this.keys['ArrowRight']) {
+                    ship.cannonAngle += 0.08;
+                }
+                if (this.keys['ArrowUp']) {
+                    ship.cannonAngle -= 0.015;
+                }
+                if (this.keys['ArrowDown']) {
+                    ship.cannonAngle += 0.015;
+                }
                 // Update speed slider display
                 const speedSlider = document.getElementById('speedSlider');
                 const speedValue = document.getElementById('speedValue');
@@ -513,6 +531,7 @@
                 if (playerShips.length > 0 && this.selectedShipIndex < playerShips.length) {
                     this.gameState.selectedShip = playerShips[this.selectedShipIndex];
                     this.cannonAngleOffset = 0;
+                    this.tabHighlightIndex = this.selectedShipIndex; // Sync tab highlight
                     const ship = this.gameState.selectedShip;
                     // Update speed slider display
                     const speedSlider = document.getElementById('speedSlider');
@@ -581,36 +600,39 @@
             
             executeAIBehavior(ship) {
                 if (!ship.aiTarget) return;
-                
                 const dx = ship.aiTarget.x - ship.x;
                 const dy = ship.aiTarget.y - ship.y;
                 const angleToTarget = Math.atan2(dy, dx);
-                
+                // Smoothly rotate cannonAngle toward angleToTarget for computer ships
+                if (ship.playerId === 'computer') {
+                    let diff = this.normalizeAngle(angleToTarget - ship.cannonAngle);
+                    const maxStep = 0.07; // radians per frame, adjust for smoothness
+                    if (Math.abs(diff) > maxStep) {
+                        ship.cannonAngle += Math.sign(diff) * maxStep;
+                    } else {
+                        ship.cannonAngle = angleToTarget;
+                    }
+                } else {
+                    ship.cannonAngle = angleToTarget;
+                }
                 switch (ship.aiState) {
                     case 'attack':
-                        ship.cannonAngle = angleToTarget;
                         const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
                         ship.targetRudderAngle = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.5, Math.PI/6);
                         break;
-                        
                     case 'evade':
-                        ship.cannonAngle = angleToTarget;
                         const evadeAngle = angleToTarget + Math.PI;
                         const evadeAngleDiff = this.normalizeAngle(evadeAngle - ship.angle);
                         ship.targetRudderAngle = Math.sign(evadeAngleDiff) * Math.min(Math.abs(evadeAngleDiff) * 0.5, Math.PI/5);
                         break;
-                        
                     case 'patrol':
-                        ship.cannonAngle = angleToTarget;
                         const patrolAngleDiff = this.normalizeAngle(angleToTarget - ship.angle);
                         ship.targetRudderAngle = Math.sign(patrolAngleDiff) * Math.min(Math.abs(patrolAngleDiff) * 0.3, Math.PI/8);
-                        
                         if (Math.random() < 0.05) {
                             ship.targetRudderAngle += (Math.random() - 0.5) * 0.2;
                         }
                         break;
                 }
-                
                 this.avoidObstacles(ship);
             }
             
