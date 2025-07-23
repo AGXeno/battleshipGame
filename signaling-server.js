@@ -33,11 +33,19 @@ io.on('connection', (socket) => {
         const room = rooms.get(roomId);
         room.add(socket.id);
         
+        // Determine if this player is the host (first player in room)
+        const isHost = room.size === 1;
+        
+        // Get existing players in room (for WebRTC connection)
+        const existingPlayers = Array.from(room).filter(id => id !== socket.id);
+        
         // Notify the joining player
         socket.emit('joined-room', {
             roomId: roomId,
             playerId: socket.id,
-            playerCount: room.size
+            playerCount: room.size,
+            isHost: isHost,
+            existingPlayers: existingPlayers
         });
         
         // Notify other players in the room

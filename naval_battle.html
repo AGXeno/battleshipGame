@@ -339,7 +339,12 @@
                     document.getElementById('joinRoomBtn').style.display = 'none';
                     document.getElementById('leaveRoomBtn').style.display = 'inline-block';
                     
-                    if (data.playerCount === 2) {
+                    // If there are existing players and we're not the host, wait for offer
+                    if (data.existingPlayers && data.existingPlayers.length > 0 && !this.isHost) {
+                        this.remotePlayerId = data.existingPlayers[0];
+                    }
+                    
+                    if (data.playerCount === 2 && this.isHost) {
                         this.setupWebRTC();
                     }
                 });
@@ -348,7 +353,10 @@
                     document.getElementById('connectionStatus').textContent = 
                         `In room ${this.roomId} (${data.playerCount}/2 players)${this.isHost ? ' - Host' : ''}`;
                     
-                    if (data.playerCount === 2) {
+                    // Set remote player ID
+                    this.remotePlayerId = data.playerId;
+                    
+                    if (data.playerCount === 2 && this.isHost) {
                         this.setupWebRTC();
                     }
                 });
@@ -437,9 +445,10 @@
                     const offer = await this.peerConnection.createOffer();
                     await this.peerConnection.setLocalDescription(offer);
                     
-                    // Send to other player in room (we'll need to track this)
+                    // Send offer to the specific remote player
                     this.socket.emit('offer', {
                         offer: offer,
+                        to: this.remotePlayerId,
                         roomId: this.roomId
                     });
                 } else {
