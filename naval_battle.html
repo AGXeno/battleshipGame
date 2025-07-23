@@ -219,6 +219,7 @@
                 this.mouseAimAngle = 0;
                 this.aiSelectedShipIndex = 0;
                 this.aiLastShipSwitch = 0;
+                this.lastNumberPressed = [false, false, false, false, false]; // For 1-5
                 
                 this.init();
             }
@@ -436,6 +437,20 @@
             updatePlayerControls() {
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
                 
+                // --- Number key hotkey selection (1-5) ---
+                for (let i = 0; i < 5; i++) {
+                    const key = 'Digit' + (i + 1);
+                    if (this.keys[key] && !this.lastNumberPressed[i]) {
+                        this.lastNumberPressed[i] = true;
+                        if (playerShips.length > i) {
+                            this.selectedShipIndex = i;
+                            this.selectShipByIndex(playerShips);
+                        }
+                    } else if (!this.keys[key]) {
+                        this.lastNumberPressed[i] = false;
+                    }
+                }
+                
                 if (this.keys['KeyW'] && !this.lastWPressed) {
                     this.lastWPressed = true;
                     if (playerShips.length > 0) {
@@ -477,7 +492,7 @@
                     this.gameState.selectedShip = playerShips[this.selectedShipIndex];
                     this.cannonAngleOffset = 0;
                     document.getElementById('selectedShip').textContent = 
-                        `Player Ship ${this.gameState.selectedShip.id.substr(0, 4)} (${this.selectedShipIndex + 1}/${playerShips.length})`;
+                        `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length})`;
                     
                     const degrees = Math.round(this.gameState.selectedShip.targetRudderAngle * 180/Math.PI);
                     document.getElementById('headingSlider').value = degrees;
