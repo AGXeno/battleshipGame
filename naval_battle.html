@@ -170,15 +170,17 @@
             <div>• <strong>Right-click:</strong> Set cannon aim</div>
             <div>• <strong>A/D keys:</strong> Steer left/right</div>
             <div>• <strong>W/S keys:</strong> Select ships</div>
+            <div>• <strong>Q/E keys:</strong> Decrease/Increase speed</div>
+            <div>• <strong>Speed Slider:</strong> Adjust speed</div>
             <div>• Red lines show cannon directions</div>
             <div>• Yellow line shows aim preview</div>
             <div>• Scroll wheel for fine-tuning</div>
             <div>• Ships auto-fire every 5 seconds</div>
             
             <div class="ship-controls">
-                <label>Heading: </label>
-                <input type="range" id="headingSlider" min="-45" max="45" value="0">
-                <span id="headingValue">0°</span>
+                <label>Speed: </label>
+                <input type="range" id="speedSlider" min="10" max="60" value="25">
+                <span id="speedValue">25</span>
             </div>
             
             <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
@@ -250,15 +252,14 @@
             }
             
             setupControls() {
-                const headingSlider = document.getElementById('headingSlider');
-                const headingValue = document.getElementById('headingValue');
+                const speedSlider = document.getElementById('speedSlider');
+                const speedValue = document.getElementById('speedValue');
                 
-                headingSlider.addEventListener('input', (e) => {
+                speedSlider.addEventListener('input', (e) => {
                     const value = parseInt(e.target.value);
-                    headingValue.textContent = value + '°';
-                    
+                    speedValue.textContent = value;
                     if (this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
-                        this.gameState.selectedShip.targetRudderAngle = value * Math.PI/180;
+                        this.gameState.selectedShip.speed = value;
                     }
                 });
                 
@@ -315,14 +316,18 @@
                     gameStarted: false,
                     gameStartTime: null
                 };
-                
                 this.selectedShipIndex = 0;
                 this.generateObstacles();
                 document.getElementById('gameState').textContent = 'Ready to Play';
                 document.getElementById('startBtn').style.display = 'inline-block';
                 document.getElementById('selectedShip').textContent = 'No Ship Selected';
-                document.getElementById('headingSlider').value = 0;
-                document.getElementById('headingValue').textContent = '0°';
+                // Reset speed slider
+                const speedSlider = document.getElementById('speedSlider');
+                const speedValue = document.getElementById('speedValue');
+                if (speedSlider && speedValue) {
+                    speedSlider.value = 25;
+                    speedValue.textContent = '25';
+                }
             }
             
             spawnShip(playerId) {
@@ -337,7 +342,7 @@
                     rudderAngle: 0,
                     targetRudderAngle: 0,
                     cannonAngle: playerId === 'player' ? -45 * Math.PI/180 : 135 * Math.PI/180,
-                    speed: 25,
+                    speed: 25, // default speed
                     health: 3,
                     maxHealth: 3,
                     lastShot: currentTime,
@@ -436,7 +441,6 @@
             
             updatePlayerControls() {
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                
                 // --- Number key hotkey selection (1-5) ---
                 for (let i = 0; i < 5; i++) {
                     const key = 'Digit' + (i + 1);
@@ -450,7 +454,6 @@
                         this.lastNumberPressed[i] = false;
                     }
                 }
-                
                 if (this.keys['KeyW'] && !this.lastWPressed) {
                     this.lastWPressed = true;
                     if (playerShips.length > 0) {
@@ -460,7 +463,6 @@
                 } else if (!this.keys['KeyW']) {
                     this.lastWPressed = false;
                 }
-                
                 if (this.keys['KeyS'] && !this.lastSPressed) {
                     this.lastSPressed = true;
                     if (playerShips.length > 0) {
@@ -470,33 +472,53 @@
                 } else if (!this.keys['KeyS']) {
                     this.lastSPressed = false;
                 }
-                
                 if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
-                
                 const ship = this.gameState.selectedShip;
-                
+                // Q/E speed control
+                if (this.keys['KeyQ']) {
+                    ship.speed = Math.max(10, ship.speed - 0.5);
+                }
+                if (this.keys['KeyE']) {
+                    ship.speed = Math.min(60, ship.speed + 0.5);
+                }
+                // A/D rudder control
                 if (this.keys['KeyA']) {
-                    ship.targetRudderAngle = Math.max(ship.targetRudderAngle - 0.02, -Math.PI/4);
+                    ship.targetRudderAngle = Math.max(-Math.PI/4, ship.targetRudderAngle - 0.03);
                 }
                 if (this.keys['KeyD']) {
-                    ship.targetRudderAngle = Math.min(ship.targetRudderAngle + 0.02, Math.PI/4);
+                    ship.targetRudderAngle = Math.min(Math.PI/4, ship.targetRudderAngle + 0.03);
                 }
-                
-                const degrees = Math.round(ship.targetRudderAngle * 180/Math.PI);
-                document.getElementById('headingSlider').value = degrees;
-                document.getElementById('headingValue').textContent = degrees + '°';
+                // Update speed slider display
+                const speedSlider = document.getElementById('speedSlider');
+                const speedValue = document.getElementById('speedValue');
+                if (speedSlider && speedValue) {
+                    speedSlider.value = Math.round(ship.speed);
+                    speedValue.textContent = Math.round(ship.speed);
+                }
+                // Update selected ship display
+                const selectedShipElem = document.getElementById('selectedShip');
+                if (selectedShipElem) {
+                    selectedShipElem.textContent = 
+                        `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length}) | Speed: ${Math.round(ship.speed)}`;
+                }
             }
             
             selectShipByIndex(playerShips) {
                 if (playerShips.length > 0 && this.selectedShipIndex < playerShips.length) {
                     this.gameState.selectedShip = playerShips[this.selectedShipIndex];
                     this.cannonAngleOffset = 0;
+                    const ship = this.gameState.selectedShip;
+                    // Update speed slider display
+                    const speedSlider = document.getElementById('speedSlider');
+                    const speedValue = document.getElementById('speedValue');
+                    if (speedSlider && speedValue) {
+                        speedSlider.value = Math.round(ship.speed);
+                        speedValue.textContent = Math.round(ship.speed);
+                    }
                     document.getElementById('selectedShip').textContent = 
-                        `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length})`;
-                    
-                    const degrees = Math.round(this.gameState.selectedShip.targetRudderAngle * 180/Math.PI);
-                    document.getElementById('headingSlider').value = degrees;
-                    document.getElementById('headingValue').textContent = degrees + '°';
+                        `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length}) | Speed: ${Math.round(ship.speed)}`;
+                } else {
+                    document.getElementById('selectedShip').textContent = 'No Ship Selected';
                 }
             }
             
