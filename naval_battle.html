@@ -165,33 +165,29 @@
         <button id="controlsToggle">Controls</button>
         
         <div id="controlsPanel" class="hidden">
-            <div><strong>Controls:</strong></div>
+            <div><strong>Controls</strong></div>
             <div style="margin-top: 10px;">
-                <strong>Keyboard Controls:</strong>
-                <div>• <strong>W/S keys:</strong> Select ships</div>
-                <div>• <strong>A/D keys:</strong> Steer left/right</div>
-                <div>• <strong>Q/E keys:</strong> Decrease/Increase speed</div>
-                <div>• <strong>Arrow Left/Right:</strong> Aim cannon</div>
-                <div>• <strong>Arrow Up/Down:</strong> Fine-tune cannon aim</div>
-                <div>• <strong>Tab/Shift+Tab:</strong> Cycle player ships</div>
-                <div>• <strong>1-5:</strong> Hotkey select ships</div>
-                <div>• <strong>Spacebar/Enter:</strong> Manual fire (shoot cannon)</div>
+                <strong>Keyboard:</strong><br>
+                W/S: Speed up/down<br>
+                A/D: Steer<br>
+                ←/→: Aim cannon<br>
+                ↑/↓: Fine aim<br>
+                Q/E: Cycle ships<br>
+                1–5: Select ship<br>
+                Space/Enter: Fire (active ship, cooldown)
             </div>
             <div style="margin-top: 10px;">
-                <strong>Mouse Controls:</strong>
-                <div>• <strong>Left-click:</strong> Cycle/select ships</div>
-                <div>• <strong>Right-click:</strong> Fire cannon</div>
-                <div>• <strong>Mouse move:</strong> Aim cannon (active ship)</div>
-                <div>• <strong>Scroll wheel:</strong> Adjust speed of selected ship</div>
+                <strong>Mouse:</strong><br>
+                Left-click: Select ship<br>
+                Right-click: Set cannon angle<br>
+                Move: Aim cannon (active ship)<br>
+                Scroll: Adjust speed (active ship)
             </div>
             <div style="margin-top: 10px;">
-                <strong>Other:</strong>
-                <div>• Red lines show cannon directions</div>
-                <div>• Yellow line shows aim preview</div>
-                <div>• Ships auto-fire every 5 seconds</div>
-                <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
-                    Computer ships (red) are AI controlled
-                </div>
+                <strong>Other:</strong><br>
+                Red = cannon direction<br>
+                Yellow = aim preview<br>
+                Inactive ships auto-fire
             </div>
             <!-- Hidden speed slider for JS compatibility -->
             <div class="ship-controls" style="display: none;">
@@ -247,7 +243,11 @@
             }
             
             setupCanvas() {
-                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                this.canvas.addEventListener('click', (e) => {
+                    this.handleCanvasClick(e);
+                    // Refocus canvas after click
+                    this.canvas.focus();
+                });
                 this.canvas.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     this.handleCanvasRightClick(e);
@@ -259,37 +259,14 @@
                     this.canvas.focus();
                 });
                 // Keyboard controls
-                document.addEventListener('keydown', (e) => {
+                window.addEventListener('keydown', (e) => {
                     this.keys[e.code] = true;
                     // Manual shooting with spacebar or enter
                     if (e.code === 'Space' || e.code === 'Enter') {
                         this.handleManualShoot();
                     }
-                    // Tab/Shift+Tab for cycling ships
-                    if (e.code === 'Tab') {
-                        const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                        if (playerShips.length > 0) {
-                            if (e.shiftKey) {
-                                this.tabHighlightIndex = (this.tabHighlightIndex - 1 + playerShips.length) % playerShips.length;
-                            } else {
-                                this.tabHighlightIndex = (this.tabHighlightIndex + 1) % playerShips.length;
-                            }
-                            this.selectedShipIndex = this.tabHighlightIndex;
-                            this.selectShipByIndex(playerShips);
-                            e.preventDefault();
-                        }
-                    }
-                    // Enter to select highlighted ship (redundant, but for accessibility)
-                    if (e.code === 'Enter') {
-                        const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                        if (playerShips.length > 0) {
-                            this.selectedShipIndex = this.tabHighlightIndex;
-                            this.selectShipByIndex(playerShips);
-                            e.preventDefault();
-                        }
-                    }
                 });
-                document.addEventListener('keyup', (e) => {
+                window.addEventListener('keyup', (e) => {
                     this.keys[e.code] = false;
                 });
             }
@@ -394,7 +371,7 @@
                     speed: 25, // default speed
                     health: 3,
                     maxHealth: 3,
-                    lastShot: currentTime,
+                    lastShot: null,
                     shotCooldown: 5000,
                     spawnTime: currentTime,
                     lastRamTime: 0, // Track last ramming time to prevent spam
@@ -436,16 +413,43 @@
             
             handleCanvasClick(e) {
                 if (!this.gameState.gameStarted) return;
+                // Only select ship under cursor
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                if (playerShips.length > 0) {
-                    this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
-                    this.selectShipByIndex(playerShips);
+                let found = false;
+                for (let i = 0; i < playerShips.length; i++) {
+                    const ship = playerShips[i];
+                    const dx = mouseX - ship.x;
+                    const dy = mouseY - ship.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 18) {
+                        this.selectedShipIndex = i;
+                        this.selectShipByIndex(playerShips);
+                        found = true;
+                        break;
+                    }
+                }
+                if (!found) {
+                    this.gameState.selectedShip = null;
+                    document.getElementById('selectedShip').textContent = 'No Ship Selected';
                 }
             }
             handleCanvasRightClick(e) {
                 if (!this.gameState.gameStarted) return;
                 if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
-                this.handleManualShoot();
+                // Set cannon angle to mouse position (do not shoot)
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
+                const ship = this.gameState.selectedShip;
+                const dx = mouseX - ship.x;
+                const dy = mouseY - ship.y;
+                ship.cannonAngle = Math.atan2(dy, dx);
             }
             
             handleMouseMove(e) {
@@ -465,78 +469,86 @@
             
             updatePlayerControls() {
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                // --- Number key hotkey selection (1-5) ---
+                // --- 1-5 hotkey selection ---
                 for (let i = 0; i < 5; i++) {
                     const key = 'Digit' + (i + 1);
-                    if (this.keys[key] && !this.lastNumberPressed[i]) {
+                    if (this.keys[key] && !this.lastNumberPressed?.[i]) {
                         this.lastNumberPressed[i] = true;
                         if (playerShips.length > i) {
                             this.selectedShipIndex = i;
                             this.selectShipByIndex(playerShips);
                         }
                     } else if (!this.keys[key]) {
-                        this.lastNumberPressed[i] = false;
+                        if (this.lastNumberPressed) this.lastNumberPressed[i] = false;
                     }
                 }
-                if (this.keys['KeyW'] && !this.lastWPressed) {
-                    this.lastWPressed = true;
-                    if (playerShips.length > 0) {
-                        this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
-                        this.selectShipByIndex(playerShips);
-                    }
-                } else if (!this.keys['KeyW']) {
-                    this.lastWPressed = false;
-                }
-                if (this.keys['KeyS'] && !this.lastSPressed) {
-                    this.lastSPressed = true;
-                    if (playerShips.length > 0) {
-                        this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
-                        this.selectShipByIndex(playerShips);
-                    }
-                } else if (!this.keys['KeyS']) {
-                    this.lastSPressed = false;
-                }
-                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
-                const ship = this.gameState.selectedShip;
-                // Q/E speed control
+                // --- Q/E keys to cycle ships ---
                 if (this.keys['KeyQ']) {
-                    ship.speed = Math.max(10, ship.speed - 0.5);
+                    if (!this.lastQPressed) {
+                        this.lastQPressed = true;
+                        if (playerShips.length > 0) {
+                            this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
+                            this.selectShipByIndex(playerShips);
+                        }
+                    }
+                } else {
+                    this.lastQPressed = false;
                 }
                 if (this.keys['KeyE']) {
-                    ship.speed = Math.min(60, ship.speed + 0.5);
+                    if (!this.lastEPressed) {
+                        this.lastEPressed = true;
+                        if (playerShips.length > 0) {
+                            this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
+                            this.selectShipByIndex(playerShips);
+                        }
+                    }
+                } else {
+                    this.lastEPressed = false;
                 }
-                // A/D rudder control
-                if (this.keys['KeyA']) {
-                    ship.targetRudderAngle = Math.max(-Math.PI/4, ship.targetRudderAngle - 0.03);
-                }
-                if (this.keys['KeyD']) {
-                    ship.targetRudderAngle = Math.min(Math.PI/4, ship.targetRudderAngle + 0.03);
-                }
-                // Arrow keys for smooth cannon aiming
-                if (this.keys['ArrowLeft']) {
-                    ship.cannonAngle -= 0.08;
-                }
-                if (this.keys['ArrowRight']) {
-                    ship.cannonAngle += 0.08;
-                }
-                if (this.keys['ArrowUp']) {
-                    ship.cannonAngle -= 0.015;
-                }
-                if (this.keys['ArrowDown']) {
-                    ship.cannonAngle += 0.015;
-                }
-                // Update speed slider display
-                const speedSlider = document.getElementById('speedSlider');
-                const speedValue = document.getElementById('speedValue');
-                if (speedSlider && speedValue) {
-                    speedSlider.value = Math.round(ship.speed);
-                    speedValue.textContent = Math.round(ship.speed);
-                }
-                // Update selected ship display
-                const selectedShipElem = document.getElementById('selectedShip');
-                if (selectedShipElem) {
-                    selectedShipElem.textContent = 
-                        `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length}) | Speed: ${Math.round(ship.speed)}`;
+                // --- W/S keys to change speed ---
+                if (this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
+                    const ship = this.gameState.selectedShip;
+                    if (this.keys['KeyW']) {
+                        ship.speed = Math.min(60, ship.speed + 0.5);
+                    }
+                    if (this.keys['KeyS']) {
+                        ship.speed = Math.max(10, ship.speed - 0.5);
+                    }
+                    // --- A/D keys to steer left/right ---
+                    if (this.keys['KeyA']) {
+                        ship.targetRudderAngle = Math.max(-Math.PI/4, ship.targetRudderAngle - 0.03);
+                    } else if (this.keys['KeyD']) {
+                        ship.targetRudderAngle = Math.min(Math.PI/4, ship.targetRudderAngle + 0.03);
+                    } else {
+                        // Return rudder to center if neither A nor D is pressed
+                        ship.targetRudderAngle = 0;
+                    }
+                    // --- Arrow keys for cannon aiming ---
+                    if (this.keys['ArrowLeft']) {
+                        ship.cannonAngle -= 0.08;
+                    }
+                    if (this.keys['ArrowRight']) {
+                        ship.cannonAngle += 0.08;
+                    }
+                    if (this.keys['ArrowUp']) {
+                        ship.cannonAngle -= 0.015;
+                    }
+                    if (this.keys['ArrowDown']) {
+                        ship.cannonAngle += 0.015;
+                    }
+                    // Update speed slider display
+                    const speedSlider = document.getElementById('speedSlider');
+                    const speedValue = document.getElementById('speedValue');
+                    if (speedSlider && speedValue) {
+                        speedSlider.value = Math.round(ship.speed);
+                        speedValue.textContent = Math.round(ship.speed);
+                    }
+                    // Update selected ship display
+                    const selectedShipElem = document.getElementById('selectedShip');
+                    if (selectedShipElem) {
+                        selectedShipElem.textContent = 
+                            `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length}) | Speed: ${Math.round(ship.speed)}`;
+                    }
                 }
             }
             
@@ -555,6 +567,8 @@
                     }
                     document.getElementById('selectedShip').textContent = 
                         `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length}) | Speed: ${Math.round(ship.speed)}`;
+                    // Refocus canvas after selecting a ship
+                    this.canvas.focus();
                 } else {
                     document.getElementById('selectedShip').textContent = 'No Ship Selected';
                 }
@@ -864,9 +878,12 @@
                         const dx = ship.x - obstacle.x;
                         const dy = ship.y - obstacle.y;
                         const distance = Math.sqrt(dx*dx + dy*dy);
-                        
                         if (distance < obstacle.radius + 12) {
                             ship.health -= 0.1;
+                            // Set speed to 0 when crashing into islands/icebergs
+                            if (obstacle.type === 'island' || obstacle.type === 'iceberg') {
+                                ship.speed = 0;
+                            }
                             const pushX = (dx / distance) * 15;
                             const pushY = (dy / distance) * 15;
                             ship.x += pushX;
@@ -943,12 +960,15 @@
             
             handleShooting() {
                 const currentTime = Date.now();
-                
+                const selectedShip = this.gameState.selectedShip;
                 for (let ship of this.gameState.ships) {
+                    // Only auto-fire if NOT the selected player ship
+                    if (ship.playerId === 'player' && selectedShip && ship.id === selectedShip.id) {
+                        continue; // skip auto-fire for active player ship
+                    }
                     const timeSinceSpawn = currentTime - ship.spawnTime;
                     const timeSinceLastShot = currentTime - ship.lastShot;
-                    
-                    if (timeSinceSpawn >= 5000 && timeSinceLastShot >= ship.shotCooldown) {
+                    if (timeSinceSpawn >= ship.shotCooldown && timeSinceLastShot >= ship.shotCooldown) {
                         const cannonball = {
                             id: Math.random().toString(36).substr(2, 9),
                             shooterId: ship.id,
@@ -959,7 +979,6 @@
                             speed: 150,
                             dead: false
                         };
-                        
                         this.gameState.cannonballs.push(cannonball);
                         ship.lastShot = currentTime;
                     }
@@ -971,11 +990,9 @@
                 const ship = this.gameState.selectedShip;
                 if (!ship || ship.playerId !== 'player') return;
                 const currentTime = Date.now();
-                // Manual shot cooldown (separate from auto-fire)
-                if (!ship.lastManualShot) ship.lastManualShot = 0;
-                const manualCooldown = 800; // ms
-                const timeSinceManual = currentTime - ship.lastManualShot;
-                if (timeSinceManual >= manualCooldown) {
+                console.log('Manual shoot triggered', ship);
+                // Allow firing if lastShot is null (never fired) or cooldown has passed
+                if (ship.lastShot === null || (currentTime - ship.lastShot) >= ship.shotCooldown) {
                     const cannonball = {
                         id: Math.random().toString(36).substr(2, 9),
                         shooterId: ship.id,
@@ -987,7 +1004,7 @@
                         dead: false
                     };
                     this.gameState.cannonballs.push(cannonball);
-                    ship.lastManualShot = currentTime;
+                    ship.lastShot = currentTime;
                 }
             }
             
