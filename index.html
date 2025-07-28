@@ -164,6 +164,10 @@
             🌐 Multiplayer
         </button>
         
+        <button class="menu-button" onclick="showGameplayPreview()">
+            🎬 Gameplay Preview
+        </button>
+        
         <button class="menu-button" onclick="showControls()">
             🎯 Controls
         </button>
@@ -227,6 +231,11 @@
             } else {
                 alert('Please enter a room name');
             }
+        }
+        
+        function showGameplayPreview() {
+            // Redirect to gameplay preview (AI vs AI demo)
+            window.location.href = '/naval_battle_demo.html';
         }
         
         function showControls() {
