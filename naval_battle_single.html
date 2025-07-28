@@ -49,7 +49,7 @@
             color: white;
         }
         
-        #multiplayerControls {
+        #singlePlayerControls {
             position: absolute;
             top: 10px;
             left: 50%;
@@ -61,20 +61,6 @@
             text-align: center;
         }
         
-        #roomInput {
-            padding: 8px;
-            margin: 5px;
-            border: none;
-            border-radius: 4px;
-            background: #333;
-            color: white;
-        }
-        
-        #connectionStatus {
-            font-size: 12px;
-            margin-top: 5px;
-            color: #ccc;
-        }
         
         #controlsToggle {
             position: absolute;
@@ -181,10 +167,9 @@
         
         <canvas id="gameCanvas" width="1000" height="700"></canvas>
         
-        <div id="multiplayerControls">
+        <div id="singlePlayerControls">
             <div><strong>Single Player</strong></div>
             <button id="menuBtn" onclick="window.location.href='/'">← Main Menu</button>
-            <div id="connectionStatus">Single Player Mode</div>
         </div>
         
         <div id="gameStatus">
