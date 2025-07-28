@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Naval Battle - Multiplayer</title>
+    <title>Naval Battle - Single Player</title>
     <style>
         body {
             margin: 0;
@@ -182,11 +182,9 @@
         <canvas id="gameCanvas" width="1000" height="700"></canvas>
         
         <div id="multiplayerControls">
-            <div><strong>Multiplayer</strong></div>
-            <input type="text" id="roomInput" placeholder="Enter Room ID" value="room1">
-            <button id="joinRoomBtn">Join Room</button>
-            <button id="leaveRoomBtn" style="display: none;">Leave Room</button>
-            <div id="connectionStatus">Not connected</div>
+            <div><strong>Single Player</strong></div>
+            <button id="menuBtn" onclick="window.location.href='/'">← Main Menu</button>
+            <div id="connectionStatus">Single Player Mode</div>
         </div>
         
         <div id="gameStatus">
