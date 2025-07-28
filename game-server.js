@@ -393,7 +393,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3002;
 const HOST = process.env.HOST || '0.0.0.0'; // Accept connections from any IP
 
 server.listen(PORT, HOST, () => {

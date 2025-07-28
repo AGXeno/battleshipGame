@@ -21,7 +21,7 @@ server.stderr.on('data', (data) => {
 // Wait a moment for server to start, then start tunnel
 setTimeout(() => {
     console.log('\n2️⃣ Creating public tunnel...');
-    const tunnel = spawn('lt', ['--port', '3001'], {
+    const tunnel = spawn('lt', ['--port', '3002'], {
         stdio: 'pipe'
     });
 
