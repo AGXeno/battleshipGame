@@ -223,6 +223,7 @@
                 this.setupControls();
                 this.setupSocket();
                 this.gameLoop();
+                this.checkUrlParams();
             }
             
             setupCanvas() {
@@ -333,6 +334,28 @@
                 document.getElementById('joinRoomBtn').style.display = 'inline-block';
                 document.getElementById('leaveRoomBtn').style.display = 'none';
                 document.getElementById('startBtn').style.display = 'none';
+            }
+            
+            checkUrlParams() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const room = urlParams.get('room');
+                const isHost = urlParams.get('host') === 'true';
+                
+                if (room) {
+                    document.getElementById('roomInput').value = room;
+                    // Auto-join after a short delay to ensure socket is ready
+                    setTimeout(() => {
+                        this.joinRoom();
+                        if (isHost) {
+                            // Auto-start game after joining if host
+                            setTimeout(() => {
+                                if (this.roomId) {
+                                    this.startGame();
+                                }
+                            }, 1000);
+                        }
+                    }, 500);
+                }
             }
             
             startGame() {

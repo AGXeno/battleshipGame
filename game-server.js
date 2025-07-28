@@ -99,7 +99,7 @@ class GameRoom {
     spawnShip(ownerId, team, spawnPoint) {
         const angle = team === 'team1' ? -45 * Math.PI/180 : 135 * Math.PI/180;
         const ship = {
-            id: `ship_${this.nextShipId++}`,
+            id: `ship_${this.gameState.nextShipId++}`,
             ownerId: ownerId,
             team: team,
             x: spawnPoint.x + (Math.random() - 0.5) * 60,
@@ -201,7 +201,7 @@ class GameRoom {
 
     fireCannonball(ship) {
         const cannonball = {
-            id: `cannonball_${this.nextCannonballId++}`,
+            id: `cannonball_${this.gameState.nextCannonballId++}`,
             shooterId: ship.id,
             shooterTeam: ship.team,
             x: ship.x + Math.cos(ship.cannonAngle) * 25,

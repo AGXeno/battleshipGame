@@ -2,7 +2,10 @@
   "name": "naval-battle-signaling-server",
   "version": "1.0.0",
   "description": "WebRTC signaling server for Naval Battle game",
-  "main": "signaling-server.js",
+  "main": "game-server.js",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "scripts": {
     "start": "node game-server.js",
     "start:public": "node start-public.js",
@@ -12,7 +15,8 @@
   },
   "dependencies": {
     "express": "^4.18.2",
-    "socket.io": "^4.6.1"
+    "socket.io": "^4.6.1",
+    "socket.io-client": "^4.8.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
