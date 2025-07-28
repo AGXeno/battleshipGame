@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Naval Battle - Single Player</title>
+    <title>Naval Battle - Multiplayer</title>
     <style>
         body {
             margin: 0;
@@ -47,6 +47,33 @@
             top: 10px;
             right: 10px;
             color: white;
+        }
+        
+        #multiplayerControls {
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            color: white;
+            text-align: center;
+        }
+        
+        #roomInput {
+            padding: 8px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #333;
+            color: white;
+        }
+        
+        #connectionStatus {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #ccc;
         }
         
         #controlsToggle {
@@ -152,7 +179,15 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas" width="1000" height="700" tabindex="0" aria-label="Naval Battle Game Canvas"></canvas>
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        
+        <div id="multiplayerControls">
+            <div><strong>Multiplayer</strong></div>
+            <input type="text" id="roomInput" placeholder="Enter Room ID" value="room1">
+            <button id="joinRoomBtn">Join Room</button>
+            <button id="leaveRoomBtn" style="display: none;">Leave Room</button>
+            <div id="connectionStatus">Not connected</div>
+        </div>
         
         <div id="gameStatus">
             <div class="status neutral">
@@ -165,36 +200,26 @@
         <button id="controlsToggle">Controls</button>
         
         <div id="controlsPanel" class="hidden">
-            <div><strong>Controls</strong></div>
-            <div style="margin-top: 10px;">
-                <strong>Keyboard:</strong><br>
-                W/S: Speed up/down<br>
-                A/D: Steer<br>
-                ←/→: Aim cannon<br>
-                ↑/↓: Fine aim<br>
-                Q/E: Cycle ships<br>
-                1–5: Select ship<br>
-                Space/Enter: Fire (active ship, cooldown)
+            <div><strong>Controls:</strong></div>
+            <div>• <strong>Left-click:</strong> Select ships</div>
+            <div>• <strong>Right-click:</strong> Set cannon aim</div>
+            <div>• <strong>A/D keys:</strong> Steer left/right</div>
+            <div>• <strong>W/S keys:</strong> Select ships</div>
+            <div>• Red lines show cannon directions</div>
+            <div>• Yellow line shows aim preview</div>
+            <div>• Scroll wheel for fine-tuning</div>
+            <div>• Ships auto-fire every 5 seconds</div>
+            
+            <div class="ship-controls">
+                <label>Heading: </label>
+                <input type="range" id="headingSlider" min="-45" max="45" value="0">
+                <span id="headingValue">0°</span>
             </div>
-            <div style="margin-top: 10px;">
-                <strong>Mouse:</strong><br>
-                Left-click: Select ship<br>
-                Right-click: Set cannon angle<br>
-                Move: Aim cannon (active ship)<br>
-                Scroll: Adjust speed (active ship)
+            
+            <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
+                Computer ships (red) are AI controlled
             </div>
-            <div style="margin-top: 10px;">
-                <strong>Other:</strong><br>
-                Red = cannon direction<br>
-                Yellow = aim preview<br>
-                Inactive ships auto-fire
-            </div>
-            <!-- Hidden speed slider for JS compatibility -->
-            <div class="ship-controls" style="display: none;">
-                <label>Speed: </label>
-                <input type="range" id="speedSlider" min="10" max="60" value="25">
-                <span id="speedValue">25</span>
-            </div>
+            
             <button onclick="document.getElementById('controlsPanel').classList.add('hidden')" 
                     style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">
                 Hide Controls
@@ -202,6 +227,7 @@
         </div>
     </div>
 
+    <script src="/socket.io/socket.io.js"></script>
     <script>
         class NavalBattleGame {
             constructor() {
@@ -229,8 +255,16 @@
                 this.mouseAimAngle = 0;
                 this.aiSelectedShipIndex = 0;
                 this.aiLastShipSwitch = 0;
-                this.lastNumberPressed = [false, false, false, false, false]; // For 1-5
-                this.tabHighlightIndex = 0; // For Tab/Shift+Tab cycling
+                
+                // Multiplayer properties
+                this.socket = null;
+                this.isMultiplayer = false;
+                this.roomId = null;
+                this.playerId = null;
+                this.isHost = false;
+                this.peerConnection = null;
+                this.dataChannel = null;
+                this.remotePlayerId = null;
                 
                 this.init();
             }
@@ -238,48 +272,39 @@
             init() {
                 this.setupCanvas();
                 this.setupControls();
+                this.setupMultiplayer();
                 this.generateObstacles();
                 this.gameLoop();
             }
             
             setupCanvas() {
-                this.canvas.addEventListener('click', (e) => {
-                    this.handleCanvasClick(e);
-                    // Refocus canvas after click
-                    this.canvas.focus();
-                });
+                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
                 this.canvas.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
                     this.handleCanvasRightClick(e);
                 });
                 this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
                 this.canvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
-                // Focus canvas on load for keyboard accessibility
-                window.addEventListener('load', () => {
-                    this.canvas.focus();
-                });
-                // Keyboard controls
-                window.addEventListener('keydown', (e) => {
+                
+                document.addEventListener('keydown', (e) => {
                     this.keys[e.code] = true;
-                    // Manual shooting with spacebar or enter
-                    if (e.code === 'Space' || e.code === 'Enter') {
-                        this.handleManualShoot();
-                    }
                 });
-                window.addEventListener('keyup', (e) => {
+                
+                document.addEventListener('keyup', (e) => {
                     this.keys[e.code] = false;
                 });
             }
             
             setupControls() {
-                const speedSlider = document.getElementById('speedSlider');
-                const speedValue = document.getElementById('speedValue');
+                const headingSlider = document.getElementById('headingSlider');
+                const headingValue = document.getElementById('headingValue');
                 
-                speedSlider.addEventListener('input', (e) => {
+                headingSlider.addEventListener('input', (e) => {
                     const value = parseInt(e.target.value);
-                    speedValue.textContent = value;
+                    headingValue.textContent = value + '°';
+                    
                     if (this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
-                        this.gameState.selectedShip.speed = value;
+                        this.gameState.selectedShip.targetRudderAngle = value * Math.PI/180;
                     }
                 });
                 
@@ -292,38 +317,319 @@
                 });
             }
             
+            setupMultiplayer() {
+                this.socket = io();
+                
+                document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
+                document.getElementById('leaveRoomBtn').addEventListener('click', () => this.leaveRoom());
+                
+                this.socket.on('connect', () => {
+                    console.log('Connected to server');
+                    document.getElementById('connectionStatus').textContent = 'Connected to server';
+                });
+                
+                this.socket.on('joined-room', (data) => {
+                    this.isMultiplayer = true;
+                    this.roomId = data.roomId;
+                    this.playerId = data.playerId;
+                    this.isHost = data.isHost;
+                    
+                    document.getElementById('connectionStatus').textContent = 
+                        `In room ${data.roomId} (${data.playerCount}/2 players)${this.isHost ? ' - Host' : ''}`;
+                    document.getElementById('joinRoomBtn').style.display = 'none';
+                    document.getElementById('leaveRoomBtn').style.display = 'inline-block';
+                    
+                    // If there are existing players and we're not the host, wait for offer
+                    if (data.existingPlayers && data.existingPlayers.length > 0 && !this.isHost) {
+                        this.remotePlayerId = data.existingPlayers[0];
+                    }
+                    
+                    if (data.playerCount === 2 && this.isHost) {
+                        this.setupWebRTC();
+                    }
+                });
+                
+                this.socket.on('player-joined', (data) => {
+                    document.getElementById('connectionStatus').textContent = 
+                        `In room ${this.roomId} (${data.playerCount}/2 players)${this.isHost ? ' - Host' : ''}`;
+                    
+                    // Set remote player ID
+                    this.remotePlayerId = data.playerId;
+                    
+                    if (data.playerCount === 2 && this.isHost) {
+                        this.setupWebRTC();
+                    }
+                });
+                
+                this.socket.on('player-left', (data) => {
+                    document.getElementById('connectionStatus').textContent = 
+                        `In room ${this.roomId} (${data.playerCount}/2 players)${this.isHost ? ' - Host' : ''}`;
+                    
+                    if (this.peerConnection) {
+                        this.peerConnection.close();
+                        this.peerConnection = null;
+                        this.dataChannel = null;
+                    }
+                });
+                
+                // WebRTC signaling
+                this.socket.on('offer', async (data) => {
+                    await this.handleOffer(data.offer, data.from);
+                });
+                
+                this.socket.on('answer', async (data) => {
+                    await this.handleAnswer(data.answer);
+                });
+                
+                this.socket.on('ice-candidate', async (data) => {
+                    await this.handleIceCandidate(data.candidate);
+                });
+            }
+            
+            joinRoom() {
+                const roomId = document.getElementById('roomInput').value.trim();
+                if (roomId) {
+                    this.socket.emit('join-room', roomId);
+                }
+            }
+            
+            leaveRoom() {
+                if (this.socket) {
+                    this.socket.disconnect();
+                    this.socket = io();
+                    this.setupMultiplayer();
+                }
+                
+                this.isMultiplayer = false;
+                this.roomId = null;
+                this.playerId = null;
+                this.isHost = false;
+                
+                if (this.peerConnection) {
+                    this.peerConnection.close();
+                    this.peerConnection = null;
+                    this.dataChannel = null;
+                }
+                
+                document.getElementById('connectionStatus').textContent = 'Not connected';
+                document.getElementById('joinRoomBtn').style.display = 'inline-block';
+                document.getElementById('leaveRoomBtn').style.display = 'none';
+            }
+            
+            async setupWebRTC() {
+                const configuration = {
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' }
+                    ]
+                };
+                
+                this.peerConnection = new RTCPeerConnection(configuration);
+                
+                // Set up ICE candidate handling
+                this.peerConnection.onicecandidate = (event) => {
+                    if (event.candidate) {
+                        this.socket.emit('ice-candidate', {
+                            candidate: event.candidate,
+                            to: this.remotePlayerId,
+                            roomId: this.roomId
+                        });
+                    }
+                };
+                
+                // Set up data channel
+                if (this.isHost) {
+                    this.dataChannel = this.peerConnection.createDataChannel('gameData');
+                    this.setupDataChannel();
+                    
+                    // Create and send offer
+                    const offer = await this.peerConnection.createOffer();
+                    await this.peerConnection.setLocalDescription(offer);
+                    
+                    // Send offer to the specific remote player
+                    this.socket.emit('offer', {
+                        offer: offer,
+                        to: this.remotePlayerId,
+                        roomId: this.roomId
+                    });
+                } else {
+                    this.peerConnection.ondatachannel = (event) => {
+                        this.dataChannel = event.channel;
+                        this.setupDataChannel();
+                    };
+                }
+            }
+            
+            setupDataChannel() {
+                this.dataChannel.onopen = () => {
+                    console.log('Data channel opened');
+                    document.getElementById('connectionStatus').textContent = 
+                        `Connected to peer in room ${this.roomId}`;
+                };
+                
+                this.dataChannel.onmessage = (event) => {
+                    const data = JSON.parse(event.data);
+                    this.handleMultiplayerMessage(data);
+                };
+            }
+            
+            async handleOffer(offer, fromId) {
+                this.remotePlayerId = fromId;
+                await this.peerConnection.setRemoteDescription(offer);
+                
+                const answer = await this.peerConnection.createAnswer();
+                await this.peerConnection.setLocalDescription(answer);
+                
+                this.socket.emit('answer', {
+                    answer: answer,
+                    to: fromId
+                });
+            }
+            
+            async handleAnswer(answer) {
+                await this.peerConnection.setRemoteDescription(answer);
+            }
+            
+            async handleIceCandidate(candidate) {
+                await this.peerConnection.addIceCandidate(candidate);
+            }
+            
+            sendGameUpdate(type, data) {
+                if (this.dataChannel && this.dataChannel.readyState === 'open') {
+                    this.dataChannel.send(JSON.stringify({
+                        type: type,
+                        data: data,
+                        timestamp: Date.now()
+                    }));
+                }
+            }
+            
+            handleMultiplayerMessage(message) {
+                switch (message.type) {
+                    case 'game-state':
+                        // Sync game state from remote player
+                        this.syncGameState(message.data);
+                        break;
+                    case 'ship-action':
+                        // Handle remote player ship actions
+                        this.handleRemoteShipAction(message.data);
+                        break;
+                    case 'ship-spawn':
+                        // Handle remote ship spawn
+                        this.handleRemoteShipSpawn(message.data);
+                        break;
+                    case 'ship-control':
+                        // Handle remote ship control
+                        this.handleRemoteShipControl(message.data);
+                        break;
+                    case 'game-start':
+                        // Handle game start from host
+                        if (!this.isHost) {
+                            this.startMultiplayerGame();
+                        }
+                        break;
+                }
+            }
+            
+            handleRemoteShipSpawn(shipData) {
+                // Add remote player's ship to our game state
+                const existingShip = this.gameState.ships.find(s => s.id === shipData.id);
+                if (!existingShip) {
+                    this.gameState.ships.push(shipData);
+                    this.gameState.players[shipData.playerId].shipCount++;
+                }
+            }
+            
+            handleRemoteShipControl(controlData) {
+                const ship = this.gameState.ships.find(s => s.id === controlData.shipId);
+                if (ship) {
+                    ship.targetRudderAngle = controlData.targetRudderAngle;
+                    ship.cannonAngle = controlData.cannonAngle;
+                }
+            }
+            
+            syncGameState(remoteState) {
+                // Update remote player's ships and actions
+                // This is a simplified sync - in practice you'd want more sophisticated state management
+                if (remoteState.ships) {
+                    const remoteShips = remoteState.ships.filter(ship => ship.playerId !== this.getLocalPlayerId());
+                    const localShips = this.gameState.ships.filter(ship => ship.playerId === this.getLocalPlayerId());
+                    this.gameState.ships = [...localShips, ...remoteShips];
+                }
+            }
+            
+            getLocalPlayerId() {
+                return this.isHost ? 'player' : 'computer';
+            }
+            
+            getRemotePlayerId() {
+                return this.isHost ? 'computer' : 'player';
+            }
+            
             handleMouseWheel(e) {
                 e.preventDefault();
+                
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                if (this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
-                    // Adjust speed with scroll wheel
+                if (playerShips.length > 0) {
                     if (e.deltaY > 0) {
-                        this.gameState.selectedShip.speed = Math.max(10, this.gameState.selectedShip.speed - 2);
+                        this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
                     } else {
-                        this.gameState.selectedShip.speed = Math.min(60, this.gameState.selectedShip.speed + 2);
+                        this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
                     }
-                    // Update speed slider display
-                    const speedSlider = document.getElementById('speedSlider');
-                    const speedValue = document.getElementById('speedValue');
-                    if (speedSlider && speedValue) {
-                        speedSlider.value = Math.round(this.gameState.selectedShip.speed);
-                        speedValue.textContent = Math.round(this.gameState.selectedShip.speed);
-                    }
+                    this.selectShipByIndex(playerShips);
                 }
             }
             
             startGame() {
+                if (this.isMultiplayer && !this.isHost) {
+                    // Only host can start multiplayer games
+                    return;
+                }
+                
                 this.gameState.gameStarted = true;
                 this.gameState.gameStartTime = Date.now();
                 this.selectedShipIndex = 0;
                 document.getElementById('gameState').textContent = 'Game In Progress';
                 document.getElementById('startBtn').style.display = 'none';
                 
+                if (this.isMultiplayer) {
+                    // Notify remote player
+                    this.sendGameUpdate('game-start', {
+                        gameStartTime: this.gameState.gameStartTime
+                    });
+                    
+                    // In multiplayer, each player controls their own ships
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => {
+                            if (this.gameState.gameStarted) {
+                                this.spawnShip(this.getLocalPlayerId());
+                            }
+                        }, i * 3000);
+                    }
+                } else {
+                    // Single player mode - spawn both player and computer ships
+                    for (let i = 0; i < 5; i++) {
+                        setTimeout(() => {
+                            if (this.gameState.gameStarted) {
+                                this.spawnShip('player');
+                                this.spawnShip('computer');
+                            }
+                        }, i * 3000);
+                    }
+                }
+            }
+            
+            startMultiplayerGame() {
+                this.gameState.gameStarted = true;
+                this.gameState.gameStartTime = Date.now();
+                this.selectedShipIndex = 0;
+                document.getElementById('gameState').textContent = 'Game In Progress';
+                document.getElementById('startBtn').style.display = 'none';
+                
+                // Spawn ships for this player
                 for (let i = 0; i < 5; i++) {
                     setTimeout(() => {
                         if (this.gameState.gameStarted) {
-                            this.spawnShip('player');
-                            this.spawnShip('computer');
+                            this.spawnShip(this.getLocalPlayerId());
                         }
                     }, i * 3000);
                 }
@@ -342,18 +648,14 @@
                     gameStarted: false,
                     gameStartTime: null
                 };
+                
                 this.selectedShipIndex = 0;
                 this.generateObstacles();
                 document.getElementById('gameState').textContent = 'Ready to Play';
                 document.getElementById('startBtn').style.display = 'inline-block';
                 document.getElementById('selectedShip').textContent = 'No Ship Selected';
-                // Reset speed slider
-                const speedSlider = document.getElementById('speedSlider');
-                const speedValue = document.getElementById('speedValue');
-                if (speedSlider && speedValue) {
-                    speedSlider.value = 25;
-                    speedValue.textContent = '25';
-                }
+                document.getElementById('headingSlider').value = 0;
+                document.getElementById('headingValue').textContent = '0°';
             }
             
             spawnShip(playerId) {
@@ -368,22 +670,27 @@
                     rudderAngle: 0,
                     targetRudderAngle: 0,
                     cannonAngle: playerId === 'player' ? -45 * Math.PI/180 : 135 * Math.PI/180,
-                    speed: 25, // default speed
+                    speed: 25,
                     health: 3,
                     maxHealth: 3,
-                    lastShot: null,
+                    lastShot: currentTime,
                     shotCooldown: 5000,
                     spawnTime: currentTime,
                     lastRamTime: 0, // Track last ramming time to prevent spam
                     aiTarget: null,
                     aiLastDecision: 0,
                     aiDecisionCooldown: 1000,
-                    aiState: 'patrol',
-                    lastManualShot: 0 // Track last manual shot time
+                    aiState: 'patrol'
                 };
                 
                 this.gameState.ships.push(ship);
                 this.gameState.players[playerId].shipCount++;
+                
+                // In multiplayer, notify remote player of ship spawn
+                if (this.isMultiplayer) {
+                    this.sendGameUpdate('ship-spawn', ship);
+                }
+                
                 return ship;
             }
             
@@ -413,168 +720,147 @@
             
             handleCanvasClick(e) {
                 if (!this.gameState.gameStarted) return;
-                // Only select ship under cursor
+                
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
                 const scaleY = this.canvas.height / rect.height;
-                const mouseX = (e.clientX - rect.left) * scaleX;
-                const mouseY = (e.clientY - rect.top) * scaleY;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
                 const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                let found = false;
+                
                 for (let i = 0; i < playerShips.length; i++) {
                     const ship = playerShips[i];
-                    const dx = mouseX - ship.x;
-                    const dy = mouseY - ship.y;
-                    if (Math.sqrt(dx*dx + dy*dy) < 18) {
+                    const dx = x - ship.x;
+                    const dy = y - ship.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 15) {
                         this.selectedShipIndex = i;
                         this.selectShipByIndex(playerShips);
-                        found = true;
                         break;
                     }
                 }
-                if (!found) {
-                    this.gameState.selectedShip = null;
-                    document.getElementById('selectedShip').textContent = 'No Ship Selected';
-                }
             }
+            
             handleCanvasRightClick(e) {
                 if (!this.gameState.gameStarted) return;
-                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
-                // Set cannon angle to mouse position (do not shoot)
+                
+                const localPlayerId = this.isMultiplayer ? this.getLocalPlayerId() : 'player';
+                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== localPlayerId) return;
+                
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
                 const scaleY = this.canvas.height / rect.height;
-                const mouseX = (e.clientX - rect.left) * scaleX;
-                const mouseY = (e.clientY - rect.top) * scaleY;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
                 const ship = this.gameState.selectedShip;
-                const dx = mouseX - ship.x;
-                const dy = mouseY - ship.y;
+                const dx = x - ship.x;
+                const dy = y - ship.y;
                 ship.cannonAngle = Math.atan2(dy, dx);
+                
+                // Send multiplayer update
+                if (this.isMultiplayer) {
+                    this.sendGameUpdate('ship-control', {
+                        shipId: ship.id,
+                        targetRudderAngle: ship.targetRudderAngle,
+                        cannonAngle: ship.cannonAngle
+                    });
+                }
             }
             
             handleMouseMove(e) {
-                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== 'player') return;
+                const localPlayerId = this.isMultiplayer ? this.getLocalPlayerId() : 'player';
+                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== localPlayerId) return;
+                
                 const rect = this.canvas.getBoundingClientRect();
                 const scaleX = this.canvas.width / rect.width;
                 const scaleY = this.canvas.height / rect.height;
                 const mouseX = (e.clientX - rect.left) * scaleX;
                 const mouseY = (e.clientY - rect.top) * scaleY;
+                
                 const ship = this.gameState.selectedShip;
                 const dx = mouseX - ship.x;
                 const dy = mouseY - ship.y;
+                
                 this.mouseAimAngle = Math.atan2(dy, dx);
-                // Set the cannonAngle to follow the mouse for active ship
-                ship.cannonAngle = this.mouseAimAngle;
             }
             
             updatePlayerControls() {
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                // --- 1-5 hotkey selection ---
-                for (let i = 0; i < 5; i++) {
-                    const key = 'Digit' + (i + 1);
-                    if (this.keys[key] && !this.lastNumberPressed?.[i]) {
-                        this.lastNumberPressed[i] = true;
-                        if (playerShips.length > i) {
-                            this.selectedShipIndex = i;
-                            this.selectShipByIndex(playerShips);
-                        }
-                    } else if (!this.keys[key]) {
-                        if (this.lastNumberPressed) this.lastNumberPressed[i] = false;
+                const localPlayerId = this.isMultiplayer ? this.getLocalPlayerId() : 'player';
+                const playerShips = this.gameState.ships.filter(s => s.playerId === localPlayerId);
+                
+                if (this.keys['KeyW'] && !this.lastWPressed) {
+                    this.lastWPressed = true;
+                    if (playerShips.length > 0) {
+                        this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
+                        this.selectShipByIndex(playerShips);
+                    }
+                } else if (!this.keys['KeyW']) {
+                    this.lastWPressed = false;
+                }
+                
+                if (this.keys['KeyS'] && !this.lastSPressed) {
+                    this.lastSPressed = true;
+                    if (playerShips.length > 0) {
+                        this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
+                        this.selectShipByIndex(playerShips);
+                    }
+                } else if (!this.keys['KeyS']) {
+                    this.lastSPressed = false;
+                }
+                
+                if (!this.gameState.selectedShip || this.gameState.selectedShip.playerId !== localPlayerId) return;
+                
+                const ship = this.gameState.selectedShip;
+                let controlChanged = false;
+                
+                if (this.keys['KeyA']) {
+                    const newAngle = Math.max(ship.targetRudderAngle - 0.02, -Math.PI/4);
+                    if (newAngle !== ship.targetRudderAngle) {
+                        ship.targetRudderAngle = newAngle;
+                        controlChanged = true;
                     }
                 }
-                // --- Q/E keys to cycle ships ---
-                if (this.keys['KeyQ']) {
-                    if (!this.lastQPressed) {
-                        this.lastQPressed = true;
-                        if (playerShips.length > 0) {
-                            this.selectedShipIndex = (this.selectedShipIndex - 1 + playerShips.length) % playerShips.length;
-                            this.selectShipByIndex(playerShips);
-                        }
-                    }
-                } else {
-                    this.lastQPressed = false;
-                }
-                if (this.keys['KeyE']) {
-                    if (!this.lastEPressed) {
-                        this.lastEPressed = true;
-                        if (playerShips.length > 0) {
-                            this.selectedShipIndex = (this.selectedShipIndex + 1) % playerShips.length;
-                            this.selectShipByIndex(playerShips);
-                        }
-                    }
-                } else {
-                    this.lastEPressed = false;
-                }
-                // --- W/S keys to change speed ---
-                if (this.gameState.selectedShip && this.gameState.selectedShip.playerId === 'player') {
-                    const ship = this.gameState.selectedShip;
-                    if (this.keys['KeyW']) {
-                        ship.speed = Math.min(60, ship.speed + 0.5);
-                    }
-                    if (this.keys['KeyS']) {
-                        ship.speed = Math.max(10, ship.speed - 0.5);
-                    }
-                    // --- A/D keys to steer left/right ---
-                    if (this.keys['KeyA']) {
-                        ship.targetRudderAngle = Math.max(-Math.PI/4, ship.targetRudderAngle - 0.03);
-                    } else if (this.keys['KeyD']) {
-                        ship.targetRudderAngle = Math.min(Math.PI/4, ship.targetRudderAngle + 0.03);
-                    } else {
-                        // Return rudder to center if neither A nor D is pressed
-                        ship.targetRudderAngle = 0;
-                    }
-                    // --- Arrow keys for cannon aiming ---
-                    if (this.keys['ArrowLeft']) {
-                        ship.cannonAngle -= 0.08;
-                    }
-                    if (this.keys['ArrowRight']) {
-                        ship.cannonAngle += 0.08;
-                    }
-                    if (this.keys['ArrowUp']) {
-                        ship.cannonAngle -= 0.015;
-                    }
-                    if (this.keys['ArrowDown']) {
-                        ship.cannonAngle += 0.015;
-                    }
-                    // Update speed slider display
-                    const speedSlider = document.getElementById('speedSlider');
-                    const speedValue = document.getElementById('speedValue');
-                    if (speedSlider && speedValue) {
-                        speedSlider.value = Math.round(ship.speed);
-                        speedValue.textContent = Math.round(ship.speed);
-                    }
-                    // Update selected ship display
-                    const selectedShipElem = document.getElementById('selectedShip');
-                    if (selectedShipElem) {
-                        selectedShipElem.textContent = 
-                            `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length}) | Speed: ${Math.round(ship.speed)}`;
+                if (this.keys['KeyD']) {
+                    const newAngle = Math.min(ship.targetRudderAngle + 0.02, Math.PI/4);
+                    if (newAngle !== ship.targetRudderAngle) {
+                        ship.targetRudderAngle = newAngle;
+                        controlChanged = true;
                     }
                 }
+                
+                if (controlChanged && this.isMultiplayer) {
+                    this.sendGameUpdate('ship-control', {
+                        shipId: ship.id,
+                        targetRudderAngle: ship.targetRudderAngle,
+                        cannonAngle: ship.cannonAngle
+                    });
+                }
+                
+                const degrees = Math.round(ship.targetRudderAngle * 180/Math.PI);
+                document.getElementById('headingSlider').value = degrees;
+                document.getElementById('headingValue').textContent = degrees + '°';
             }
             
             selectShipByIndex(playerShips) {
                 if (playerShips.length > 0 && this.selectedShipIndex < playerShips.length) {
                     this.gameState.selectedShip = playerShips[this.selectedShipIndex];
                     this.cannonAngleOffset = 0;
-                    this.tabHighlightIndex = this.selectedShipIndex; // Sync tab highlight
-                    const ship = this.gameState.selectedShip;
-                    // Update speed slider display
-                    const speedSlider = document.getElementById('speedSlider');
-                    const speedValue = document.getElementById('speedValue');
-                    if (speedSlider && speedValue) {
-                        speedSlider.value = Math.round(ship.speed);
-                        speedValue.textContent = Math.round(ship.speed);
-                    }
                     document.getElementById('selectedShip').textContent = 
-                        `Player Ship ${this.selectedShipIndex + 1} (${this.selectedShipIndex + 1}/${playerShips.length}) | Speed: ${Math.round(ship.speed)}`;
-                    // Refocus canvas after selecting a ship
-                    this.canvas.focus();
-                } else {
-                    document.getElementById('selectedShip').textContent = 'No Ship Selected';
+                        `Player Ship ${this.gameState.selectedShip.id.substr(0, 4)} (${this.selectedShipIndex + 1}/${playerShips.length})`;
+                    
+                    const degrees = Math.round(this.gameState.selectedShip.targetRudderAngle * 180/Math.PI);
+                    document.getElementById('headingSlider').value = degrees;
+                    document.getElementById('headingValue').textContent = degrees + '°';
                 }
             }
             
             updateAI(deltaTime) {
+                // In multiplayer, don't run AI for remote player's ships
+                if (this.isMultiplayer) {
+                    return;
+                }
+                
                 const currentTime = Date.now();
                 const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer');
                 
@@ -627,39 +913,36 @@
             
             executeAIBehavior(ship) {
                 if (!ship.aiTarget) return;
+                
                 const dx = ship.aiTarget.x - ship.x;
                 const dy = ship.aiTarget.y - ship.y;
                 const angleToTarget = Math.atan2(dy, dx);
-                // Smoothly rotate cannonAngle toward angleToTarget for computer ships
-                if (ship.playerId === 'computer') {
-                    let diff = this.normalizeAngle(angleToTarget - ship.cannonAngle);
-                    const maxStep = 0.07; // radians per frame, adjust for smoothness
-                    if (Math.abs(diff) > maxStep) {
-                        ship.cannonAngle += Math.sign(diff) * maxStep;
-                    } else {
-                        ship.cannonAngle = angleToTarget;
-                    }
-                } else {
-                    ship.cannonAngle = angleToTarget;
-                }
+                
                 switch (ship.aiState) {
                     case 'attack':
+                        ship.cannonAngle = angleToTarget;
                         const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
                         ship.targetRudderAngle = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.5, Math.PI/6);
                         break;
+                        
                     case 'evade':
+                        ship.cannonAngle = angleToTarget;
                         const evadeAngle = angleToTarget + Math.PI;
                         const evadeAngleDiff = this.normalizeAngle(evadeAngle - ship.angle);
                         ship.targetRudderAngle = Math.sign(evadeAngleDiff) * Math.min(Math.abs(evadeAngleDiff) * 0.5, Math.PI/5);
                         break;
+                        
                     case 'patrol':
+                        ship.cannonAngle = angleToTarget;
                         const patrolAngleDiff = this.normalizeAngle(angleToTarget - ship.angle);
                         ship.targetRudderAngle = Math.sign(patrolAngleDiff) * Math.min(Math.abs(patrolAngleDiff) * 0.3, Math.PI/8);
+                        
                         if (Math.random() < 0.05) {
                             ship.targetRudderAngle += (Math.random() - 0.5) * 0.2;
                         }
                         break;
                 }
+                
                 this.avoidObstacles(ship);
             }
             
@@ -878,12 +1161,9 @@
                         const dx = ship.x - obstacle.x;
                         const dy = ship.y - obstacle.y;
                         const distance = Math.sqrt(dx*dx + dy*dy);
+                        
                         if (distance < obstacle.radius + 12) {
                             ship.health -= 0.1;
-                            // Set speed to 0 when crashing into islands/icebergs
-                            if (obstacle.type === 'island' || obstacle.type === 'iceberg') {
-                                ship.speed = 0;
-                            }
                             const pushX = (dx / distance) * 15;
                             const pushY = (dy / distance) * 15;
                             ship.x += pushX;
@@ -960,15 +1240,12 @@
             
             handleShooting() {
                 const currentTime = Date.now();
-                const selectedShip = this.gameState.selectedShip;
+                
                 for (let ship of this.gameState.ships) {
-                    // Only auto-fire if NOT the selected player ship
-                    if (ship.playerId === 'player' && selectedShip && ship.id === selectedShip.id) {
-                        continue; // skip auto-fire for active player ship
-                    }
                     const timeSinceSpawn = currentTime - ship.spawnTime;
                     const timeSinceLastShot = currentTime - ship.lastShot;
-                    if (timeSinceSpawn >= ship.shotCooldown && timeSinceLastShot >= ship.shotCooldown) {
+                    
+                    if (timeSinceSpawn >= 5000 && timeSinceLastShot >= ship.shotCooldown) {
                         const cannonball = {
                             id: Math.random().toString(36).substr(2, 9),
                             shooterId: ship.id,
@@ -979,32 +1256,10 @@
                             speed: 150,
                             dead: false
                         };
+                        
                         this.gameState.cannonballs.push(cannonball);
                         ship.lastShot = currentTime;
                     }
-                }
-            }
-            
-            handleManualShoot() {
-                if (!this.gameState.gameStarted) return;
-                const ship = this.gameState.selectedShip;
-                if (!ship || ship.playerId !== 'player') return;
-                const currentTime = Date.now();
-                console.log('Manual shoot triggered', ship);
-                // Allow firing if lastShot is null (never fired) or cooldown has passed
-                if (ship.lastShot === null || (currentTime - ship.lastShot) >= ship.shotCooldown) {
-                    const cannonball = {
-                        id: Math.random().toString(36).substr(2, 9),
-                        shooterId: ship.id,
-                        shooterPlayerId: ship.playerId,
-                        x: ship.x + Math.cos(ship.cannonAngle) * 25,
-                        y: ship.y + Math.sin(ship.cannonAngle) * 25,
-                        angle: ship.cannonAngle,
-                        speed: 150,
-                        dead: false
-                    };
-                    this.gameState.cannonballs.push(cannonball);
-                    ship.lastShot = currentTime;
                 }
             }
             
@@ -1077,19 +1332,12 @@
                     this.ctx.fillStyle = ship.playerId === 'player' ? '#4169E1' : '#DC143C';
                     this.ctx.fillRect(-10, -5, 20, 10);
                     
-                    // Draw the tip (triangle) for player and computer ships
-                    this.ctx.save();
-                    if (ship.playerId === 'computer') {
-                        // Rotate tip to match cannonAngle
-                        this.ctx.rotate(ship.cannonAngle - ship.angle);
-                    }
                     this.ctx.beginPath();
                     this.ctx.moveTo(10, 0);
                     this.ctx.lineTo(14, -3);
                     this.ctx.lineTo(14, 3);
                     this.ctx.closePath();
                     this.ctx.fill();
-                    this.ctx.restore();
                     
                     const healthRatio = ship.health / ship.maxHealth;
                     this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
@@ -1107,10 +1355,9 @@
                     
                     this.ctx.restore();
                 }
-
-                // Draw cannon aim lines for all ships
+                
                 for (let ship of this.gameState.ships) {
-                    if (ship.playerId === 'player' || ship.playerId === 'computer') {
+                    if (ship.playerId === 'player') {
                         this.ctx.strokeStyle = '#FF0000';
                         this.ctx.lineWidth = 2;
                         this.ctx.beginPath();
@@ -1120,11 +1367,7 @@
                             ship.y + Math.sin(ship.cannonAngle) * 50
                         );
                         this.ctx.stroke();
-                    }
-                }
-
-                for (let ship of this.gameState.ships) {
-                    if (ship.playerId === 'player') {
+                        
                         if (ship === this.gameState.selectedShip) {
                             this.ctx.strokeStyle = '#FFFF00';
                             this.ctx.lineWidth = 2;
