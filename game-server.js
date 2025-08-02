@@ -395,14 +395,24 @@ io.on('connection', (socket) => {
     });
     
     socket.on('start-game', (roomId) => {
+        console.log(`Start game requested for room ${roomId} by ${socket.id}`);
         const gameRoom = gameRooms.get(roomId);
         const player = gameRoom?.players.get(socket.id);
         
-        if (gameRoom && !gameRoom.gameState.gameStarted && player?.isHost && gameRoom.areAllPlayersReady()) {
+        console.log('Game room exists:', !!gameRoom);
+        console.log('Game already started:', gameRoom?.gameState.gameStarted);
+        console.log('Player is host:', player?.isHost);
+        console.log('Player count:', gameRoom?.players.size);
+        
+        // Simplified condition: host can start if game not started and enough players
+        if (gameRoom && !gameRoom.gameState.gameStarted && player?.isHost && gameRoom.players.size >= 2) {
+            console.log('✅ Starting game!');
             gameRoom.startGame();
             io.to(roomId).emit('game-started', {
                 gameStartTime: gameRoom.gameState.gameStartTime
             });
+        } else {
+            console.log('❌ Cannot start game - conditions not met');
         }
     });
     
