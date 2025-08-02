@@ -1074,9 +1074,22 @@
                         this.ctx.strokeRect(-8, -8, 16, 2);
                         
                         if (ship.id === this.selectedShipId) {
-                            this.ctx.strokeStyle = '#FFD700';
+                            // Enhanced selection highlighting
+                            this.ctx.strokeStyle = '#FFFF00';
+                            this.ctx.lineWidth = 4;
+                            this.ctx.strokeRect(-15, -10, 30, 20);
+                            
+                            // Add a pulsing outer glow effect
+                            const time = Date.now() / 500;
+                            const alpha = 0.3 + 0.2 * Math.sin(time);
+                            this.ctx.shadowColor = '#FFFF00';
+                            this.ctx.shadowBlur = 10;
+                            this.ctx.globalAlpha = alpha;
+                            this.ctx.strokeStyle = '#FFFFFF';
                             this.ctx.lineWidth = 2;
-                            this.ctx.strokeRect(-12, -12, 24, 10);
+                            this.ctx.strokeRect(-18, -12, 36, 24);
+                            this.ctx.shadowBlur = 0;
+                            this.ctx.globalAlpha = 1;
                         }
                         
                         this.ctx.restore();
@@ -1089,10 +1102,20 @@
                             const numberY = ship.y + 15;
                             
                             this.ctx.save();
-                            this.ctx.fillStyle = ship.team === 'team1' ? '#4169E1' : '#DC143C';
+                            
+                            // Make selected ship number larger and more prominent
+                            const isSelected = ship.id === this.selectedShipId;
+                            const fontSize = isSelected ? 24 : 18;
+                            let fillColor = ship.team === 'team1' ? '#4169E1' : '#DC143C';
+                            if (isSelected) {
+                                fillColor = '#FFFF00';
+                            }
+                            const strokeWidth = isSelected ? 3 : 2;
+                            
+                            this.ctx.fillStyle = fillColor;
                             this.ctx.strokeStyle = '#000';
-                            this.ctx.lineWidth = 2;
-                            this.ctx.font = 'bold 14px Arial';
+                            this.ctx.lineWidth = strokeWidth;
+                            this.ctx.font = `bold ${fontSize}px Arial`;
                             this.ctx.textAlign = 'center';
                             this.ctx.textBaseline = 'middle';
                             

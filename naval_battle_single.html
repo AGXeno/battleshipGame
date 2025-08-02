@@ -1995,9 +1995,22 @@
                     this.ctx.strokeRect(-8, -8, 16, 2);
                     
                     if (ship === this.gameState.selectedObject) {
-                        this.ctx.strokeStyle = '#FFD700';
+                        // Enhanced selection highlighting
+                        this.ctx.strokeStyle = '#FFFF00';
+                        this.ctx.lineWidth = 4;
+                        this.ctx.strokeRect(-15, -10, 30, 20);
+                        
+                        // Add a pulsing outer glow effect
+                        const time = Date.now() / 500;
+                        const alpha = 0.3 + 0.2 * Math.sin(time);
+                        this.ctx.shadowColor = '#FFFF00';
+                        this.ctx.shadowBlur = 10;
+                        this.ctx.globalAlpha = alpha;
+                        this.ctx.strokeStyle = '#FFFFFF';
                         this.ctx.lineWidth = 2;
-                        this.ctx.strokeRect(-12, -8, 24, 16);
+                        this.ctx.strokeRect(-18, -12, 36, 24);
+                        this.ctx.shadowBlur = 0;
+                        this.ctx.globalAlpha = 1;
                     }
                     
                     this.ctx.restore();
@@ -2012,10 +2025,17 @@
                         const numberY = ship.y + 15;
                         
                         this.ctx.save();
-                        this.ctx.fillStyle = '#FFD700';
+                        
+                        // Make selected ship number larger and more prominent
+                        const isSelected = ship === this.gameState.selectedObject;
+                        const fontSize = isSelected ? 24 : 18;
+                        const fillColor = isSelected ? '#FFFF00' : '#FFD700';
+                        const strokeWidth = isSelected ? 3 : 2;
+                        
+                        this.ctx.fillStyle = fillColor;
                         this.ctx.strokeStyle = '#000';
-                        this.ctx.lineWidth = 2;
-                        this.ctx.font = 'bold 14px Arial';
+                        this.ctx.lineWidth = strokeWidth;
+                        this.ctx.font = `bold ${fontSize}px Arial`;
                         this.ctx.textAlign = 'center';
                         this.ctx.textBaseline = 'middle';
                         
