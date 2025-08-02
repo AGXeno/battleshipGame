@@ -45,8 +45,8 @@
         
         #headingDisplay {
             margin-top: 20px;
-            width: min(400px, 95vw);
-            height: 200px;
+            width: min(500px, 95vw);
+            height: 280px;
             background: rgba(0, 0, 0, 0.3);
             border: 2px solid #16213e;
             border-radius: 10px;
@@ -54,22 +54,31 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
+            justify-content: flex-start;
+            padding: 10px;
         }
         
         #headingCanvas {
             background: transparent;
+            margin-top: 60px;
         }
         
         #headingInfo {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
+            position: relative;
             color: white;
-            font-size: 16px;
-            font-weight: bold;
             text-align: center;
+            margin-bottom: 10px;
+        }
+        
+        #selectedObject {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        #currentHeading {
+            font-size: 14px;
+            color: #ccc;
         }
         
         #gameStatus {
@@ -215,11 +224,11 @@
         <canvas id="gameCanvas" width="1000" height="700"></canvas>
         
         <div id="headingDisplay">
-            <canvas id="headingCanvas" width="350" height="160"></canvas>
             <div id="headingInfo">
-                <div id="selectedObject">AI vs AI Demo</div>
-                <div id="currentHeading">Watching AI Battle</div>
+                <div id="selectedObject">Blue AI vs Red AI - Demo Mode</div>
+                <div id="currentHeading">Two AI teams fighting each other</div>
             </div>
+            <canvas id="headingCanvas" width="400" height="200"></canvas>
         </div>
         
         <div id="demoControls">
@@ -362,12 +371,12 @@
             updateSelectedDisplay() {
                 if (this.cameraFollowShip) {
                     const teamName = this.cameraFollowShip.playerId === 'blue' ? 'Blue' : 'Red';
-                    document.getElementById('selectedObject').textContent = `Following ${teamName} Ship ${this.cameraFollowShip.shipNumber || ''} - AI Player View`;
+                    document.getElementById('selectedObject').textContent = `${teamName} AI Team - Ship ${this.cameraFollowShip.shipNumber || ''}`;
                     const heading = Math.round(this.cameraFollowShip.angle * 180 / Math.PI);
-                    document.getElementById('currentHeading').textContent = `Heading: ${heading}° | AI Controlling Ship`;
+                    document.getElementById('currentHeading').textContent = `Heading: ${heading}° | Two AI Teams Battle`;
                 } else {
-                    document.getElementById('selectedObject').textContent = 'AI vs AI Demo - Auto-cycling ships';
-                    document.getElementById('currentHeading').textContent = 'Watching AI players in action';
+                    document.getElementById('selectedObject').textContent = 'Blue AI vs Red AI - Demo Mode';
+                    document.getElementById('currentHeading').textContent = 'Two AI teams fighting each other';
                 }
             }
             
@@ -624,16 +633,21 @@
             }
             
             returnToMainMenu() {
-                this.resetGame();
+                // Don't reset the game - just show main menu (game stays paused in background)
                 document.getElementById('menuTitle').textContent = 'Naval Battle - AI vs AI Demo';
                 document.getElementById('menuContent').innerHTML = `
-                    <button id="startBtn">Start Demo</button>
+                    <button id="resumeDemoBtn">Resume Current Demo</button>
+                    <button id="startBtn">Start New Demo</button>
                     <button id="resetBtn">New Map</button>
                 `;
                 
                 // Add event listeners after creating the buttons
                 setTimeout(() => {
-                    document.getElementById('startBtn')?.addEventListener('click', () => this.startGame());
+                    document.getElementById('resumeDemoBtn')?.addEventListener('click', () => this.togglePause());
+                    document.getElementById('startBtn')?.addEventListener('click', () => {
+                        this.resetGame();
+                        this.startGame();
+                    });
                     document.getElementById('resetBtn')?.addEventListener('click', () => this.resetGame());
                 }, 0);
                 
@@ -1485,19 +1499,20 @@
                 ctx.stroke();
                 ctx.setLineDash([]);
                 
-                // Display AI strategic information
+                // Display AI strategic information on the right side
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 14px Arial';
-                ctx.textAlign = 'left';
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'right';
                 ctx.textBaseline = 'top';
                 
+                const aiInfoX = canvas.width - 10;
                 const aiInfoY = 10;
-                const lineHeight = 18;
+                const lineHeight = 16;
                 let currentY = aiInfoY;
                 
                 // Ship info
                 const teamName = ship.playerId === 'blue' ? 'Blue' : 'Red';
-                ctx.fillText(`${teamName} Ship ${ship.shipNumber} AI Status:`, 10, currentY);
+                ctx.fillText(`${teamName} Ship ${ship.shipNumber} AI Status:`, aiInfoX, currentY);
                 currentY += lineHeight;
                 
                 // AI Behavior
@@ -1505,31 +1520,31 @@
                                aiInfo.behavior === 'PURSUING' ? '#ffaa44' :
                                aiInfo.behavior === 'EVADING' ? '#44ff44' :
                                aiInfo.behavior === 'AVOIDING' ? '#ff44ff' : '#4444ff';
-                ctx.font = 'bold 12px Arial';
-                ctx.fillText(`• ${aiInfo.behavior}`, 15, currentY);
+                ctx.font = 'bold 11px Arial';
+                ctx.fillText(`• ${aiInfo.behavior}`, aiInfoX - 5, currentY);
                 currentY += lineHeight;
                 
                 // Reasoning
                 ctx.fillStyle = '#ccc';
-                ctx.font = '11px Arial';
-                ctx.fillText(`  ${aiInfo.reason}`, 15, currentY);
+                ctx.font = '10px Arial';
+                ctx.fillText(`${aiInfo.reason}`, aiInfoX - 5, currentY);
                 currentY += lineHeight;
                 
                 // Target info
                 if (aiInfo.targetInfo) {
-                    ctx.fillText(`  ${aiInfo.targetInfo}`, 15, currentY);
+                    ctx.fillText(`${aiInfo.targetInfo}`, aiInfoX - 5, currentY);
                     currentY += lineHeight;
                 }
                 
                 // Technical data
                 ctx.fillStyle = '#aaa';
-                ctx.fillText(`  Speed: ${aiInfo.speed}/${aiInfo.targetSpeed}`, 15, currentY);
+                ctx.fillText(`Speed: ${aiInfo.speed}/${aiInfo.targetSpeed}`, aiInfoX - 5, currentY);
                 currentY += lineHeight;
-                ctx.fillText(`  Rudder: ${aiInfo.rudderAngle}°`, 15, currentY);
+                ctx.fillText(`Rudder: ${aiInfo.rudderAngle}°`, aiInfoX - 5, currentY);
                 
                 if (aiInfo.distance && aiInfo.distance > 0) {
                     currentY += lineHeight;
-                    ctx.fillText(`  Range: ${aiInfo.distance}px`, 15, currentY);
+                    ctx.fillText(`Range: ${aiInfo.distance}px`, aiInfoX - 5, currentY);
                 }
             }
             
