@@ -346,6 +346,8 @@
                         <input type="text" id="roomInput" placeholder="Enter room ID" value="room1" style="padding: 8px; margin: 10px; border: none; border-radius: 4px; background: #333; color: white;">
                         <br>
                         <button id="joinRoomBtn" disabled>Connecting...</button>
+                        <br><br>
+                        <button id="backToMainBtn" style="background: #666; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Back to Main Menu</button>
                         <div id="connectionStatus">Connecting to server...</div>
                     </div>
                 `;
@@ -365,6 +367,18 @@
                 } else {
                     console.error('❌ Could not find joinRoomBtn to add event listener');
                 }
+                
+                // Add event listener for back to main menu button
+                const backToMainBtn = document.getElementById('backToMainBtn');
+                if (backToMainBtn) {
+                    backToMainBtn.addEventListener('click', () => {
+                        window.location.href = 'index.html';
+                    });
+                    console.log('📝 Event listener added to Back to Main Menu button');
+                } else {
+                    console.error('❌ Could not find backToMainBtn to add event listener');
+                }
+                
                 document.getElementById('gameMenu').classList.remove('hidden');
                 console.log('Initial menu setup complete');
                 
@@ -819,11 +833,19 @@
                         <input type="text" id="roomInput" placeholder="Enter room ID" value="room1" style="padding: 8px; margin: 10px; border: none; border-radius: 4px; background: #333; color: white;">
                         <br>
                         <button id="joinRoomBtn">Join Room</button>
+                        <br><br>
+                        <button id="backToMainBtn" style="background: #666; color: white; border: none; padding: 10px 20px; border-radius: 4px; cursor: pointer;">Back to Main Menu</button>
                     </div>
                 `;
                 
                 // Add event listener for join room button
                 document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
+                
+                // Add event listener for back to main menu button
+                document.getElementById('backToMainBtn').addEventListener('click', () => {
+                    window.location.href = 'index.html';
+                });
+                
                 document.getElementById('gameMenu').classList.remove('hidden');
             }
             
