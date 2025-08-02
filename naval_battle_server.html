@@ -329,6 +329,7 @@
             }
             
             setupInitialMenu() {
+                console.log('Setting up initial menu...');
                 // Show initial room joining menu
                 document.getElementById('menuTitle').textContent = 'Join Multiplayer Room';
                 document.getElementById('menuContent').innerHTML = `
@@ -336,13 +337,18 @@
                         <p>Enter a room ID to join or create a room</p>
                         <input type="text" id="roomInput" placeholder="Enter room ID" value="room1" style="padding: 8px; margin: 10px; border: none; border-radius: 4px; background: #333; color: white;">
                         <br>
-                        <button id="joinRoomBtn">Join Room</button>
+                        <button id="joinRoomBtn" disabled>Connecting...</button>
+                        <div id="connectionStatus">Connecting to server...</div>
                     </div>
                 `;
                 
                 // Add event listener for join room button
-                document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
+                document.getElementById('joinRoomBtn').addEventListener('click', () => {
+                    console.log('Join Room button clicked');
+                    this.joinRoom();
+                });
                 document.getElementById('gameMenu').classList.remove('hidden');
+                console.log('Initial menu setup complete');
             }
             
             setupCanvas() {
@@ -415,14 +421,26 @@
             }
             
             setupSocket() {
+                console.log('Setting up socket connection...');
                 this.socket = io();
                 
                 this.socket.on('connect', () => {
-                    console.log('Connected to server');
+                    console.log('✅ Connected to server successfully');
                     document.getElementById('connectionStatus').textContent = 'Connected to server';
+                    
+                    // Enable join room button once connected
+                    const joinBtn = document.getElementById('joinRoomBtn');
+                    if (joinBtn) {
+                        joinBtn.disabled = false;
+                        joinBtn.textContent = 'Join Room';
+                        console.log('✅ Join Room button enabled');
+                    } else {
+                        console.error('❌ Join Room button not found');
+                    }
                 });
                 
                 this.socket.on('joined-room', (data) => {
+                    console.log('✅ Received joined-room event:', data);
                     this.roomId = data.roomId;
                     this.myPlayerId = data.playerId;
                     this.myTeam = data.team;
@@ -485,7 +503,13 @@
                 });
                 
                 this.socket.on('disconnect', () => {
+                    console.log('❌ Disconnected from server');
                     document.getElementById('connectionStatus').textContent = 'Disconnected from server';
+                });
+                
+                this.socket.on('connect_error', (error) => {
+                    console.error('❌ Connection error:', error);
+                    document.getElementById('connectionStatus').textContent = 'Connection failed';
                 });
             }
             
@@ -633,10 +657,30 @@
             }
             
             joinRoom() {
-                const roomId = document.getElementById('roomInput').value.trim();
-                if (roomId && this.socket) {
-                    this.socket.emit('join-room', roomId);
+                console.log('🔄 joinRoom() called');
+                const roomInput = document.getElementById('roomInput');
+                const roomId = roomInput ? roomInput.value.trim() : '';
+                
+                console.log('Room ID:', roomId);
+                console.log('Socket connected:', !!this.socket?.connected);
+                
+                if (!roomId) {
+                    console.error('❌ No room ID provided');
+                    return;
                 }
+                
+                if (!this.socket) {
+                    console.error('❌ Socket not initialized');
+                    return;
+                }
+                
+                if (!this.socket.connected) {
+                    console.error('❌ Socket not connected');
+                    return;
+                }
+                
+                console.log('✅ Emitting join-room event with roomId:', roomId);
+                this.socket.emit('join-room', roomId);
             }
             
             leaveRoom() {
