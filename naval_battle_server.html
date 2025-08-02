@@ -249,9 +249,9 @@
             <div><strong>🌐 Multiplayer</strong></div>
             <input type="text" id="roomInput" placeholder="Enter Room ID" value="room1">
             <br>
-            <button id="joinRoomBtn" onclick="game.joinRoom()">Join Room</button>
-            <button id="leaveRoomBtn" onclick="game.leaveRoom()" style="display: none;">Leave Room</button>
-            <button id="startBtn" onclick="game.startGame()" style="display: none;">Start Game</button>
+            <button id="joinRoomBtn">Join Room</button>
+            <button id="leaveRoomBtn" style="display: none;">Leave Room</button>
+            <button id="startBtn" style="display: none;">Start Game</button>
             <div id="connectionStatus">Not connected</div>
         </div>
         
@@ -331,9 +331,17 @@
             init() {
                 this.setupCanvas();
                 this.setupControls();
+                this.setupInitialMenu();
                 this.setupSocket();
                 this.gameLoop();
                 this.checkUrlParams();
+            }
+            
+            setupInitialMenu() {
+                // Add event listeners for initial menu buttons
+                document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
+                document.getElementById('leaveRoomBtn').addEventListener('click', () => this.leaveRoom());
+                document.getElementById('startBtn').addEventListener('click', () => this.startGame());
             }
             
             setupCanvas() {
@@ -421,9 +429,22 @@
                     
                     document.getElementById('connectionStatus').textContent = 
                         `In room ${data.roomId} - You are ${data.team === 'team1' ? 'Blue Team' : 'Red Team'}`;
-                    document.getElementById('joinRoomBtn').style.display = 'none';
-                    document.getElementById('leaveRoomBtn').style.display = 'inline-block';
-                    document.getElementById('startBtn').style.display = 'inline-block';
+                    
+                    // Show room menu with lobby option
+                    document.getElementById('menuTitle').textContent = `Room: ${data.roomId}`;
+                    document.getElementById('menuContent').innerHTML = `
+                        <div style="text-align: center;">
+                            <p>You are on the <strong>${data.team === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                            <button id="startBtn">Start Game</button>
+                            <button id="returnToLobbyBtn">Return to Lobby</button>
+                        </div>
+                    `;
+                    
+                    // Add event listeners
+                    document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+                    document.getElementById('returnToLobbyBtn').addEventListener('click', () => this.returnToLobby());
+                    
+                    document.getElementById('gameMenu').classList.remove('hidden');
                     
                     // Update player count and verification status
                     this.updatePlayerStatus(data.playerCount, data.playersReady);
@@ -490,19 +511,31 @@
             }
             
             updatePlayerStatus(playerCount, playersReady) {
-                const statusDiv = document.getElementById('playerStatus') || this.createPlayerStatusDiv();
-                statusDiv.innerHTML = `
-                    <div style="text-align: center; padding: 10px; background: rgba(0,0,0,0.7); border-radius: 5px; margin: 10px 0;">
-                        <p>Players in room: ${playerCount}/2</p>
-                        ${playersReady ? '<p style="color: #4CAF50;">✓ All players ready!</p>' : '<p style="color: #FFA500;">Waiting for players...</p>'}
-                    </div>
-                `;
-                
-                // Enable/disable start button based on player readiness
-                const startBtn = document.getElementById('startBtn');
-                if (startBtn) {
-                    startBtn.disabled = !playersReady;
-                    startBtn.style.opacity = playersReady ? '1' : '0.5';
+                // Update the menu content to include player status
+                const menuContent = document.getElementById('menuContent');
+                if (menuContent && this.roomId) {
+                    menuContent.innerHTML = `
+                        <div style="text-align: center;">
+                            <p>You are on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                            <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                <p>Players in room: ${playerCount}/2</p>
+                                ${playersReady ? '<p style="color: #4CAF50;">✓ All players ready!</p>' : '<p style="color: #FFA500;">Waiting for players...</p>'}
+                            </div>
+                            <button id="startBtn">Start Game</button>
+                            <button id="returnToLobbyBtn">Return to Lobby</button>
+                        </div>
+                    `;
+                    
+                    // Re-add event listeners
+                    document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+                    document.getElementById('returnToLobbyBtn').addEventListener('click', () => this.returnToLobby());
+                    
+                    // Enable/disable start button based on player readiness
+                    const startBtn = document.getElementById('startBtn');
+                    if (startBtn) {
+                        startBtn.disabled = !playersReady;
+                        startBtn.style.opacity = playersReady ? '1' : '0.5';
+                    }
                 }
             }
             
@@ -523,11 +556,18 @@
                     // Show pause menu
                     document.getElementById('menuTitle').textContent = 'Game Paused';
                     document.getElementById('menuContent').innerHTML = `
-                        <button id="resumeBtn" onclick="game.togglePause()">Resume Game</button>
-                        <button id="restartBtn" onclick="game.restartGame()">Restart Game</button>
-                        <button id="mainMenuBtn" onclick="game.returnToMainMenu()">Return to Main Menu</button>
-                        <button id="leaveRoomBtn" onclick="game.leaveRoom()">Leave Room</button>
+                        <button id="resumeBtn">Resume Game</button>
+                        <button id="restartBtn">Restart Game</button>
+                        <button id="mainMenuBtn">Return to Main Menu</button>
+                        <button id="leaveRoomBtn">Leave Room</button>
                     `;
+                    
+                    // Add event listeners for pause menu buttons
+                    document.getElementById('resumeBtn').addEventListener('click', () => this.togglePause());
+                    document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
+                    document.getElementById('mainMenuBtn').addEventListener('click', () => this.returnToMainMenu());
+                    document.getElementById('leaveRoomBtn').addEventListener('click', () => this.leaveRoom());
+                    
                     document.getElementById('gameMenu').classList.remove('hidden');
                 } else {
                     // Hide pause menu
@@ -548,8 +588,25 @@
                 document.getElementById('menuTitle').textContent = 'Naval Battle';
                 document.getElementById('menuContent').innerHTML = `
                     <input type="text" id="roomInput" placeholder="Enter room ID" maxlength="10">
-                    <button id="joinRoomBtn" onclick="game.joinRoom()">Join Room</button>
+                    <button id="joinRoomBtn">Join Room</button>
                 `;
+                
+                // Add event listener for join room button
+                document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
+                document.getElementById('gameMenu').classList.remove('hidden');
+            }
+            
+            returnToLobby() {
+                this.leaveRoom();
+                // Reset to lobby state
+                document.getElementById('menuTitle').textContent = 'Naval Battle';
+                document.getElementById('menuContent').innerHTML = `
+                    <input type="text" id="roomInput" placeholder="Enter room ID" maxlength="10">
+                    <button id="joinRoomBtn">Join Room</button>
+                `;
+                
+                // Add event listener for join room button
+                document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
                 document.getElementById('gameMenu').classList.remove('hidden');
             }
             
