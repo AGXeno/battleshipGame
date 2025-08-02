@@ -1241,33 +1241,69 @@
                 
                 const dx = ship.aiTarget.x - ship.x;
                 const dy = ship.aiTarget.y - ship.y;
+                const distance = Math.sqrt(dx*dx + dy*dy);
                 const angleToTarget = Math.atan2(dy, dx);
+                
+                // Calculate target's velocity for predictive aiming
+                const targetVelX = Math.cos(ship.aiTarget.angle) * ship.aiTarget.speed;
+                const targetVelY = Math.sin(ship.aiTarget.angle) * ship.aiTarget.speed;
+                
+                // Predict where target will be (lead the target)
+                const cannonballSpeed = 80;
+                const timeToImpact = distance / cannonballSpeed;
+                const predictedX = ship.aiTarget.x + targetVelX * timeToImpact * 0.05;
+                const predictedY = ship.aiTarget.y + targetVelY * timeToImpact * 0.05;
+                const predictedAngle = Math.atan2(predictedY - ship.y, predictedX - ship.x);
                 
                 switch (ship.aiState) {
                     case 'attack':
-                        ship.cannonAngle = angleToTarget;
-                        ship.targetSpeed = ship.defaultSpeed;
-                        const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
-                        ship.targetRudderAngle = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.5, Math.PI/6);
+                        // Use predictive aiming
+                        ship.cannonAngle = predictedAngle;
+                        
+                        // Optimal combat distance is 100-200 pixels
+                        if (distance < 100) {
+                            // Too close, back off while maintaining fire angle
+                            ship.targetSpeed = ship.defaultSpeed * 0.6;
+                            const retreatAngle = angleToTarget + Math.PI;
+                            const retreatDiff = this.normalizeAngle(retreatAngle - ship.angle);
+                            ship.targetRudderAngle = Math.sign(retreatDiff) * Math.min(Math.abs(retreatDiff) * 0.4, Math.PI/6);
+                        } else if (distance > 200) {
+                            // Chase target
+                            ship.targetSpeed = ship.defaultSpeed;
+                            const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
+                            ship.targetRudderAngle = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.5, Math.PI/6);
+                        } else {
+                            // Optimal range - circle strafe
+                            ship.targetSpeed = ship.defaultSpeed * 0.8;
+                            const strafeAngle = angleToTarget + Math.PI/2;
+                            const strafeDiff = this.normalizeAngle(strafeAngle - ship.angle);
+                            ship.targetRudderAngle = Math.sign(strafeDiff) * Math.min(Math.abs(strafeDiff) * 0.4, Math.PI/6);
+                        }
                         break;
                         
                     case 'evade':
-                        ship.cannonAngle = angleToTarget;
+                        // Still aim at target for opportunistic shots
+                        ship.cannonAngle = predictedAngle;
                         ship.targetSpeed = ship.defaultSpeed;
-                        const evadeAngle = angleToTarget + Math.PI;
+                        
+                        // Zigzag evasion pattern
+                        const evadeTime = Date.now() / 1000;
+                        const zigzagOffset = Math.sin(evadeTime * 2) * Math.PI/3;
+                        const evadeAngle = angleToTarget + Math.PI + zigzagOffset;
                         const evadeAngleDiff = this.normalizeAngle(evadeAngle - ship.angle);
-                        ship.targetRudderAngle = Math.sign(evadeAngleDiff) * Math.min(Math.abs(evadeAngleDiff) * 0.5, Math.PI/5);
+                        ship.targetRudderAngle = Math.sign(evadeAngleDiff) * Math.min(Math.abs(evadeAngleDiff) * 0.6, Math.PI/4);
                         break;
                         
                     case 'patrol':
                         ship.cannonAngle = angleToTarget;
                         ship.targetSpeed = ship.defaultSpeed * 0.7;
-                        const patrolAngleDiff = this.normalizeAngle(angleToTarget - ship.angle);
-                        ship.targetRudderAngle = Math.sign(patrolAngleDiff) * Math.min(Math.abs(patrolAngleDiff) * 0.3, Math.PI/8);
                         
-                        if (Math.random() < 0.05) {
-                            ship.targetRudderAngle += (Math.random() - 0.5) * 0.2;
-                        }
+                        // Patrol in a figure-8 pattern around the area
+                        const patrolTime = Date.now() / 1000;
+                        const figure8Offset = Math.sin(patrolTime * 0.5) * Math.PI/4;
+                        const patrolAngle = angleToTarget + figure8Offset;
+                        const patrolAngleDiff = this.normalizeAngle(patrolAngle - ship.angle);
+                        ship.targetRudderAngle = Math.sign(patrolAngleDiff) * Math.min(Math.abs(patrolAngleDiff) * 0.3, Math.PI/8);
                         break;
                 }
                 
@@ -1275,31 +1311,72 @@
             }
             
             avoidObstacles(ship) {
-                const avoidanceRadius = 80;
+                const avoidanceRadius = 100;
+                const lookAheadDistance = 60;
                 let avoidanceForceX = 0;
                 let avoidanceForceY = 0;
                 
+                // Look ahead in the direction we're moving
+                const futureX = ship.x + Math.cos(ship.angle) * lookAheadDistance;
+                const futureY = ship.y + Math.sin(ship.angle) * lookAheadDistance;
+                
+                // Check obstacles
                 for (let obstacle of this.gameState.obstacles) {
                     const dx = ship.x - obstacle.x;
                     const dy = ship.y - obstacle.y;
                     const distance = Math.sqrt(dx*dx + dy*dy);
                     
-                    if (distance < avoidanceRadius) {
-                        const force = (avoidanceRadius - distance) / avoidanceRadius;
-                        avoidanceForceX += (dx / distance) * force;
-                        avoidanceForceY += (dy / distance) * force;
+                    // Also check future position
+                    const futureDx = futureX - obstacle.x;
+                    const futureDy = futureY - obstacle.y;
+                    const futureDistance = Math.sqrt(futureDx*futureDx + futureDy*futureDy);
+                    
+                    if (distance < avoidanceRadius + obstacle.radius) {
+                        // Strong avoidance for close obstacles
+                        const force = Math.pow((avoidanceRadius + obstacle.radius - distance) / avoidanceRadius, 2);
+                        avoidanceForceX += (dx / distance) * force * 2;
+                        avoidanceForceY += (dy / distance) * force * 2;
+                    }
+                    
+                    // Predictive avoidance
+                    if (futureDistance < obstacle.radius + 30) {
+                        // We're about to hit this obstacle, strong evasion needed
+                        avoidanceForceX += (futureDx / futureDistance) * 3;
+                        avoidanceForceY += (futureDy / futureDistance) * 3;
                     }
                 }
                 
-                if (ship.x < 100) avoidanceForceX += 1;
-                if (ship.x > this.canvas.width - 100) avoidanceForceX -= 1;
-                if (ship.y < 100) avoidanceForceY += 1;
-                if (ship.y > this.canvas.height - 100) avoidanceForceY -= 1;
+                // Wall avoidance with stronger forces
+                const wallBuffer = 120;
+                if (ship.x < wallBuffer) {
+                    avoidanceForceX += Math.pow((wallBuffer - ship.x) / wallBuffer, 2) * 2;
+                }
+                if (ship.x > this.canvas.width - wallBuffer) {
+                    avoidanceForceX -= Math.pow((ship.x - (this.canvas.width - wallBuffer)) / wallBuffer, 2) * 2;
+                }
+                if (ship.y < wallBuffer) {
+                    avoidanceForceY += Math.pow((wallBuffer - ship.y) / wallBuffer, 2) * 2;
+                }
+                if (ship.y > this.canvas.height - wallBuffer) {
+                    avoidanceForceY -= Math.pow((ship.y - (this.canvas.height - wallBuffer)) / wallBuffer, 2) * 2;
+                }
                 
+                // Apply avoidance if needed
                 if (avoidanceForceX !== 0 || avoidanceForceY !== 0) {
                     const avoidanceAngle = Math.atan2(avoidanceForceY, avoidanceForceX);
                     const angleDiff = this.normalizeAngle(avoidanceAngle - ship.angle);
-                    ship.targetRudderAngle = Math.sign(angleDiff) * Math.PI/5;
+                    
+                    // Stronger turning for obstacle avoidance, overrides other behaviors
+                    const avoidanceTurn = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.8, Math.PI/4);
+                    
+                    // Blend with existing target rudder angle, but prioritize avoidance
+                    ship.targetRudderAngle = ship.targetRudderAngle * 0.3 + avoidanceTurn * 0.7;
+                    
+                    // Slow down when avoiding obstacles
+                    const avoidanceStrength = Math.sqrt(avoidanceForceX*avoidanceForceX + avoidanceForceY*avoidanceForceY);
+                    if (avoidanceStrength > 1) {
+                        ship.targetSpeed = Math.max(ship.defaultSpeed * 0.4, ship.targetSpeed * 0.7);
+                    }
                 }
             }
             
