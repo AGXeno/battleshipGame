@@ -674,25 +674,8 @@
             }
             
             returnToMainMenu() {
-                // Don't reset the game - just show main menu (game stays paused in background)
-                document.getElementById('menuTitle').textContent = 'Naval Battle - AI vs AI Demo';
-                document.getElementById('menuContent').innerHTML = `
-                    <button id="resumeDemoBtn">Resume Current Demo</button>
-                    <button id="startBtn">Start New Demo</button>
-                    <button id="resetBtn">New Map</button>
-                `;
-                
-                // Add event listeners after creating the buttons
-                setTimeout(() => {
-                    document.getElementById('resumeDemoBtn')?.addEventListener('click', () => this.togglePause());
-                    document.getElementById('startBtn')?.addEventListener('click', () => {
-                        this.resetGame();
-                        this.startGame();
-                    });
-                    document.getElementById('resetBtn')?.addEventListener('click', () => this.resetGame());
-                }, 0);
-                
-                document.getElementById('gameMenu').classList.remove('hidden');
+                // Navigate back to the main game selection menu
+                window.location.href = 'index.html';
             }
             
             spawnShip(playerId) {

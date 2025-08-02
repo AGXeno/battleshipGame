@@ -583,17 +583,11 @@
             }
             
             returnToMainMenu() {
-                this.leaveRoom();
-                // Reset to initial state
-                document.getElementById('menuTitle').textContent = 'Naval Battle';
-                document.getElementById('menuContent').innerHTML = `
-                    <input type="text" id="roomInput" placeholder="Enter room ID" maxlength="10">
-                    <button id="joinRoomBtn">Join Room</button>
-                `;
-                
-                // Add event listener for join room button
-                document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
-                document.getElementById('gameMenu').classList.remove('hidden');
+                // Leave room and navigate back to the main game selection menu
+                if (this.socket) {
+                    this.socket.disconnect();
+                }
+                window.location.href = 'index.html';
             }
             
             returnToLobby() {
