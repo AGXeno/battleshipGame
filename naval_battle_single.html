@@ -1986,13 +1986,16 @@
                     this.ctx.closePath();
                     this.ctx.fill();
                     
-                    const healthRatio = ship.health / ship.maxHealth;
-                    this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
-                    this.ctx.fillRect(-8, -8, healthRatio * 16, 2);
-                    
-                    this.ctx.strokeStyle = '#000';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.strokeRect(-8, -8, 16, 2);
+                    // Only show health bars for player ships (owner can see their own ship health)
+                    if (ship.playerId === 'player') {
+                        const healthRatio = ship.health / ship.maxHealth;
+                        this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
+                        this.ctx.fillRect(-8, -8, healthRatio * 16, 2);
+                        
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(-8, -8, 16, 2);
+                    }
                     
                     if (ship === this.gameState.selectedObject) {
                         // Enhanced selection highlighting
