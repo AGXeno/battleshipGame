@@ -322,6 +322,7 @@
                 this.lastQPressed = false;
                 this.lastEPressed = false;
                 this.pendingRoomJoin = null;
+                this.lastCannonUpdate = 0;
                 
                 this.init();
             }
@@ -967,10 +968,24 @@
                 const mouseY = (e.clientY - rect.top) * scaleY;
                 
                 const ship = this.gameState.ships.find(s => s.id === this.selectedShipId);
-                if (ship) {
+                if (ship && ship.ownerId === this.myPlayerId) {
                     const dx = mouseX - ship.x;
                     const dy = mouseY - ship.y;
                     this.mouseAimAngle = Math.atan2(dy, dx);
+                    
+                    // Throttle cannon updates to avoid spamming server
+                    const now = Date.now();
+                    if (now - this.lastCannonUpdate > 50) { // Update every 50ms
+                        this.lastCannonUpdate = now;
+                        
+                        if (this.socket) {
+                            this.socket.emit('ship-control', {
+                                shipId: this.selectedShipId,
+                                action: 'cannon',
+                                value: this.mouseAimAngle
+                            });
+                        }
+                    }
                 }
             }
             
