@@ -356,12 +356,12 @@
             updateSelectedDisplay() {
                 if (this.cameraFollowShip) {
                     const teamName = this.cameraFollowShip.playerId === 'blue' ? 'Blue' : 'Red';
-                    document.getElementById('selectedObject').textContent = `Following ${teamName} Ship ${this.cameraFollowShip.shipNumber || ''}`;
+                    document.getElementById('selectedObject').textContent = `Following ${teamName} Ship ${this.cameraFollowShip.shipNumber || ''} - AI Strategy View`;
                     const heading = Math.round(this.cameraFollowShip.angle * 180 / Math.PI);
-                    document.getElementById('currentHeading').textContent = `Heading: ${heading}°`;
+                    document.getElementById('currentHeading').textContent = `Heading: ${heading}° | Watching AI Think`;
                 } else {
-                    document.getElementById('selectedObject').textContent = 'AI vs AI Demo';
-                    document.getElementById('currentHeading').textContent = 'Watching AI Battle';
+                    document.getElementById('selectedObject').textContent = 'AI vs AI Demo - Click ship to see AI strategy';
+                    document.getElementById('currentHeading').textContent = 'Click any ship to watch AI decision-making';
                 }
             }
             
@@ -1263,6 +1263,62 @@
                 document.getElementById('redScore').textContent = this.gameState.players.red.score;
             }
             
+            getAIDebugInfo(ship) {
+                if (!ship.aiTarget) return { behavior: 'No Target', reason: 'Searching for enemies' };
+                
+                const target = ship.aiTarget;
+                const distance = Math.sqrt((target.x - ship.x) ** 2 + (target.y - ship.y) ** 2);
+                
+                // Determine AI behavior based on current actions
+                let behavior = 'Unknown';
+                let reason = '';
+                let targetInfo = '';
+                
+                if (target) {
+                    targetInfo = `Target: ${target.playerId} Ship ${target.shipNumber || '?'}`;
+                }
+                
+                // Check current speed and direction to determine behavior
+                const speedRatio = ship.targetSpeed / 50; // Assuming max speed ~50
+                const angleToTarget = Math.atan2(target.y - ship.y, target.x - ship.x);
+                const angleDiff = Math.abs(ship.angle - angleToTarget);
+                
+                if (distance > 150) {
+                    behavior = 'PURSUING';
+                    reason = `Closing distance (${Math.round(distance)}px)`;
+                } else if (distance < 80) {
+                    behavior = 'EVADING';
+                    reason = `Too close, backing off`;
+                } else if (angleDiff > Math.PI/4) {
+                    behavior = 'MANEUVERING';
+                    reason = 'Positioning for attack';
+                } else {
+                    behavior = 'ATTACKING';
+                    reason = 'In firing position';
+                }
+                
+                // Check for obstacle avoidance
+                const obstacles = this.gameState.obstacles || [];
+                for (let obstacle of obstacles) {
+                    const obstacleDistance = Math.sqrt((obstacle.x - ship.x) ** 2 + (obstacle.y - ship.y) ** 2);
+                    if (obstacleDistance < 100) {
+                        behavior = 'AVOIDING';
+                        reason = 'Dodging obstacle';
+                        break;
+                    }
+                }
+                
+                return {
+                    behavior,
+                    reason,
+                    targetInfo,
+                    distance: Math.round(distance),
+                    speed: Math.round(ship.speed),
+                    targetSpeed: Math.round(ship.targetSpeed),
+                    rudderAngle: Math.round(ship.rudderAngle * 180 / Math.PI)
+                };
+            }
+            
             renderHeadingDisplay() {
                 const ctx = this.headingCtx;
                 const canvas = this.headingCanvas;
@@ -1275,6 +1331,10 @@
                 
                 let tillerAngle = this.cameraFollowShip.rudderAngle;
                 const degrees = Math.round(tillerAngle * 180 / Math.PI);
+                
+                // Get AI strategic information
+                const ship = this.cameraFollowShip;
+                const aiInfo = this.getAIDebugInfo(ship);
                 
                 const centerX = canvas.width / 2;
                 const centerY = canvas.height - 20;
@@ -1367,6 +1427,53 @@
                 ctx.lineTo(centerX, centerY - radius + 5);
                 ctx.stroke();
                 ctx.setLineDash([]);
+                
+                // Display AI strategic information
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                
+                const aiInfoY = 10;
+                const lineHeight = 18;
+                let currentY = aiInfoY;
+                
+                // Ship info
+                const teamName = ship.playerId === 'blue' ? 'Blue' : 'Red';
+                ctx.fillText(`${teamName} Ship ${ship.shipNumber} AI Status:`, 10, currentY);
+                currentY += lineHeight;
+                
+                // AI Behavior
+                ctx.fillStyle = aiInfo.behavior === 'ATTACKING' ? '#ff4444' : 
+                               aiInfo.behavior === 'PURSUING' ? '#ffaa44' :
+                               aiInfo.behavior === 'EVADING' ? '#44ff44' :
+                               aiInfo.behavior === 'AVOIDING' ? '#ff44ff' : '#4444ff';
+                ctx.font = 'bold 12px Arial';
+                ctx.fillText(`• ${aiInfo.behavior}`, 15, currentY);
+                currentY += lineHeight;
+                
+                // Reasoning
+                ctx.fillStyle = '#ccc';
+                ctx.font = '11px Arial';
+                ctx.fillText(`  ${aiInfo.reason}`, 15, currentY);
+                currentY += lineHeight;
+                
+                // Target info
+                if (aiInfo.targetInfo) {
+                    ctx.fillText(`  ${aiInfo.targetInfo}`, 15, currentY);
+                    currentY += lineHeight;
+                }
+                
+                // Technical data
+                ctx.fillStyle = '#aaa';
+                ctx.fillText(`  Speed: ${aiInfo.speed}/${aiInfo.targetSpeed}`, 15, currentY);
+                currentY += lineHeight;
+                ctx.fillText(`  Rudder: ${aiInfo.rudderAngle}°`, 15, currentY);
+                
+                if (aiInfo.distance && aiInfo.distance > 0) {
+                    currentY += lineHeight;
+                    ctx.fillText(`  Range: ${aiInfo.distance}px`, 15, currentY);
+                }
             }
             
             resetGame() {
