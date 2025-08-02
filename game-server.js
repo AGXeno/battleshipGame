@@ -122,9 +122,15 @@ class GameRoom {
     spawnShip(ownerId, team, spawnPoint) {
         const angle = team === 'team1' ? -45 * Math.PI/180 : 135 * Math.PI/180;
         
-        // Calculate ship number based on existing ships for this owner
+        // Calculate ship number - find the lowest available number (1-5)
         const ownerShips = this.gameState.ships.filter(s => s.ownerId === ownerId);
-        const shipNumber = ownerShips.length + 1;
+        const usedNumbers = new Set(ownerShips.map(s => s.shipNumber));
+        let shipNumber = 1;
+        while (usedNumbers.has(shipNumber) && shipNumber <= 5) {
+            shipNumber++;
+        }
+        // Cap at 5 ships max per player
+        if (shipNumber > 5) shipNumber = 5;
         
         const ship = {
             id: `ship_${this.gameState.nextShipId++}`,

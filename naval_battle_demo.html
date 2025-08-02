@@ -1638,17 +1638,26 @@
                     
                     this.ctx.restore();
                     
+                    this.ctx.restore();
+                    
                     // Health bar (visible for all ships in demo mode for educational purposes)
                     this.ctx.save();
                     this.ctx.translate(ship.x, ship.y - 15);
                     
                     const healthRatio = ship.health / ship.maxHealth;
-                    this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
-                    this.ctx.fillRect(-8, -8, healthRatio * 16, 2);
                     
+                    // Health bar background
+                    this.ctx.fillStyle = '#333';
+                    this.ctx.fillRect(-8, 0, 16, 3);
+                    
+                    // Health bar
+                    this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
+                    this.ctx.fillRect(-8, 0, healthRatio * 16, 3);
+                    
+                    // Health bar border
                     this.ctx.strokeStyle = '#000';
                     this.ctx.lineWidth = 1;
-                    this.ctx.strokeRect(-8, -8, 16, 2);
+                    this.ctx.strokeRect(-8, 0, 16, 3);
                     
                     // Show selection for both AI team selected ships
                     if (ship === this.blueSelectedShip || ship === this.redSelectedShip) {
