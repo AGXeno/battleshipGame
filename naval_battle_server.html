@@ -315,6 +315,7 @@
                 this.selectedShipIndex = 0;
                 this.lastQPressed = false;
                 this.lastEPressed = false;
+                this.pendingRoomJoin = null;
                 
                 this.init();
             }
@@ -437,6 +438,9 @@
                     } else {
                         console.error('❌ Join Room button not found');
                     }
+                    
+                    // Try auto-join from URL params now that socket is connected
+                    this.tryAutoJoin();
                 });
                 
                 this.socket.on('joined-room', (data) => {
@@ -519,14 +523,26 @@
                 const isHost = urlParams.get('host') === 'true';
                 
                 if (room) {
-                    // Wait for menu to be set up then set value and auto-join
+                    console.log('📋 Found room in URL params:', room, 'isHost:', isHost);
+                    // Store for later auto-join when socket connects
+                    this.pendingRoomJoin = room;
+                    
+                    // Set the room input value
                     setTimeout(() => {
                         const roomInput = document.getElementById('roomInput');
                         if (roomInput) {
                             roomInput.value = room;
-                            this.joinRoom();
+                            console.log('📝 Set room input value to:', room);
                         }
-                    }, 100);
+                    }, 50);
+                }
+            }
+            
+            tryAutoJoin() {
+                if (this.pendingRoomJoin && this.socket?.connected) {
+                    console.log('🚀 Auto-joining room:', this.pendingRoomJoin);
+                    this.joinRoom();
+                    this.pendingRoomJoin = null; // Clear after joining
                 }
             }
             
