@@ -447,6 +447,7 @@
                 const resetBtn = document.getElementById('resetBtn');
                 const resumeBtn = document.getElementById('resumeBtn');
                 const restartBtn = document.getElementById('restartBtn');
+                const mainMenuBtn = document.getElementById('mainMenuBtn');
                 const quitBtn = document.getElementById('quitBtn');
                 
                 if (startBtn) {
@@ -463,6 +464,7 @@
                 if (resetBtn) resetBtn.addEventListener('click', () => this.resetGame());
                 if (resumeBtn) resumeBtn.addEventListener('click', () => this.resumeGame());
                 if (restartBtn) restartBtn.addEventListener('click', () => this.restartGame());
+                if (mainMenuBtn) mainMenuBtn.addEventListener('click', () => this.returnToMainMenu());
                 if (quitBtn) quitBtn.addEventListener('click', () => this.quitGame());
             }
             
@@ -598,6 +600,7 @@
                     document.getElementById('menuContent').innerHTML = `
                         <button id="resumeBtn">Resume Game</button>
                         <button id="restartBtn">Restart Game</button>
+                        <button id="mainMenuBtn">Return to Main Menu</button>
                         <button id="quitBtn">Quit Game</button>
                     `;
                     this.setupMenuButtons();
@@ -683,6 +686,17 @@
             
             quitGame() {
                 this.resetGame();
+            }
+            
+            returnToMainMenu() {
+                this.resetGame();
+                document.getElementById('menuTitle').textContent = 'Naval Battle';
+                document.getElementById('menuContent').innerHTML = `
+                    <button id="startBtn">Start New Game</button>
+                    <button id="resetBtn">Change Map</button>
+                `;
+                this.setupMenuButtons();
+                document.getElementById('gameMenu').classList.remove('hidden');
             }
             
             resetGame() {

@@ -350,6 +350,7 @@
                     
                     // Handle pause/escape
                     if (e.code === 'KeyP' || e.code === 'Escape') {
+                        this.togglePause();
                         e.preventDefault();
                     }
                     
@@ -423,6 +424,9 @@
                     document.getElementById('joinRoomBtn').style.display = 'none';
                     document.getElementById('leaveRoomBtn').style.display = 'inline-block';
                     document.getElementById('startBtn').style.display = 'inline-block';
+                    
+                    // Update player count and verification status
+                    this.updatePlayerStatus(data.playerCount, data.playersReady);
                 });
                 
                 this.socket.on('game-state', (gameState) => {
@@ -437,10 +441,33 @@
                 
                 this.socket.on('player-joined', (data) => {
                     console.log('Player joined:', data.playerId);
+                    this.updatePlayerStatus(data.playerCount, data.playersReady);
                 });
                 
                 this.socket.on('player-left', (data) => {
                     console.log('Player left:', data.playerId);
+                    this.updatePlayerStatus(data.playerCount, data.playersReady);
+                });
+                
+                this.socket.on('players-ready', (data) => {
+                    this.updatePlayerStatus(data.playerCount, data.playersReady);
+                });
+                
+                this.socket.on('waiting-for-players', (data) => {
+                    document.getElementById('menuTitle').textContent = 'Waiting for Players';
+                    document.getElementById('menuContent').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <p>Players in room: ${data.playerCount}/2</p>
+                            <p>Waiting for all players to be ready...</p>
+                            <div style="margin: 20px 0;">
+                                <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite;"></div>
+                            </div>
+                        </div>
+                        <style>
+                            @keyframes spin { to { transform: rotate(360deg); } }
+                        </style>
+                    `;
+                    document.getElementById('gameMenu').classList.remove('hidden');
                 });
                 
                 this.socket.on('disconnect', () => {
@@ -460,6 +487,70 @@
                         this.joinRoom();
                     }, 500);
                 }
+            }
+            
+            updatePlayerStatus(playerCount, playersReady) {
+                const statusDiv = document.getElementById('playerStatus') || this.createPlayerStatusDiv();
+                statusDiv.innerHTML = `
+                    <div style="text-align: center; padding: 10px; background: rgba(0,0,0,0.7); border-radius: 5px; margin: 10px 0;">
+                        <p>Players in room: ${playerCount}/2</p>
+                        ${playersReady ? '<p style="color: #4CAF50;">✓ All players ready!</p>' : '<p style="color: #FFA500;">Waiting for players...</p>'}
+                    </div>
+                `;
+                
+                // Enable/disable start button based on player readiness
+                const startBtn = document.getElementById('startBtn');
+                if (startBtn) {
+                    startBtn.disabled = !playersReady;
+                    startBtn.style.opacity = playersReady ? '1' : '0.5';
+                }
+            }
+            
+            createPlayerStatusDiv() {
+                const statusDiv = document.createElement('div');
+                statusDiv.id = 'playerStatus';
+                const menuContent = document.getElementById('menuContent');
+                if (menuContent) {
+                    menuContent.appendChild(statusDiv);
+                }
+                return statusDiv;
+            }
+            
+            togglePause() {
+                if (!this.gameState || !this.gameState.gameStarted) return;
+                
+                if (document.getElementById('gameMenu').classList.contains('hidden')) {
+                    // Show pause menu
+                    document.getElementById('menuTitle').textContent = 'Game Paused';
+                    document.getElementById('menuContent').innerHTML = `
+                        <button id="resumeBtn" onclick="game.togglePause()">Resume Game</button>
+                        <button id="restartBtn" onclick="game.restartGame()">Restart Game</button>
+                        <button id="mainMenuBtn" onclick="game.returnToMainMenu()">Return to Main Menu</button>
+                        <button id="leaveRoomBtn" onclick="game.leaveRoom()">Leave Room</button>
+                    `;
+                    document.getElementById('gameMenu').classList.remove('hidden');
+                } else {
+                    // Hide pause menu
+                    document.getElementById('gameMenu').classList.add('hidden');
+                }
+            }
+            
+            restartGame() {
+                if (this.socket && this.roomId) {
+                    this.socket.emit('restart-game', this.roomId);
+                }
+                document.getElementById('gameMenu').classList.add('hidden');
+            }
+            
+            returnToMainMenu() {
+                this.leaveRoom();
+                // Reset to initial state
+                document.getElementById('menuTitle').textContent = 'Naval Battle';
+                document.getElementById('menuContent').innerHTML = `
+                    <input type="text" id="roomInput" placeholder="Enter room ID" maxlength="10">
+                    <button id="joinRoomBtn" onclick="game.joinRoom()">Join Room</button>
+                `;
+                document.getElementById('gameMenu').classList.remove('hidden');
             }
             
             joinRoom() {

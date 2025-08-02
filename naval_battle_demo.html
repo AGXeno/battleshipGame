@@ -343,6 +343,14 @@
                     const panel = document.getElementById('controlsPanel');
                     panel.classList.toggle('hidden');
                 });
+                
+                // Add keyboard controls for pause
+                document.addEventListener('keydown', (e) => {
+                    if (e.code === 'KeyP' || e.code === 'Escape') {
+                        this.togglePause();
+                        e.preventDefault();
+                    }
+                });
             }
             
             updateSelectedDisplay() {
@@ -521,6 +529,46 @@
                     
                     this.scheduleInitialShipSpawning();
                 }
+            }
+            
+            togglePause() {
+                if (!this.gameState.gameStarted || this.gameState.countdownActive) return;
+                
+                this.gameState.gamePaused = !this.gameState.gamePaused;
+                
+                if (this.gameState.gamePaused) {
+                    this.gameState.pauseStartTime = Date.now();
+                    document.getElementById('menuTitle').textContent = 'Game Paused';
+                    document.getElementById('menuContent').innerHTML = `
+                        <button id="resumeBtn" onclick="game.togglePause()">Resume Game</button>
+                        <button id="restartBtn" onclick="game.restartGame()">Restart Game</button>
+                        <button id="mainMenuBtn" onclick="game.returnToMainMenu()">Return to Main Menu</button>
+                    `;
+                    document.getElementById('gameMenu').classList.remove('hidden');
+                } else {
+                    if (this.gameState.pauseStartTime) {
+                        this.gameState.totalPausedTime += Date.now() - this.gameState.pauseStartTime;
+                        this.gameState.pauseStartTime = null;
+                    }
+                    document.getElementById('gameMenu').classList.add('hidden');
+                }
+            }
+            
+            restartGame() {
+                this.resetGame();
+                this.startGame();
+            }
+            
+            returnToMainMenu() {
+                this.resetGame();
+                document.getElementById('menuTitle').textContent = 'Naval Battle - AI vs AI Demo';
+                document.getElementById('menuContent').innerHTML = `
+                    <button id="startBtn">Start Demo</button>
+                    <button id="resetBtn">New Map</button>
+                `;
+                document.getElementById('startBtn').addEventListener('click', () => this.startGame());
+                document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+                document.getElementById('gameMenu').classList.remove('hidden');
             }
             
             spawnShip(playerId) {
@@ -1502,7 +1550,10 @@
                 const deltaTime = currentTime - this.lastTime;
                 this.lastTime = currentTime;
                 
-                this.update(deltaTime);
+                // Only update game state if not paused
+                if (!this.gameState.gamePaused) {
+                    this.update(deltaTime);
+                }
                 this.render();
                 
                 requestAnimationFrame(() => this.gameLoop());
