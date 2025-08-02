@@ -447,17 +447,18 @@
                     console.log('✅ Received joined-room event:', data);
                     this.roomId = data.roomId;
                     this.myPlayerId = data.playerId;
-                    this.myTeam = data.team;
-                    this.gameState = data.gameState;
                     this.isHost = data.isHost;
                     
+                    // Assign teams based on join order for signaling server compatibility
+                    this.myTeam = data.isHost ? 'team1' : 'team2';
+                    
                     document.getElementById('connectionStatus').textContent = 
-                        `In room ${data.roomId} - You are ${data.team === 'team1' ? 'Blue Team' : 'Red Team'}`;
+                        `In room ${data.roomId} - You are ${this.myTeam === 'team1' ? 'Blue Team (Host)' : 'Red Team'}`;
                     
                     document.getElementById('gameMenu').classList.remove('hidden');
                     
-                    // Update player count and verification status
-                    this.updatePlayerStatus(data.playerCount || 1, data.playersReady || false);
+                    // Show simplified ready state for signaling server
+                    this.showSimpleRoomStatus(data.playerCount, data.isHost);
                 });
                 
                 this.socket.on('game-state', (gameState) => {
@@ -472,12 +473,12 @@
                 
                 this.socket.on('player-joined', (data) => {
                     console.log('Player joined:', data.playerId);
-                    this.updatePlayerStatus(data.playerCount, data.playersReady);
+                    this.showSimpleRoomStatus(data.playerCount, this.isHost);
                 });
                 
                 this.socket.on('player-left', (data) => {
                     console.log('Player left:', data.playerId);
-                    this.updatePlayerStatus(data.playerCount, data.playersReady);
+                    this.showSimpleRoomStatus(data.playerCount, this.isHost);
                 });
                 
                 this.socket.on('players-ready', (data) => {
@@ -543,6 +544,55 @@
                     console.log('🚀 Auto-joining room:', this.pendingRoomJoin);
                     this.joinRoom();
                     this.pendingRoomJoin = null; // Clear after joining
+                }
+            }
+            
+            showSimpleRoomStatus(playerCount, isHost) {
+                const menuContent = document.getElementById('menuContent');
+                if (menuContent && this.roomId) {
+                    const title = `Room: ${this.roomId}`;
+                    document.getElementById('menuTitle').textContent = title;
+                    
+                    if (isHost) {
+                        // Host view - simplified for signaling server
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are <strong>Host</strong> on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    ${playerCount === 2 ? '<p style="color: #4CAF50;">✓ Both players connected!</p>' : '<p style="color: #FFA500;">Waiting for second player...</p>'}
+                                </div>
+                                <button id="startBtn" ${playerCount < 2 ? 'disabled' : ''}>Start Game</button>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
+                            </div>
+                        `;
+                    } else {
+                        // Non-host view - simplified for signaling server
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    <p style="color: #4CAF50;">✓ Connected and ready!</p>
+                                </div>
+                                <p>Waiting for host to start the game...</p>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
+                            </div>
+                        `;
+                    }
+                    
+                    // Re-add event listeners
+                    const startBtn = document.getElementById('startBtn');
+                    const returnBtn = document.getElementById('returnToLobbyBtn');
+                    
+                    if (startBtn) {
+                        startBtn.addEventListener('click', () => this.startGameSimple());
+                        startBtn.style.opacity = (playerCount < 2) ? '0.5' : '1';
+                    }
+                    
+                    if (returnBtn) {
+                        returnBtn.addEventListener('click', () => this.returnToLobby());
+                    }
                 }
             }
             
@@ -719,6 +769,26 @@
                 if (this.socket && this.roomId && this.isHost) {
                     this.socket.emit('start-game', this.roomId);
                 }
+            }
+            
+            startGameSimple() {
+                // For signaling server compatibility - just hide menu and start
+                console.log('🎮 Starting game (simplified mode)');
+                document.getElementById('gameMenu').classList.add('hidden');
+                // Initialize a basic game state since signaling server doesn't provide one
+                this.initializeBasicGameState();
+            }
+            
+            initializeBasicGameState() {
+                this.gameState = {
+                    ships: [],
+                    cannonballs: [],
+                    obstacles: [],
+                    scores: { team1: 0, team2: 0 },
+                    gameStarted: true,
+                    gameStartTime: Date.now()
+                };
+                console.log('🎯 Basic game state initialized');
             }
             
             toggleReady() {
