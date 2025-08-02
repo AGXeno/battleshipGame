@@ -1657,18 +1657,22 @@
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(-8, 0, 16, 3);
                     
-                    // Show selection for both AI team selected ships
+                    this.ctx.restore();
+                    
+                    // Show selection for both AI team selected ships (after health bar restore)
                     if (ship === this.blueSelectedShip || ship === this.redSelectedShip) {
+                        this.ctx.save();
+                        this.ctx.translate(ship.x, ship.y);
+                        
                         // Enhanced selection highlighting
-                        const isBlue = ship === this.blueSelectedShip;
-                        this.ctx.strokeStyle = isBlue ? '#4169E1' : '#DC143C';
+                        this.ctx.strokeStyle = '#FFFF00';
                         this.ctx.lineWidth = 4;
                         this.ctx.strokeRect(-15, -10, 30, 20);
                         
                         // Add a pulsing outer glow effect
                         const time = Date.now() / 500;
                         const alpha = 0.3 + 0.2 * Math.sin(time);
-                        this.ctx.shadowColor = isBlue ? '#4169E1' : '#DC143C';
+                        this.ctx.shadowColor = '#FFFF00';
                         this.ctx.shadowBlur = 10;
                         this.ctx.globalAlpha = alpha;
                         this.ctx.strokeStyle = '#FFFFFF';
@@ -1676,9 +1680,9 @@
                         this.ctx.strokeRect(-18, -12, 36, 24);
                         this.ctx.shadowBlur = 0;
                         this.ctx.globalAlpha = 1;
+                        
+                        this.ctx.restore();
                     }
-                    
-                    this.ctx.restore();
                 }
                 
                 // Render ship numbers
