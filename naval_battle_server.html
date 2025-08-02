@@ -344,12 +344,30 @@
                 `;
                 
                 // Add event listener for join room button
-                document.getElementById('joinRoomBtn').addEventListener('click', () => {
-                    console.log('Join Room button clicked');
-                    this.joinRoom();
-                });
+                const joinRoomBtn = document.getElementById('joinRoomBtn');
+                if (joinRoomBtn) {
+                    joinRoomBtn.addEventListener('click', (e) => {
+                        console.log('🖱️ Join Room button clicked!');
+                        console.log('Event:', e);
+                        console.log('Button disabled:', joinRoomBtn.disabled);
+                        console.log('Button text:', joinRoomBtn.textContent);
+                        e.preventDefault();
+                        this.joinRoom();
+                    });
+                    console.log('📝 Event listener added to Join Room button');
+                } else {
+                    console.error('❌ Could not find joinRoomBtn to add event listener');
+                }
                 document.getElementById('gameMenu').classList.remove('hidden');
                 console.log('Initial menu setup complete');
+                
+                // Add global click listener for debugging
+                document.addEventListener('click', (e) => {
+                    console.log('🌐 Global click detected:', e.target);
+                    console.log('Target id:', e.target.id);
+                    console.log('Target class:', e.target.className);
+                    console.log('Target text:', e.target.textContent);
+                });
             }
             
             setupCanvas() {
@@ -427,20 +445,51 @@
                 
                 this.socket.on('connect', () => {
                     console.log('✅ Connected to server successfully');
-                    document.getElementById('connectionStatus').textContent = 'Connected to server';
                     
-                    // Enable join room button once connected
-                    const joinBtn = document.getElementById('joinRoomBtn');
-                    if (joinBtn) {
-                        joinBtn.disabled = false;
-                        joinBtn.textContent = 'Join Room';
-                        console.log('✅ Join Room button enabled');
-                    } else {
-                        console.error('❌ Join Room button not found');
-                    }
-                    
-                    // Try auto-join from URL params now that socket is connected
-                    this.tryAutoJoin();
+                    // Force update the UI elements
+                    setTimeout(() => {
+                        const connectionStatus = document.getElementById('connectionStatus');
+                        const joinBtn = document.getElementById('joinRoomBtn');
+                        
+                        console.log('🔍 Updating UI elements...');
+                        console.log('connectionStatus element:', !!connectionStatus);
+                        console.log('joinBtn element:', !!joinBtn);
+                        
+                        if (connectionStatus) {
+                            connectionStatus.textContent = 'Connected to server';
+                            console.log('✅ Updated connection status');
+                        }
+                        
+                        if (joinBtn) {
+                            // Force a complete UI rebuild instead of just updating properties
+                            console.log('🔄 Rebuilding entire menu with connected state');
+                            document.getElementById('menuContent').innerHTML = `
+                                <div style="text-align: center;">
+                                    <p>Enter a room ID to join or create a room</p>
+                                    <input type="text" id="roomInput" placeholder="Enter room ID" value="room1" style="padding: 8px; margin: 10px; border: none; border-radius: 4px; background: #333; color: white;">
+                                    <br>
+                                    <button id="joinRoomBtn" style="padding: 10px 20px; margin: 5px; border: none; border-radius: 5px; background: #16213e; color: white; cursor: pointer; font-size: 16px;">Join Room</button>
+                                    <div id="connectionStatus">Connected to server</div>
+                                </div>
+                            `;
+                            
+                            // Re-add event listener to the new button
+                            const newJoinBtn = document.getElementById('joinRoomBtn');
+                            if (newJoinBtn) {
+                                newJoinBtn.addEventListener('click', (e) => {
+                                    console.log('🖱️ New Join Room button clicked!');
+                                    e.preventDefault();
+                                    this.joinRoom();
+                                });
+                                console.log('✅ New Join Room button created and enabled');
+                            }
+                        } else {
+                            console.error('❌ Join Room button not found');
+                        }
+                        
+                        // Try auto-join from URL params now that socket is connected
+                        this.tryAutoJoin();
+                    }, 100);
                 });
                 
                 this.socket.on('joined-room', (data) => {
@@ -519,9 +568,16 @@
             }
             
             checkUrlParams() {
+                console.log('🔍 Checking URL params...');
+                console.log('Current URL:', window.location.href);
+                console.log('Search string:', window.location.search);
+                
                 const urlParams = new URLSearchParams(window.location.search);
                 const room = urlParams.get('room');
                 const isHost = urlParams.get('host') === 'true';
+                
+                console.log('Parsed room:', room);
+                console.log('Parsed isHost:', isHost);
                 
                 if (room) {
                     console.log('📋 Found room in URL params:', room, 'isHost:', isHost);
@@ -536,14 +592,22 @@
                             console.log('📝 Set room input value to:', room);
                         }
                     }, 50);
+                } else {
+                    console.log('❌ No room found in URL params');
                 }
             }
             
             tryAutoJoin() {
+                console.log('🔍 tryAutoJoin called');
+                console.log('pendingRoomJoin:', this.pendingRoomJoin);
+                console.log('socket connected:', this.socket?.connected);
+                
                 if (this.pendingRoomJoin && this.socket?.connected) {
                     console.log('🚀 Auto-joining room:', this.pendingRoomJoin);
                     this.joinRoom();
                     this.pendingRoomJoin = null; // Clear after joining
+                } else {
+                    console.log('❌ Auto-join conditions not met');
                 }
             }
             
