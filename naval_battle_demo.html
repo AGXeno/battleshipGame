@@ -301,6 +301,12 @@
                 this.spawnTimeouts = [];
                 this.cameraFollowShip = null;
                 
+                // AI Demo tracking variables
+                this.currentDemoTeam = 'blue'; // Track which team we're watching
+                this.currentShipIndex = 0; // Track which ship in the team
+                this.autoSwitchInterval = 8000; // Auto-switch ships every 8 seconds
+                this.lastSwitchTime = 0;
+                
                 this.init();
             }
             
@@ -356,12 +362,57 @@
             updateSelectedDisplay() {
                 if (this.cameraFollowShip) {
                     const teamName = this.cameraFollowShip.playerId === 'blue' ? 'Blue' : 'Red';
-                    document.getElementById('selectedObject').textContent = `Following ${teamName} Ship ${this.cameraFollowShip.shipNumber || ''} - AI Strategy View`;
+                    document.getElementById('selectedObject').textContent = `Following ${teamName} Ship ${this.cameraFollowShip.shipNumber || ''} - AI Player View`;
                     const heading = Math.round(this.cameraFollowShip.angle * 180 / Math.PI);
-                    document.getElementById('currentHeading').textContent = `Heading: ${heading}° | Watching AI Think`;
+                    document.getElementById('currentHeading').textContent = `Heading: ${heading}° | AI Controlling Ship`;
                 } else {
-                    document.getElementById('selectedObject').textContent = 'AI vs AI Demo - Click ship to see AI strategy';
-                    document.getElementById('currentHeading').textContent = 'Click any ship to watch AI decision-making';
+                    document.getElementById('selectedObject').textContent = 'AI vs AI Demo - Auto-cycling ships';
+                    document.getElementById('currentHeading').textContent = 'Watching AI players in action';
+                }
+            }
+            
+            updateAIDemoShipSelection() {
+                if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
+                
+                const currentTime = Date.now();
+                
+                // Auto-switch ships every interval or if current ship is destroyed
+                if (currentTime - this.lastSwitchTime > this.autoSwitchInterval || 
+                    !this.cameraFollowShip || 
+                    this.cameraFollowShip.health <= 0) {
+                    
+                    this.selectNextAIShip();
+                    this.lastSwitchTime = currentTime;
+                }
+            }
+            
+            selectNextAIShip() {
+                const blueShips = this.gameState.ships.filter(s => s.playerId === 'blue' && s.health > 0);
+                const redShips = this.gameState.ships.filter(s => s.playerId === 'red' && s.health > 0);
+                
+                // Switch between teams every few ships
+                let targetShips = this.currentDemoTeam === 'blue' ? blueShips : redShips;
+                
+                if (targetShips.length === 0) {
+                    // Switch teams if current team has no ships
+                    this.currentDemoTeam = this.currentDemoTeam === 'blue' ? 'red' : 'blue';
+                    targetShips = this.currentDemoTeam === 'blue' ? blueShips : redShips;
+                    this.currentShipIndex = 0;
+                }
+                
+                if (targetShips.length > 0) {
+                    // Sort ships by ship number for consistent selection
+                    targetShips.sort((a, b) => (a.shipNumber || 0) - (b.shipNumber || 0));
+                    
+                    this.currentShipIndex = (this.currentShipIndex + 1) % targetShips.length;
+                    this.cameraFollowShip = targetShips[this.currentShipIndex];
+                    
+                    // Switch teams after cycling through all ships
+                    if (this.currentShipIndex === 0) {
+                        this.currentDemoTeam = this.currentDemoTeam === 'blue' ? 'red' : 'blue';
+                    }
+                    
+                    this.updateSelectedDisplay();
                 }
             }
             
@@ -528,6 +579,11 @@
                     titleElement.className = '';
                     
                     this.scheduleInitialShipSpawning();
+                    
+                    // Initialize AI demo ship selection
+                    setTimeout(() => {
+                        this.selectNextAIShip();
+                    }, 1000);
                 }
             }
             
@@ -946,6 +1002,7 @@
                 this.updateShips(deltaTime);
                 this.updateCannonballs(deltaTime);
                 this.updateIcebergDrift(deltaTime);
+                this.updateAIDemoShipSelection(); // Auto-cycle through AI ships
                 this.checkCollisions();
                 this.cleanupDeadObjects();
                 this.handleShooting();
