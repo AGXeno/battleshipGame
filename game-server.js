@@ -391,7 +391,7 @@ io.on('connection', (socket) => {
             playersReady: gameRoom.areAllPlayersReady()
         });
         
-        console.log(`Player ${socket.id} joined room ${roomId} as ${team}`);
+        console.log(`Player ${socket.id} joined room ${roomId} as ${playerInfo.team}`);
     });
     
     socket.on('start-game', (roomId) => {
@@ -493,7 +493,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3003;
 const HOST = process.env.HOST || '0.0.0.0'; // Accept connections from any IP
 
 server.listen(PORT, HOST, () => {
