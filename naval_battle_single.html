@@ -446,9 +446,9 @@
                 const startBtn = document.getElementById('startBtn');
                 const resetBtn = document.getElementById('resetBtn');
                 const resumeBtn = document.getElementById('resumeBtn');
+                const resumeGameBtn = document.getElementById('resumeGameBtn');
                 const restartBtn = document.getElementById('restartBtn');
                 const mainMenuBtn = document.getElementById('mainMenuBtn');
-                const quitBtn = document.getElementById('quitBtn');
                 
                 if (startBtn) {
                     // Check if this is a "Start New Game" after win/loss
@@ -463,9 +463,9 @@
                 }
                 if (resetBtn) resetBtn.addEventListener('click', () => this.resetGame());
                 if (resumeBtn) resumeBtn.addEventListener('click', () => this.resumeGame());
+                if (resumeGameBtn) resumeGameBtn.addEventListener('click', () => this.resumeGame());
                 if (restartBtn) restartBtn.addEventListener('click', () => this.restartGame());
                 if (mainMenuBtn) mainMenuBtn.addEventListener('click', () => this.returnToMainMenu());
-                if (quitBtn) quitBtn.addEventListener('click', () => this.quitGame());
             }
             
             handleMouseWheel(e) {
@@ -601,7 +601,6 @@
                         <button id="resumeBtn">Resume Game</button>
                         <button id="restartBtn">Restart Game</button>
                         <button id="mainMenuBtn">Return to Main Menu</button>
-                        <button id="quitBtn">Quit Game</button>
                     `;
                     this.setupMenuButtons();
                     document.getElementById('gameMenu').classList.remove('hidden');
@@ -684,14 +683,11 @@
                 this.startGame();
             }
             
-            quitGame() {
-                this.resetGame();
-            }
-            
             returnToMainMenu() {
-                this.resetGame();
+                // Don't reset the game - just show main menu (game stays paused in background)
                 document.getElementById('menuTitle').textContent = 'Naval Battle';
                 document.getElementById('menuContent').innerHTML = `
+                    <button id="resumeGameBtn">Resume Current Game</button>
                     <button id="startBtn">Start New Game</button>
                     <button id="resetBtn">Change Map</button>
                 `;
