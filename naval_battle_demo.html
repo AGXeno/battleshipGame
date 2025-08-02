@@ -540,10 +540,18 @@
                     this.gameState.pauseStartTime = Date.now();
                     document.getElementById('menuTitle').textContent = 'Game Paused';
                     document.getElementById('menuContent').innerHTML = `
-                        <button id="resumeBtn" onclick="game.togglePause()">Resume Game</button>
-                        <button id="restartBtn" onclick="game.restartGame()">Restart Game</button>
-                        <button id="mainMenuBtn" onclick="game.returnToMainMenu()">Return to Main Menu</button>
+                        <button id="resumeBtn">Resume Game</button>
+                        <button id="restartBtn">Restart Game</button>
+                        <button id="mainMenuBtn">Return to Main Menu</button>
                     `;
+                    
+                    // Add event listeners after creating the buttons
+                    setTimeout(() => {
+                        document.getElementById('resumeBtn')?.addEventListener('click', () => this.togglePause());
+                        document.getElementById('restartBtn')?.addEventListener('click', () => this.restartGame());
+                        document.getElementById('mainMenuBtn')?.addEventListener('click', () => this.returnToMainMenu());
+                    }, 0);
+                    
                     document.getElementById('gameMenu').classList.remove('hidden');
                 } else {
                     if (this.gameState.pauseStartTime) {
@@ -566,8 +574,13 @@
                     <button id="startBtn">Start Demo</button>
                     <button id="resetBtn">New Map</button>
                 `;
-                document.getElementById('startBtn').addEventListener('click', () => this.startGame());
-                document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+                
+                // Add event listeners after creating the buttons
+                setTimeout(() => {
+                    document.getElementById('startBtn')?.addEventListener('click', () => this.startGame());
+                    document.getElementById('resetBtn')?.addEventListener('click', () => this.resetGame());
+                }, 0);
+                
                 document.getElementById('gameMenu').classList.remove('hidden');
             }
             
