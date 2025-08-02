@@ -1384,31 +1384,7 @@
                         this.ctx.lineWidth = 1;
                         this.ctx.strokeRect(-10, -5, 20, 10);
                         
-                        this.ctx.restore();
-                        
-                        // Health bar - only show for ships owned by this player
-                        if (ship.ownerId === this.myPlayerId) {
-                            this.ctx.save();
-                            this.ctx.translate(ship.x, ship.y - 15);
-                            
-                            const healthRatio = ship.health / ship.maxHealth;
-                            
-                            // Health bar background
-                            this.ctx.fillStyle = '#333';
-                            this.ctx.fillRect(-8, 0, 16, 3);
-                            
-                            // Health bar
-                            this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
-                            this.ctx.fillRect(-8, 0, healthRatio * 16, 3);
-                            
-                            // Health bar border
-                            this.ctx.strokeStyle = '#000';
-                            this.ctx.lineWidth = 1;
-                            this.ctx.strokeRect(-8, 0, 16, 3);
-                            
-                            this.ctx.restore();
-                        }
-                        
+                        // Selection highlighting (drawn first, in ship coordinate space)
                         if (ship.id === this.selectedShipId) {
                             // Enhanced selection highlighting
                             this.ctx.strokeStyle = '#FFFF00';
@@ -1426,6 +1402,31 @@
                             this.ctx.strokeRect(-18, -12, 36, 24);
                             this.ctx.shadowBlur = 0;
                             this.ctx.globalAlpha = 1;
+                        }
+                        
+                        this.ctx.restore();
+                        
+                        // Health bar - only show for ships owned by this player (drawn after selection to appear on top)
+                        if (ship.ownerId === this.myPlayerId) {
+                            this.ctx.save();
+                            this.ctx.translate(ship.x, ship.y - 20);
+                            
+                            const healthRatio = ship.health / ship.maxHealth;
+                            
+                            // Health bar background (larger and more visible)
+                            this.ctx.fillStyle = '#333';
+                            this.ctx.fillRect(-12, 0, 24, 5);
+                            
+                            // Health bar
+                            this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
+                            this.ctx.fillRect(-12, 0, healthRatio * 24, 5);
+                            
+                            // Health bar border
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = 1;
+                            this.ctx.strokeRect(-12, 0, 24, 5);
+                            
+                            this.ctx.restore();
                         }
                         
                         this.ctx.restore();
