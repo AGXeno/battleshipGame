@@ -13,6 +13,11 @@
             overflow: auto;
         }
         
+        /* Prevent scrolling when WASD keys are pressed */
+        body.game-active {
+            overflow: hidden;
+        }
+        
         #gameContainer {
             position: relative;
             width: 100vw;
@@ -32,6 +37,7 @@
             cursor: crosshair;
             max-width: 95vw;
             max-height: 60vh;
+            outline: none;
         }
         
         #topScore {
@@ -226,7 +232,7 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <canvas id="gameCanvas" width="1000" height="700" tabindex="0"></canvas>
         
         <div id="headingDisplay">
             <canvas id="headingCanvas" width="350" height="160"></canvas>
@@ -361,12 +367,20 @@
                 document.getElementById('gameMenu').classList.remove('hidden');
                 console.log('Initial menu setup complete');
                 
-                // Add global click listener for debugging
+                // Add global click listener for debugging AND event delegation
                 document.addEventListener('click', (e) => {
                     console.log('🌐 Global click detected:', e.target);
                     console.log('Target id:', e.target.id);
                     console.log('Target class:', e.target.className);
                     console.log('Target text:', e.target.textContent);
+                    
+                    // Handle start game button via event delegation
+                    if (e.target.id === 'startBtn') {
+                        console.log('🎯 Start Game button clicked via delegation!');
+                        e.preventDefault();
+                        // Use proper server start game instead of simple mode
+                        this.startGame();
+                    }
                 });
             }
             
@@ -382,17 +396,22 @@
                 document.addEventListener('keydown', (e) => {
                     this.keys[e.code] = true;
                     
+                    // Prevent browser default behavior for game keys
+                    if (['KeyW', 'KeyA', 'KeyS', 'KeyD', 'KeyQ', 'KeyE', 'KeyP', 'Escape'].includes(e.code) ||
+                        (e.code >= 'Digit1' && e.code <= 'Digit5')) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+                    
                     // Handle pause/escape
                     if (e.code === 'KeyP' || e.code === 'Escape') {
                         this.togglePause();
-                        e.preventDefault();
                     }
                     
                     // Handle number key selection (1-5)
                     if (e.code >= 'Digit1' && e.code <= 'Digit5') {
                         const shipNumber = parseInt(e.code.slice(-1)) - 1;
                         this.selectShipByNumber(shipNumber);
-                        e.preventDefault();
                     }
                 });
                 
@@ -516,8 +535,20 @@
                 });
                 
                 this.socket.on('game-started', (data) => {
+                    console.log('🎮 Game started event received:', data);
                     document.getElementById('startBtn').style.display = 'none';
                     document.getElementById('gameMenu').classList.add('hidden');
+                    console.log('✅ Game menu hidden, gameplay should begin');
+                    
+                    // Prevent browser scrolling and focus canvas for keyboard input
+                    document.body.classList.add('game-active');
+                    this.canvas.focus();
+                    console.log('✅ Canvas focused for keyboard input');
+                    
+                    // Auto-select first ship when game starts
+                    setTimeout(() => {
+                        this.autoSelectFirstShip();
+                    }, 1000);
                 });
                 
                 this.socket.on('player-joined', (data) => {
@@ -650,8 +681,17 @@
                     const returnBtn = document.getElementById('returnToLobbyBtn');
                     
                     if (startBtn) {
-                        startBtn.addEventListener('click', () => this.startGameSimple());
+                        startBtn.addEventListener('click', (e) => {
+                            console.log('🎯 Start Game button event fired!');
+                            console.log('Event:', e);
+                            console.log('Button disabled:', startBtn.disabled);
+                            e.preventDefault();
+                            this.startGameSimple();
+                        });
                         startBtn.style.opacity = (playerCount < 2) ? '0.5' : '1';
+                        console.log('📝 Start Game event listener added');
+                    } else {
+                        console.error('❌ Start Game button not found for event listener');
                     }
                     
                     if (returnBtn) {
@@ -830,8 +870,16 @@
             }
             
             startGame() {
+                console.log('🎮 startGame() called');
+                console.log('Socket:', !!this.socket);
+                console.log('Room ID:', this.roomId);
+                console.log('Is Host:', this.isHost);
+                
                 if (this.socket && this.roomId && this.isHost) {
+                    console.log('✅ Emitting start-game event to server');
                     this.socket.emit('start-game', this.roomId);
+                } else {
+                    console.error('❌ Cannot start game - missing requirements');
                 }
             }
             
@@ -956,6 +1004,24 @@
                 if (targetShip) {
                     this.selectedShipId = targetShip.id;
                     this.updateSelectedShipDisplay(targetShip);
+                }
+            }
+            
+            autoSelectFirstShip() {
+                if (!this.gameState || !this.gameState.ships) {
+                    console.log('⏳ No ships available yet, retrying...');
+                    setTimeout(() => this.autoSelectFirstShip(), 500);
+                    return;
+                }
+                
+                const myShips = this.gameState.ships.filter(s => s.ownerId === this.myPlayerId);
+                if (myShips.length > 0) {
+                    this.selectedShipId = myShips[0].id;
+                    this.updateSelectedShipDisplay(myShips[0]);
+                    console.log('✅ Auto-selected first ship:', myShips[0].id);
+                } else {
+                    console.log('⏳ No player ships found, retrying...');
+                    setTimeout(() => this.autoSelectFirstShip(), 500);
                 }
             }
             
