@@ -1,0 +1,1365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naval Battle - Multiplayer</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+            overflow: auto;
+        }
+        
+        #gameContainer {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            background: #1a1a2e;
+            min-height: 900px;
+            padding-top: 20px;
+        }
+        
+        #gameCanvas {
+            border: 2px solid #16213e;
+            background: #0f3460;
+            cursor: crosshair;
+            max-width: 95vw;
+            max-height: 60vh;
+        }
+        
+        #topScore {
+            display: flex;
+            justify-content: space-between;
+            width: min(1004px, 95vw);
+            margin-bottom: 5px;
+            font-size: 28px;
+            color: white;
+        }
+        
+        #headingDisplay {
+            margin-top: 20px;
+            width: min(400px, 95vw);
+            height: 200px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 2px solid #16213e;
+            border-radius: 10px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #headingCanvas {
+            background: transparent;
+        }
+        
+        #headingInfo {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        #multiplayerControls {
+            display: none;
+        }
+        
+        #roomInput {
+            padding: 8px;
+            margin: 5px;
+            border: none;
+            border-radius: 4px;
+            background: #333;
+            color: white;
+        }
+        
+        #connectionStatus {
+            font-size: 12px;
+            margin-top: 5px;
+            color: #ccc;
+        }
+        
+        #gameMenu {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            border: 2px solid #16213e;
+            border-radius: 15px;
+            padding: 30px;
+            color: white;
+            text-align: center;
+            z-index: 200;
+            min-width: 300px;
+        }
+        
+        #gameMenu.hidden {
+            display: none;
+        }
+        
+        #gameMenu h2 {
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #4169E1;
+            font-size: 2em;
+        }
+        
+        #gameMenu h2.countdown {
+            font-size: 6em;
+            color: #FFD700;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+            margin: 0;
+        }
+        
+        #controlsToggle {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            z-index: 100;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #16213e;
+            color: white;
+            cursor: pointer;
+        }
+        
+        #controlsPanel {
+            position: absolute;
+            left: 10px;
+            bottom: 60px;
+            background: rgba(0, 0, 0, 0.9);
+            border: 1px solid #16213e;
+            border-radius: 8px;
+            padding: 15px;
+            color: white;
+            max-width: 300px;
+            transition: transform 0.3s ease;
+            z-index: 99;
+        }
+        
+        #controlsPanel.hidden {
+            transform: translateX(-100%);
+        }
+        
+        .score-item {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-weight: bold;
+            min-width: 200px;
+        }
+        
+        .team1-score {
+            color: #4169E1;
+        }
+        
+        .team2-score {
+            color: #DC143C;
+        }
+        
+        .game-info {
+            color: #ccc;
+            font-size: 28px;
+        }
+        
+        button {
+            padding: 10px 20px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: #16213e;
+            color: white;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background: #1e3a5f;
+        }
+        
+        .ship-controls {
+            margin: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .ship-controls label {
+            min-width: 80px;
+        }
+        
+        .ship-controls input[type="range"] {
+            flex: 1;
+            margin: 0 10px;
+        }
+        
+        .ship-controls span {
+            min-width: 80px;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <div id="topScore">
+            <div class="score-item team1-score">
+                Blue Team: <span id="team1Score">0</span>
+            </div>
+            <div class="score-item game-info">
+                Time: <span id="gameTime">0:00</span>
+            </div>
+            <div class="score-item team2-score">
+                Red Team: <span id="team2Score">0</span>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        
+        <div id="headingDisplay">
+            <canvas id="headingCanvas" width="350" height="160"></canvas>
+            <div id="headingInfo">
+                <div id="selectedObject">No selection</div>
+                <div id="currentHeading">Tiller: --</div>
+            </div>
+        </div>
+        
+        <div id="multiplayerControls">
+            <div><strong>🌐 Multiplayer</strong></div>
+            <input type="text" id="roomInput" placeholder="Enter Room ID" value="room1">
+            <br>
+            <button id="joinRoomBtn">Join Room</button>
+            <button id="leaveRoomBtn" style="display: none;">Leave Room</button>
+            <button id="startBtn" style="display: none;">Start Game</button>
+            <div id="connectionStatus">Not connected</div>
+        </div>
+        
+        <div id="gameMenu" class="hidden">
+            <h2 id="menuTitle">Naval Battle</h2>
+            <div id="menuContent">
+                <p>Waiting for game to start...</p>
+            </div>
+        </div>
+        
+        <button id="controlsToggle">Controls</button>
+        
+        <div id="controlsPanel" class="hidden">
+            <div><strong>Multiplayer Controls:</strong></div>
+            <div>• <strong>Left-click:</strong> Select your ships</div>
+            <div>• <strong>Right-click:</strong> Set cannon aim</div>
+            <div>• <strong>A/D keys:</strong> Steer left/right</div>
+            <div>• <strong>W/S keys:</strong> Speed up/down</div>
+            <div>• <strong>1-5 keys:</strong> Select ships by number</div>
+            <div>• <strong>Q/E keys:</strong> Cycle through ships</div>
+            <div>• <strong>P/Esc keys:</strong> Pause game</div>
+            <div>• Red lines show cannon directions</div>
+            <div>• Yellow line shows aim preview</div>
+            <div>• Ships auto-fire every 5 seconds</div>
+            
+            <div class="ship-controls">
+                <label>Heading: </label>
+                <input type="range" id="headingSlider" min="-45" max="45" value="0">
+                <span id="headingValue">0°</span>
+            </div>
+            
+            <div class="ship-controls">
+                <label>Speed: </label>
+                <input type="range" id="speedSlider" min="0" max="25" value="25">
+                <span id="speedValue">25</span>
+            </div>
+            
+            <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
+                Blue team spawns bottom-left<br>
+                Red team spawns top-right<br>
+                Icebergs drift with ocean currents
+            </div>
+            
+            <button onclick="document.getElementById('controlsPanel').classList.add('hidden')" 
+                    style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">
+                Hide Controls
+            </button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        class NavalBattleMultiplayer {
+            constructor() {
+                this.canvas = document.getElementById('gameCanvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.headingCanvas = document.getElementById('headingCanvas');
+                this.headingCtx = this.headingCanvas.getContext('2d');
+                
+                this.socket = null;
+                this.gameState = null;
+                this.selectedShipId = null;
+                this.roomId = null;
+                this.myPlayerId = null;
+                this.myTeam = null;
+                
+                this.lastTime = 0;
+                this.keys = {};
+                this.mouseAimAngle = 0;
+                this.selectedShipIndex = 0;
+                this.lastQPressed = false;
+                this.lastEPressed = false;
+                this.pendingRoomJoin = null;
+                
+                this.init();
+            }
+            
+            init() {
+                this.setupCanvas();
+                this.setupControls();
+                this.setupInitialMenu();
+                this.setupSocket();
+                this.gameLoop();
+                this.checkUrlParams();
+            }
+            
+            setupInitialMenu() {
+                console.log('Setting up initial menu...');
+                // Show initial room joining menu
+                document.getElementById('menuTitle').textContent = 'Join Multiplayer Room';
+                document.getElementById('menuContent').innerHTML = `
+                    <div style="text-align: center;">
+                        <p>Enter a room ID to join or create a room</p>
+                        <input type="text" id="roomInput" placeholder="Enter room ID" value="room1" style="padding: 8px; margin: 10px; border: none; border-radius: 4px; background: #333; color: white;">
+                        <br>
+                        <button id="joinRoomBtn" disabled>Connecting...</button>
+                        <div id="connectionStatus">Connecting to server...</div>
+                    </div>
+                `;
+                
+                // Add event listener for join room button
+                document.getElementById('joinRoomBtn').addEventListener('click', () => {
+                    console.log('Join Room button clicked');
+                    this.joinRoom();
+                });
+                document.getElementById('gameMenu').classList.remove('hidden');
+                console.log('Initial menu setup complete');
+            }
+            
+            setupCanvas() {
+                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+                this.canvas.addEventListener('contextmenu', (e) => {
+                    e.preventDefault();
+                    this.handleCanvasRightClick(e);
+                });
+                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
+                this.canvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
+                
+                document.addEventListener('keydown', (e) => {
+                    this.keys[e.code] = true;
+                    
+                    // Handle pause/escape
+                    if (e.code === 'KeyP' || e.code === 'Escape') {
+                        this.togglePause();
+                        e.preventDefault();
+                    }
+                    
+                    // Handle number key selection (1-5)
+                    if (e.code >= 'Digit1' && e.code <= 'Digit5') {
+                        const shipNumber = parseInt(e.code.slice(-1)) - 1;
+                        this.selectShipByNumber(shipNumber);
+                        e.preventDefault();
+                    }
+                });
+                
+                document.addEventListener('keyup', (e) => {
+                    this.keys[e.code] = false;
+                });
+            }
+            
+            setupControls() {
+                const headingSlider = document.getElementById('headingSlider');
+                const headingValue = document.getElementById('headingValue');
+                const speedSlider = document.getElementById('speedSlider');
+                const speedValue = document.getElementById('speedValue');
+                
+                headingSlider.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    headingValue.textContent = value + '°';
+                    
+                    if (this.selectedShipId && this.socket) {
+                        this.socket.emit('ship-control', {
+                            shipId: this.selectedShipId,
+                            action: 'rudder',
+                            value: value * Math.PI/180
+                        });
+                    }
+                });
+
+                speedSlider.addEventListener('input', (e) => {
+                    const value = parseInt(e.target.value);
+                    speedValue.textContent = value;
+                    
+                    if (this.selectedShipId && this.socket) {
+                        this.socket.emit('ship-control', {
+                            shipId: this.selectedShipId,
+                            action: 'speed',
+                            value: value
+                        });
+                    }
+                });
+                
+                document.getElementById('controlsToggle').addEventListener('click', () => {
+                    const panel = document.getElementById('controlsPanel');
+                    panel.classList.toggle('hidden');
+                });
+            }
+            
+            setupSocket() {
+                console.log('Setting up socket connection...');
+                this.socket = io();
+                
+                this.socket.on('connect', () => {
+                    console.log('✅ Connected to server successfully');
+                    document.getElementById('connectionStatus').textContent = 'Connected to server';
+                    
+                    // Enable join room button once connected
+                    const joinBtn = document.getElementById('joinRoomBtn');
+                    if (joinBtn) {
+                        joinBtn.disabled = false;
+                        joinBtn.textContent = 'Join Room';
+                        console.log('✅ Join Room button enabled');
+                    } else {
+                        console.error('❌ Join Room button not found');
+                    }
+                    
+                    // Try auto-join from URL params now that socket is connected
+                    this.tryAutoJoin();
+                });
+                
+                this.socket.on('joined-room', (data) => {
+                    console.log('✅ Received joined-room event:', data);
+                    this.roomId = data.roomId;
+                    this.myPlayerId = data.playerId;
+                    this.isHost = data.isHost;
+                    
+                    // Assign teams based on join order for signaling server compatibility
+                    this.myTeam = data.isHost ? 'team1' : 'team2';
+                    
+                    document.getElementById('connectionStatus').textContent = 
+                        `In room ${data.roomId} - You are ${this.myTeam === 'team1' ? 'Blue Team (Host)' : 'Red Team'}`;
+                    
+                    document.getElementById('gameMenu').classList.remove('hidden');
+                    
+                    // Show simplified ready state for signaling server
+                    this.showSimpleRoomStatus(data.playerCount, data.isHost);
+                });
+                
+                this.socket.on('game-state', (gameState) => {
+                    this.gameState = gameState;
+                    this.updateSelectedShipDisplay();
+                });
+                
+                this.socket.on('game-started', (data) => {
+                    document.getElementById('startBtn').style.display = 'none';
+                    document.getElementById('gameMenu').classList.add('hidden');
+                });
+                
+                this.socket.on('player-joined', (data) => {
+                    console.log('Player joined:', data.playerId);
+                    this.showSimpleRoomStatus(data.playerCount, this.isHost);
+                });
+                
+                this.socket.on('player-left', (data) => {
+                    console.log('Player left:', data.playerId);
+                    this.showSimpleRoomStatus(data.playerCount, this.isHost);
+                });
+                
+                this.socket.on('players-ready', (data) => {
+                    this.updatePlayerStatus(data.playerCount, data.playersReady);
+                });
+                
+                this.socket.on('player-ready-status', (data) => {
+                    this.playerReady = data.isReady;
+                    this.updatePlayerStatus(data.playerCount, data.allPlayersReady);
+                });
+                
+                this.socket.on('waiting-for-players', (data) => {
+                    document.getElementById('menuTitle').textContent = 'Waiting for Players';
+                    document.getElementById('menuContent').innerHTML = `
+                        <div style="text-align: center; padding: 20px;">
+                            <p>Players in room: ${data.playerCount}/2</p>
+                            <p>Waiting for all players to be ready...</p>
+                            <div style="margin: 20px 0;">
+                                <div style="display: inline-block; width: 20px; height: 20px; border: 2px solid #fff; border-radius: 50%; border-top-color: transparent; animation: spin 1s linear infinite;"></div>
+                            </div>
+                        </div>
+                        <style>
+                            @keyframes spin { to { transform: rotate(360deg); } }
+                        </style>
+                    `;
+                    document.getElementById('gameMenu').classList.remove('hidden');
+                });
+                
+                this.socket.on('disconnect', () => {
+                    console.log('❌ Disconnected from server');
+                    document.getElementById('connectionStatus').textContent = 'Disconnected from server';
+                });
+                
+                this.socket.on('connect_error', (error) => {
+                    console.error('❌ Connection error:', error);
+                    document.getElementById('connectionStatus').textContent = 'Connection failed';
+                });
+            }
+            
+            checkUrlParams() {
+                const urlParams = new URLSearchParams(window.location.search);
+                const room = urlParams.get('room');
+                const isHost = urlParams.get('host') === 'true';
+                
+                if (room) {
+                    console.log('📋 Found room in URL params:', room, 'isHost:', isHost);
+                    // Store for later auto-join when socket connects
+                    this.pendingRoomJoin = room;
+                    
+                    // Set the room input value
+                    setTimeout(() => {
+                        const roomInput = document.getElementById('roomInput');
+                        if (roomInput) {
+                            roomInput.value = room;
+                            console.log('📝 Set room input value to:', room);
+                        }
+                    }, 50);
+                }
+            }
+            
+            tryAutoJoin() {
+                if (this.pendingRoomJoin && this.socket?.connected) {
+                    console.log('🚀 Auto-joining room:', this.pendingRoomJoin);
+                    this.joinRoom();
+                    this.pendingRoomJoin = null; // Clear after joining
+                }
+            }
+            
+            showSimpleRoomStatus(playerCount, isHost) {
+                const menuContent = document.getElementById('menuContent');
+                if (menuContent && this.roomId) {
+                    const title = `Room: ${this.roomId}`;
+                    document.getElementById('menuTitle').textContent = title;
+                    
+                    if (isHost) {
+                        // Host view - simplified for signaling server
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are <strong>Host</strong> on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    ${playerCount === 2 ? '<p style="color: #4CAF50;">✓ Both players connected!</p>' : '<p style="color: #FFA500;">Waiting for second player...</p>'}
+                                </div>
+                                <button id="startBtn" ${playerCount < 2 ? 'disabled' : ''}>Start Game</button>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
+                            </div>
+                        `;
+                    } else {
+                        // Non-host view - simplified for signaling server
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    <p style="color: #4CAF50;">✓ Connected and ready!</p>
+                                </div>
+                                <p>Waiting for host to start the game...</p>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
+                            </div>
+                        `;
+                    }
+                    
+                    // Re-add event listeners
+                    const startBtn = document.getElementById('startBtn');
+                    const returnBtn = document.getElementById('returnToLobbyBtn');
+                    
+                    if (startBtn) {
+                        startBtn.addEventListener('click', () => this.startGameSimple());
+                        startBtn.style.opacity = (playerCount < 2) ? '0.5' : '1';
+                    }
+                    
+                    if (returnBtn) {
+                        returnBtn.addEventListener('click', () => this.returnToLobby());
+                    }
+                }
+            }
+            
+            updatePlayerStatus(playerCount, playersReady) {
+                // Update the menu content to include player status
+                const menuContent = document.getElementById('menuContent');
+                if (menuContent && this.roomId) {
+                    const title = `Room: ${this.roomId}`;
+                    document.getElementById('menuTitle').textContent = title;
+                    
+                    const isReady = this.playerReady || false;
+                    
+                    if (this.isHost) {
+                        // Host view - can start game when all ready
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are <strong>Host</strong> on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    ${playersReady && playerCount === 2 ? '<p style="color: #4CAF50;">✓ All players ready!</p>' : '<p style="color: #FFA500;">Waiting for players to be ready...</p>'}
+                                </div>
+                                <button id="startBtn" ${!playersReady || playerCount < 2 ? 'disabled' : ''}>Start Game</button>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
+                            </div>
+                        `;
+                    } else {
+                        // Non-host view - ready button
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    <p>Status: ${isReady ? '<span style="color: #4CAF50;">Ready ✓</span>' : '<span style="color: #FFA500;">Not Ready</span>'}</p>
+                                </div>
+                                <button id="readyBtn">${isReady ? 'Not Ready' : 'Ready'}</button>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
+                            </div>
+                        `;
+                    }
+                    
+                    // Re-add event listeners
+                    const startBtn = document.getElementById('startBtn');
+                    const readyBtn = document.getElementById('readyBtn');
+                    const returnBtn = document.getElementById('returnToLobbyBtn');
+                    
+                    if (startBtn) {
+                        startBtn.addEventListener('click', () => this.startGame());
+                        startBtn.style.opacity = (!playersReady || playerCount < 2) ? '0.5' : '1';
+                    }
+                    
+                    if (readyBtn) {
+                        readyBtn.addEventListener('click', () => this.toggleReady());
+                    }
+                    
+                    if (returnBtn) {
+                        returnBtn.addEventListener('click', () => this.returnToLobby());
+                    }
+                }
+            }
+            
+            createPlayerStatusDiv() {
+                const statusDiv = document.createElement('div');
+                statusDiv.id = 'playerStatus';
+                const menuContent = document.getElementById('menuContent');
+                if (menuContent) {
+                    menuContent.appendChild(statusDiv);
+                }
+                return statusDiv;
+            }
+            
+            togglePause() {
+                if (!this.gameState || !this.gameState.gameStarted) return;
+                
+                if (document.getElementById('gameMenu').classList.contains('hidden')) {
+                    // Show pause menu
+                    document.getElementById('menuTitle').textContent = 'Game Paused';
+                    document.getElementById('menuContent').innerHTML = `
+                        <button id="resumeBtn">Resume Game</button>
+                        <button id="restartBtn">Restart Game</button>
+                        <button id="mainMenuBtn">Return to Main Menu</button>
+                        <button id="leaveRoomBtn">Leave Room</button>
+                    `;
+                    
+                    // Add event listeners for pause menu buttons
+                    document.getElementById('resumeBtn').addEventListener('click', () => this.togglePause());
+                    document.getElementById('restartBtn').addEventListener('click', () => this.restartGame());
+                    document.getElementById('mainMenuBtn').addEventListener('click', () => this.returnToMainMenu());
+                    document.getElementById('leaveRoomBtn').addEventListener('click', () => this.leaveRoom());
+                    
+                    document.getElementById('gameMenu').classList.remove('hidden');
+                } else {
+                    // Hide pause menu
+                    document.getElementById('gameMenu').classList.add('hidden');
+                }
+            }
+            
+            restartGame() {
+                if (this.socket && this.roomId) {
+                    this.socket.emit('restart-game', this.roomId);
+                }
+                document.getElementById('gameMenu').classList.add('hidden');
+            }
+            
+            returnToMainMenu() {
+                // Leave room and navigate back to the main game selection menu
+                if (this.socket) {
+                    this.socket.disconnect();
+                }
+                window.location.href = 'index.html';
+            }
+            
+            returnToLobby() {
+                this.leaveRoom();
+                // Reset to lobby state
+                document.getElementById('menuTitle').textContent = 'Join Multiplayer Room';
+                document.getElementById('menuContent').innerHTML = `
+                    <div style="text-align: center;">
+                        <p>Enter a room ID to join or create a room</p>
+                        <input type="text" id="roomInput" placeholder="Enter room ID" value="room1" style="padding: 8px; margin: 10px; border: none; border-radius: 4px; background: #333; color: white;">
+                        <br>
+                        <button id="joinRoomBtn">Join Room</button>
+                    </div>
+                `;
+                
+                // Add event listener for join room button
+                document.getElementById('joinRoomBtn').addEventListener('click', () => this.joinRoom());
+                document.getElementById('gameMenu').classList.remove('hidden');
+            }
+            
+            joinRoom() {
+                console.log('🔄 joinRoom() called');
+                const roomInput = document.getElementById('roomInput');
+                const roomId = roomInput ? roomInput.value.trim() : '';
+                
+                console.log('Room ID:', roomId);
+                console.log('Socket connected:', !!this.socket?.connected);
+                
+                if (!roomId) {
+                    console.error('❌ No room ID provided');
+                    return;
+                }
+                
+                if (!this.socket) {
+                    console.error('❌ Socket not initialized');
+                    return;
+                }
+                
+                if (!this.socket.connected) {
+                    console.error('❌ Socket not connected');
+                    return;
+                }
+                
+                console.log('✅ Emitting join-room event with roomId:', roomId);
+                this.socket.emit('join-room', roomId);
+            }
+            
+            leaveRoom() {
+                if (this.socket) {
+                    this.socket.emit('leave-room');
+                    this.socket.disconnect();
+                    this.socket = io();
+                    this.setupSocket();
+                }
+                
+                document.getElementById('joinRoomBtn').style.display = 'inline-block';
+                document.getElementById('leaveRoomBtn').style.display = 'none';
+                document.getElementById('startBtn').style.display = 'none';
+                document.getElementById('connectionStatus').textContent = 'Connected to server';
+                this.gameState = null;
+                this.selectedShipId = null;
+            }
+            
+            startGame() {
+                if (this.socket && this.roomId && this.isHost) {
+                    this.socket.emit('start-game', this.roomId);
+                }
+            }
+            
+            startGameSimple() {
+                // For signaling server compatibility - just hide menu and start
+                console.log('🎮 Starting game (simplified mode)');
+                document.getElementById('gameMenu').classList.add('hidden');
+                // Initialize a basic game state since signaling server doesn't provide one
+                this.initializeBasicGameState();
+            }
+            
+            initializeBasicGameState() {
+                this.gameState = {
+                    ships: [],
+                    cannonballs: [],
+                    obstacles: [],
+                    scores: { team1: 0, team2: 0 },
+                    gameStarted: true,
+                    gameStartTime: Date.now()
+                };
+                console.log('🎯 Basic game state initialized');
+            }
+            
+            toggleReady() {
+                if (this.socket && this.roomId) {
+                    this.socket.emit('toggle-ready', this.roomId);
+                }
+            }
+            
+            handleCanvasClick(e) {
+                if (!this.gameState || !this.gameState.gameStarted) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
+                // Only select ships owned by this player
+                const myShips = this.gameState.ships.filter(s => s.ownerId === this.myPlayerId);
+                
+                for (let ship of myShips) {
+                    const dx = x - ship.x;
+                    const dy = y - ship.y;
+                    if (Math.sqrt(dx*dx + dy*dy) < 15) {
+                        this.selectedShipId = ship.id;
+                        this.updateSelectedShipDisplay(ship);
+                        break;
+                    }
+                }
+            }
+            
+            handleCanvasRightClick(e) {
+                if (!this.gameState || !this.gameState.gameStarted || !this.selectedShipId) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const x = (e.clientX - rect.left) * scaleX;
+                const y = (e.clientY - rect.top) * scaleY;
+                
+                const ship = this.gameState.ships.find(s => s.id === this.selectedShipId);
+                if (ship && ship.ownerId === this.myPlayerId) {
+                    const dx = x - ship.x;
+                    const dy = y - ship.y;
+                    const angle = Math.atan2(dy, dx);
+                    
+                    if (this.socket) {
+                        this.socket.emit('ship-control', {
+                            shipId: this.selectedShipId,
+                            action: 'cannon',
+                            value: angle
+                        });
+                    }
+                }
+            }
+            
+            handleMouseMove(e) {
+                if (!this.selectedShipId || !this.gameState) return;
+                
+                const rect = this.canvas.getBoundingClientRect();
+                const scaleX = this.canvas.width / rect.width;
+                const scaleY = this.canvas.height / rect.height;
+                const mouseX = (e.clientX - rect.left) * scaleX;
+                const mouseY = (e.clientY - rect.top) * scaleY;
+                
+                const ship = this.gameState.ships.find(s => s.id === this.selectedShipId);
+                if (ship) {
+                    const dx = mouseX - ship.x;
+                    const dy = mouseY - ship.y;
+                    this.mouseAimAngle = Math.atan2(dy, dx);
+                }
+            }
+            
+            handleMouseWheel(e) {
+                e.preventDefault();
+                
+                if (!this.gameState || !this.gameState.ships) return;
+                
+                const myShips = this.gameState.ships.filter(s => s.ownerId === this.myPlayerId);
+                if (myShips.length === 0) return;
+                
+                let currentIndex = myShips.findIndex(s => s.id === this.selectedShipId);
+                if (currentIndex === -1) currentIndex = 0;
+                
+                if (e.deltaY > 0) {
+                    currentIndex = (currentIndex + 1) % myShips.length;
+                } else {
+                    currentIndex = (currentIndex - 1 + myShips.length) % myShips.length;
+                }
+                
+                this.selectedShipId = myShips[currentIndex].id;
+                this.updateSelectedShipDisplay(myShips[currentIndex]);
+            }
+            
+            selectShipByNumber(shipNumber) {
+                if (!this.gameState || !this.gameState.ships) return;
+                
+                const myShips = this.gameState.ships.filter(s => s.ownerId === this.myPlayerId);
+                const targetShip = myShips.find(ship => ship.shipNumber === shipNumber + 1);
+                
+                if (targetShip) {
+                    this.selectedShipId = targetShip.id;
+                    this.updateSelectedShipDisplay(targetShip);
+                }
+            }
+            
+            updateControls() {
+                if (!this.gameState || !this.gameState.gameStarted) return;
+                
+                const myShips = this.gameState.ships.filter(s => s.ownerId === this.myPlayerId);
+                
+                // Q/E for selection cycling
+                if (this.keys['KeyQ'] && !this.lastQPressed) {
+                    this.lastQPressed = true;
+                    if (myShips.length > 0) {
+                        let currentIndex = myShips.findIndex(s => s.id === this.selectedShipId);
+                        currentIndex = (currentIndex + 1) % myShips.length;
+                        this.selectedShipId = myShips[currentIndex].id;
+                        this.updateSelectedShipDisplay(myShips[currentIndex]);
+                    }
+                } else if (!this.keys['KeyQ']) {
+                    this.lastQPressed = false;
+                }
+                
+                if (this.keys['KeyE'] && !this.lastEPressed) {
+                    this.lastEPressed = true;
+                    if (myShips.length > 0) {
+                        let currentIndex = myShips.findIndex(s => s.id === this.selectedShipId);
+                        currentIndex = (currentIndex - 1 + myShips.length) % myShips.length;
+                        this.selectedShipId = myShips[currentIndex].id;
+                        this.updateSelectedShipDisplay(myShips[currentIndex]);
+                    }
+                } else if (!this.keys['KeyE']) {
+                    this.lastEPressed = false;
+                }
+                
+                // Ship controls
+                const ship = this.gameState.ships.find(s => s.id === this.selectedShipId);
+                if (ship && ship.ownerId === this.myPlayerId && this.socket) {
+                    
+                    // A/D for steering
+                    if (this.keys['KeyA']) {
+                        this.socket.emit('ship-control', {
+                            shipId: this.selectedShipId,
+                            action: 'rudder-adjust',
+                            value: -0.02
+                        });
+                    }
+                    if (this.keys['KeyD']) {
+                        this.socket.emit('ship-control', {
+                            shipId: this.selectedShipId,
+                            action: 'rudder-adjust',
+                            value: 0.02
+                        });
+                    }
+                    
+                    // W/S for speed control
+                    if (this.keys['KeyW']) {
+                        this.socket.emit('ship-control', {
+                            shipId: this.selectedShipId,
+                            action: 'speed-adjust',
+                            value: 0.5
+                        });
+                    }
+                    if (this.keys['KeyS']) {
+                        this.socket.emit('ship-control', {
+                            shipId: this.selectedShipId,
+                            action: 'speed-adjust',
+                            value: -0.5
+                        });
+                    }
+                }
+            }
+            
+            updateSelectedShipDisplay(ship = null) {
+                if (!ship && this.selectedShipId && this.gameState) {
+                    ship = this.gameState.ships.find(s => s.id === this.selectedShipId);
+                }
+                
+                if (ship) {
+                    const teamName = ship.team === 'team1' ? 'Blue' : 'Red';
+                    document.getElementById('selectedObject').textContent = 
+                        `${teamName} Ship ${ship.shipNumber || ''} (${ship.ownerId === this.myPlayerId ? 'You' : 'Ally'})`;
+                    
+                    // Update sliders
+                    const degrees = Math.round((ship.targetRudderAngle || 0) * 180/Math.PI);
+                    document.getElementById('headingSlider').value = degrees;
+                    document.getElementById('headingValue').textContent = degrees + '°';
+                    
+                    document.getElementById('speedSlider').value = Math.round(ship.targetSpeed || 25);
+                    document.getElementById('speedValue').textContent = Math.round(ship.targetSpeed || 25);
+                } else {
+                    document.getElementById('selectedObject').textContent = 'No selection';
+                }
+            }
+            
+            renderHeadingDisplay() {
+                const ctx = this.headingCtx;
+                const canvas = this.headingCanvas;
+                
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                if (!this.selectedShipId || !this.gameState) {
+                    document.getElementById('currentHeading').textContent = 'Tiller: --';
+                    return;
+                }
+                
+                const ship = this.gameState.ships.find(s => s.id === this.selectedShipId);
+                if (!ship) return;
+                
+                const tillerAngle = ship.rudderAngle || 0;
+                const degrees = Math.round(tillerAngle * 180 / Math.PI);
+                document.getElementById('currentHeading').textContent = `Tiller: ${degrees}°`;
+                
+                // Draw the protractor
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height - 20;
+                const radius = 120;
+                
+                // Draw the semi-circle outline
+                ctx.strokeStyle = '#4169E1';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, radius, Math.PI, 0);
+                ctx.stroke();
+                
+                // Draw degree markings
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                ctx.fillStyle = '#ccc';
+                ctx.font = '12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                
+                for (let tillerDeg = -45; tillerDeg <= 45; tillerDeg += 15) {
+                    const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
+                    
+                    const x1 = centerX + Math.cos(protractorAngle) * (radius - 15);
+                    const y1 = centerY - Math.sin(protractorAngle) * (radius - 15);
+                    const x2 = centerX + Math.cos(protractorAngle) * radius;
+                    const y2 = centerY - Math.sin(protractorAngle) * radius;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                    
+                    const labelX = centerX + Math.cos(protractorAngle) * (radius + 15);
+                    const labelY = centerY - Math.sin(protractorAngle) * (radius + 15);
+                    
+                    if (tillerDeg === 0) {
+                        ctx.fillText('0°', labelX, labelY);
+                    } else {
+                        const sign = tillerDeg > 0 ? '+' : '';
+                        ctx.fillText(sign + tillerDeg + '°', labelX, labelY);
+                    }
+                }
+                
+                // Minor markings
+                for (let tillerDeg = -40; tillerDeg <= 40; tillerDeg += 5) {
+                    if (tillerDeg % 15 !== 0) {
+                        const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
+                        
+                        const x1 = centerX + Math.cos(protractorAngle) * (radius - 8);
+                        const y1 = centerY - Math.sin(protractorAngle) * (radius - 8);
+                        const x2 = centerX + Math.cos(protractorAngle) * radius;
+                        const y2 = centerY - Math.sin(protractorAngle) * radius;
+                        
+                        ctx.beginPath();
+                        ctx.moveTo(x1, y1);
+                        ctx.lineTo(x2, y2);
+                        ctx.stroke();
+                    }
+                }
+                
+                // Draw the tiller indicator line
+                const tillerDegrees = tillerAngle * 180 / Math.PI;
+                const clampedTiller = Math.max(-45, Math.min(45, tillerDegrees));
+                const protractorAngle = Math.PI * (1 - (clampedTiller + 45) / 90);
+                
+                const indicatorX = centerX + Math.cos(protractorAngle) * (radius - 5);
+                const indicatorY = centerY - Math.sin(protractorAngle) * (radius - 5);
+                
+                const teamColor = ship.team === 'team1' ? '#4169E1' : '#DC143C';
+                ctx.strokeStyle = teamColor;
+                ctx.lineWidth = 4;
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(indicatorX, indicatorY);
+                ctx.stroke();
+                
+                ctx.fillStyle = teamColor;
+                ctx.beginPath();
+                ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#4169E1';
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Add center line for reference
+                ctx.strokeStyle = '#666';
+                ctx.lineWidth = 1;
+                ctx.setLineDash([3, 3]);
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(centerX, centerY - radius + 5);
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+            
+            update(deltaTime) {
+                if (!this.gameState) return;
+                
+                this.updateControls();
+                this.renderHeadingDisplay();
+                this.updateGameStatus();
+            }
+            
+            updateGameStatus() {
+                if (!this.gameState) return;
+                
+                if (this.gameState.gameStartTime) {
+                    const elapsed = Math.floor((Date.now() - this.gameState.gameStartTime) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    document.getElementById('gameTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                }
+                
+                document.getElementById('team1Score').textContent = this.gameState.scores?.team1 || 0;
+                document.getElementById('team2Score').textContent = this.gameState.scores?.team2 || 0;
+            }
+            
+            render() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                if (!this.gameState) {
+                    this.ctx.fillStyle = '#0f3460';
+                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.ctx.fillStyle = 'white';
+                    this.ctx.font = '24px Arial';
+                    this.ctx.textAlign = 'center';
+                    this.ctx.fillText('Waiting for game state...', this.canvas.width/2, this.canvas.height/2);
+                    return;
+                }
+                
+                this.ctx.fillStyle = '#0f3460';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Render obstacles
+                if (this.gameState.obstacles) {
+                    for (let obstacle of this.gameState.obstacles) {
+                        this.ctx.save();
+                        this.ctx.translate(obstacle.x, obstacle.y);
+                        
+                        if (obstacle.type === 'island') {
+                            this.ctx.fillStyle = '#8B4513';
+                            this.ctx.beginPath();
+                            this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            
+                            this.ctx.fillStyle = '#654321';
+                            this.ctx.beginPath();
+                            this.ctx.arc(-obstacle.radius * 0.3, -obstacle.radius * 0.3, obstacle.radius * 0.6, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        } else if (obstacle.type === 'iceberg') {
+                            this.ctx.fillStyle = '#E0FFFF';
+                            this.ctx.beginPath();
+                            this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            
+                            this.ctx.fillStyle = '#B0E0E6';
+                            this.ctx.beginPath();
+                            this.ctx.arc(-5, -5, obstacle.radius * 0.6, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+                        
+                        this.ctx.restore();
+                    }
+                }
+                
+                // Render docks
+                const team1Dock = { x: 100, y: 620 };
+                const team2Dock = { x: 900, y: 80 };
+                
+                // Team 1 dock (blue)
+                this.ctx.save();
+                this.ctx.fillStyle = 'rgba(65, 105, 225, 0.4)';
+                this.ctx.beginPath();
+                this.ctx.arc(team1Dock.x, team1Dock.y, 35, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = '#4169E1';
+                this.ctx.beginPath();
+                this.ctx.arc(team1Dock.x, team1Dock.y, 25, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Team 2 dock (red)
+                this.ctx.fillStyle = 'rgba(220, 20, 60, 0.4)';
+                this.ctx.beginPath();
+                this.ctx.arc(team2Dock.x, team2Dock.y, 35, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.fillStyle = '#DC143C';
+                this.ctx.beginPath();
+                this.ctx.arc(team2Dock.x, team2Dock.y, 25, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                this.ctx.restore();
+                
+                // Render ships
+                if (this.gameState.ships) {
+                    for (let ship of this.gameState.ships) {
+                        this.ctx.save();
+                        this.ctx.translate(ship.x, ship.y);
+                        this.ctx.rotate(ship.angle);
+                        
+                        this.ctx.fillStyle = ship.team === 'team1' ? '#4169E1' : '#DC143C';
+                        this.ctx.fillRect(-10, -5, 20, 10);
+                        
+                        this.ctx.fillStyle = ship.team === 'team1' ? '#00008B' : '#8B0000';
+                        this.ctx.fillRect(5, -3, 5, 6);
+                        
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(-10, -5, 20, 10);
+                        
+                        this.ctx.restore();
+                        
+                        // Health bar - only show for ships owned by this player
+                        if (ship.ownerId === this.myPlayerId) {
+                            this.ctx.save();
+                            this.ctx.translate(ship.x, ship.y - 15);
+                            
+                            const healthRatio = ship.health / ship.maxHealth;
+                            this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
+                            this.ctx.fillRect(-8, -8, healthRatio * 16, 2);
+                            
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = 1;
+                            this.ctx.strokeRect(-8, -8, 16, 2);
+                            
+                            this.ctx.restore();
+                        }
+                        
+                        if (ship.id === this.selectedShipId) {
+                            // Enhanced selection highlighting
+                            this.ctx.strokeStyle = '#FFFF00';
+                            this.ctx.lineWidth = 4;
+                            this.ctx.strokeRect(-15, -10, 30, 20);
+                            
+                            // Add a pulsing outer glow effect
+                            const time = Date.now() / 500;
+                            const alpha = 0.3 + 0.2 * Math.sin(time);
+                            this.ctx.shadowColor = '#FFFF00';
+                            this.ctx.shadowBlur = 10;
+                            this.ctx.globalAlpha = alpha;
+                            this.ctx.strokeStyle = '#FFFFFF';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.strokeRect(-18, -12, 36, 24);
+                            this.ctx.shadowBlur = 0;
+                            this.ctx.globalAlpha = 1;
+                        }
+                        
+                        this.ctx.restore();
+                    }
+                    
+                    // Render ship numbers
+                    for (let ship of this.gameState.ships) {
+                        if (ship.shipNumber) {
+                            const numberX = ship.x - 15;
+                            const numberY = ship.y + 15;
+                            
+                            this.ctx.save();
+                            
+                            // Make selected ship number larger and more prominent
+                            const isSelected = ship.id === this.selectedShipId;
+                            const fontSize = isSelected ? 24 : 18;
+                            let fillColor = ship.team === 'team1' ? '#4169E1' : '#DC143C';
+                            if (isSelected) {
+                                fillColor = '#FFFF00';
+                            }
+                            const strokeWidth = isSelected ? 3 : 2;
+                            
+                            this.ctx.fillStyle = fillColor;
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = strokeWidth;
+                            this.ctx.font = `bold ${fontSize}px Arial`;
+                            this.ctx.textAlign = 'center';
+                            this.ctx.textBaseline = 'middle';
+                            
+                            this.ctx.strokeText(ship.shipNumber.toString(), numberX, numberY);
+                            this.ctx.fillText(ship.shipNumber.toString(), numberX, numberY);
+                            
+                            this.ctx.restore();
+                        }
+                    }
+                    
+                    // Render cannon directions
+                    for (let ship of this.gameState.ships) {
+                        if (ship.ownerId === this.myPlayerId) {
+                            this.ctx.strokeStyle = '#FF0000';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(ship.x, ship.y);
+                            this.ctx.lineTo(
+                                ship.x + Math.cos(ship.cannonAngle) * 50,
+                                ship.y + Math.sin(ship.cannonAngle) * 50
+                            );
+                            this.ctx.stroke();
+                            
+                            if (ship.id === this.selectedShipId) {
+                                this.ctx.strokeStyle = '#FFFF00';
+                                this.ctx.lineWidth = 2;
+                                this.ctx.setLineDash([5, 5]);
+                                this.ctx.beginPath();
+                                this.ctx.moveTo(ship.x, ship.y);
+                                this.ctx.lineTo(
+                                    ship.x + Math.cos(this.mouseAimAngle) * 50,
+                                    ship.y + Math.sin(this.mouseAimAngle) * 50
+                                );
+                                this.ctx.stroke();
+                                this.ctx.setLineDash([]);
+                            }
+                        } else {
+                            // Show other players' cannon directions
+                            const color = ship.team === 'team1' ? '#4444FF' : '#FF4444';
+                            this.ctx.strokeStyle = color;
+                            this.ctx.lineWidth = 2;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(ship.x, ship.y);
+                            this.ctx.lineTo(
+                                ship.x + Math.cos(ship.cannonAngle) * 50,
+                                ship.y + Math.sin(ship.cannonAngle) * 50
+                            );
+                            this.ctx.stroke();
+                        }
+                    }
+                }
+                
+                // Render cannonballs
+                if (this.gameState.cannonballs) {
+                    for (let cannonball of this.gameState.cannonballs) {
+                        this.ctx.fillStyle = '#1a1a1a';
+                        this.ctx.beginPath();
+                        this.ctx.arc(cannonball.x, cannonball.y, 4, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        this.ctx.strokeStyle = '#fff';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.stroke();
+                    }
+                }
+            }
+            
+            gameLoop() {
+                const currentTime = performance.now();
+                const deltaTime = currentTime - this.lastTime;
+                this.lastTime = currentTime;
+                
+                this.update(deltaTime);
+                this.render();
+                
+                requestAnimationFrame(() => this.gameLoop());
+            }
+        }
+        
+        window.addEventListener('load', () => {
+            window.game = new NavalBattleMultiplayer();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Naval Battle</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background: #0a1929;
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        #mainMenu {
+            text-align: center;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 0 30px rgba(0, 100, 200, 0.5);
+        }
+        
+        h1 {
+            font-size: 48px;
+            color: #4169E1;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            font-size: 20px;
+            color: #ccc;
+            margin-bottom: 40px;
+        }
+        
+        .menu-button {
+            display: block;
+            width: 300px;
+            padding: 20px;
+            margin: 20px auto;
+            font-size: 24px;
+            background: #1976d2;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+        
+        .menu-button:hover {
+            background: #2196f3;
+            transform: scale(1.05);
+            box-shadow: 0 5px 20px rgba(33, 150, 243, 0.5);
+        }
+        
+        #multiplayerMenu {
+            display: none;
+        }
+        
+        .back-button {
+            background: #666;
+            font-size: 18px;
+            width: 200px;
+            padding: 15px;
+        }
+        
+        .back-button:hover {
+            background: #888;
+        }
+        
+        .room-controls {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+        }
+        
+        .room-input {
+            padding: 10px;
+            font-size: 18px;
+            border-radius: 5px;
+            border: 1px solid #444;
+            background: #1a1a1a;
+            color: white;
+            margin: 10px;
+            width: 200px;
+        }
+        
+        .room-button {
+            padding: 10px 20px;
+            font-size: 18px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .room-button:hover {
+            background: #5CBF60;
+        }
+        
+        .join-button {
+            background: #2196F3;
+        }
+        
+        .join-button:hover {
+            background: #42A5F5;
+        }
+        
+        #roomList {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .room-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: rgba(33, 150, 243, 0.2);
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .room-item:hover {
+            background: rgba(33, 150, 243, 0.4);
+        }
+        
+        .player-count {
+            color: #4CAF50;
+            font-size: 14px;
+        }
+        
+        .credits {
+            margin-top: 40px;
+            font-size: 14px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="mainMenu">
+        <h1>⚓ Naval Battle ⚓</h1>
+        <div class="subtitle">Command your fleet to victory!</div>
+        
+        <button class="menu-button" onclick="startSinglePlayer()">
+            🎮 Single Player
+        </button>
+        
+        <button class="menu-button" onclick="showMultiplayerMenu()">
+            🌐 Multiplayer
+        </button>
+        
+        <button class="menu-button" onclick="showGameplayPreview()">
+            🎬 Gameplay Preview
+        </button>
+        
+        <button class="menu-button" onclick="showControls()">
+            🎯 Controls
+        </button>
+        
+        <div class="credits">Project 4 - Team 4 - Summer 2025</div>
+    </div>
+    
+    <div id="multiplayerMenu" style="display: none;">
+        <h1>🌐 Multiplayer</h1>
+        
+        <div class="room-controls">
+            <h3>Host a Game</h3>
+            <input type="text" id="hostRoomName" class="room-input" placeholder="Room Name" value="room1">
+            <br>
+            <button class="room-button" onclick="hostGame()">Create Room</button>
+        </div>
+        
+        <div class="room-controls">
+            <h3>Join a Game</h3>
+            <input type="text" id="joinRoomName" class="room-input" placeholder="Room Name" value="room1">
+            <br>
+            <button class="room-button join-button" onclick="joinGame()">Join Room</button>
+        </div>
+        
+        <button class="menu-button back-button" onclick="showMainMenu()">
+            ← Back to Menu
+        </button>
+    </div>
+    
+    <script>
+        function startSinglePlayer() {
+            // Redirect to single player game
+            window.location.href = '/naval_battle_single.html';
+        }
+        
+        function showMultiplayerMenu() {
+            document.getElementById('mainMenu').style.display = 'none';
+            document.getElementById('multiplayerMenu').style.display = 'block';
+        }
+        
+        function showMainMenu() {
+            document.getElementById('mainMenu').style.display = 'block';
+            document.getElementById('multiplayerMenu').style.display = 'none';
+        }
+        
+        function hostGame() {
+            const roomName = document.getElementById('hostRoomName').value.trim();
+            if (roomName) {
+                // Pass room name and host flag
+                window.location.href = `/naval_battle_server.html?room=${encodeURIComponent(roomName)}&host=true`;
+            } else {
+                alert('Please enter a room name');
+            }
+        }
+        
+        function joinGame() {
+            const roomName = document.getElementById('joinRoomName').value.trim();
+            if (roomName) {
+                // Pass room name without host flag
+                window.location.href = `/naval_battle_server.html?room=${encodeURIComponent(roomName)}`;
+            } else {
+                alert('Please enter a room name');
+            }
+        }
+        
+        function showGameplayPreview() {
+            // Redirect to gameplay preview (AI vs AI demo)
+            window.location.href = '/naval_battle_demo.html';
+        }
+        
+        function showControls() {
+            alert(`Naval Battle Controls:
+            
+🎮 Ship Controls:
+• Q/E - Cycle through your ships
+• 1-5 - Select specific ship
+• W/S - Increase/Decrease speed
+• A/D - Turn rudder left/right
+• Mouse - Aim cannons
+• Space - Fire cannons (when available)
+
+🎯 Game Rules:
+• Each team starts with 5 ships
+• Ships auto-fire after 5 seconds
+• First team to 15 points wins
+• Avoid islands and icebergs!
+
+Good luck, Captain! ⚓`);
+        }
+    </script>
+</body>
+</html>
