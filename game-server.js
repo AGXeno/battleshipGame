@@ -31,14 +31,37 @@ class GameRoom {
     }
 
     addPlayer(socketId, playerData) {
+        const isHost = this.players.size === 0;
         const team = this.players.size === 0 ? 'team1' : 'team2';
         this.players.set(socketId, {
             id: socketId,
             team: team,
             ready: false,
+            isHost: isHost,
             ...playerData
         });
-        return team;
+        return { team, isHost };
+    }
+    
+    togglePlayerReady(socketId) {
+        const player = this.players.get(socketId);
+        if (player) {
+            player.ready = !player.ready;
+            return {
+                isReady: player.ready,
+                allPlayersReady: this.areAllPlayersReady(),
+                playerCount: this.players.size
+            };
+        }
+        return null;
+    }
+    
+    areAllPlayersReady() {
+        if (this.players.size < 2) return false;
+        for (const player of this.players.values()) {
+            if (!player.ready) return false;
+        }
+        return true;
     }
 
     removePlayer(socketId) {
@@ -98,10 +121,16 @@ class GameRoom {
 
     spawnShip(ownerId, team, spawnPoint) {
         const angle = team === 'team1' ? -45 * Math.PI/180 : 135 * Math.PI/180;
+        
+        // Calculate ship number based on existing ships for this owner
+        const ownerShips = this.gameState.ships.filter(s => s.ownerId === ownerId);
+        const shipNumber = ownerShips.length + 1;
+        
         const ship = {
             id: `ship_${this.gameState.nextShipId++}`,
             ownerId: ownerId,
             team: team,
+            shipNumber: shipNumber,
             x: spawnPoint.x + (Math.random() - 0.5) * 60,
             y: spawnPoint.y + (Math.random() - 0.5) * 60,
             angle: angle,
@@ -109,6 +138,7 @@ class GameRoom {
             targetRudderAngle: 0,
             cannonAngle: angle,
             speed: 25,
+            targetSpeed: 25,
             health: 3,
             maxHealth: 3,
             lastShot: Date.now(),
@@ -141,6 +171,12 @@ class GameRoom {
             const rudderSpeed = 2.0;
             const rudderDiff = ship.targetRudderAngle - ship.rudderAngle;
             ship.rudderAngle += Math.sign(rudderDiff) * Math.min(Math.abs(rudderDiff), rudderSpeed * deltaTime);
+            
+            // Update speed
+            if (ship.targetSpeed !== undefined) {
+                const speedDiff = ship.targetSpeed - ship.speed;
+                ship.speed += Math.sign(speedDiff) * Math.min(Math.abs(speedDiff), 10 * deltaTime);
+            }
             
             // Update angle and position
             const turnRate = 0.8;
@@ -337,18 +373,22 @@ io.on('connection', (socket) => {
         }
         
         const gameRoom = gameRooms.get(roomId);
-        const team = gameRoom.addPlayer(socket.id);
+        const playerInfo = gameRoom.addPlayer(socket.id);
         
         socket.emit('joined-room', {
             roomId: roomId,
             playerId: socket.id,
-            team: team,
-            gameState: gameRoom.getState()
+            team: playerInfo.team,
+            isHost: playerInfo.isHost,
+            gameState: gameRoom.getState(),
+            playerCount: gameRoom.players.size,
+            playersReady: gameRoom.areAllPlayersReady()
         });
         
         socket.to(roomId).emit('player-joined', {
             playerId: socket.id,
-            playerCount: gameRoom.players.size
+            playerCount: gameRoom.players.size,
+            playersReady: gameRoom.areAllPlayersReady()
         });
         
         console.log(`Player ${socket.id} joined room ${roomId} as ${team}`);
@@ -356,7 +396,9 @@ io.on('connection', (socket) => {
     
     socket.on('start-game', (roomId) => {
         const gameRoom = gameRooms.get(roomId);
-        if (gameRoom && !gameRoom.gameState.gameStarted) {
+        const player = gameRoom?.players.get(socket.id);
+        
+        if (gameRoom && !gameRoom.gameState.gameStarted && player?.isHost && gameRoom.areAllPlayersReady()) {
             gameRoom.startGame();
             io.to(roomId).emit('game-started', {
                 gameStartTime: gameRoom.gameState.gameStartTime
@@ -364,10 +406,67 @@ io.on('connection', (socket) => {
         }
     });
     
-    socket.on('ship-control', (data) => {
-        const gameRoom = gameRooms.get(data.roomId);
+    socket.on('toggle-ready', (roomId) => {
+        const gameRoom = gameRooms.get(roomId);
         if (gameRoom) {
-            gameRoom.updateShipControl(socket.id, data.shipId, data.control);
+            const readyInfo = gameRoom.togglePlayerReady(socket.id);
+            if (readyInfo) {
+                socket.emit('player-ready-status', readyInfo);
+                socket.to(roomId).emit('players-ready', {
+                    playerCount: readyInfo.playerCount,
+                    playersReady: readyInfo.allPlayersReady
+                });
+            }
+        }
+    });
+    
+    socket.on('leave-room', () => {
+        // Handle leaving room gracefully
+        for (const [roomId, gameRoom] of gameRooms) {
+            if (gameRoom.players.has(socket.id)) {
+                socket.leave(roomId);
+                gameRoom.removePlayer(socket.id);
+                
+                socket.to(roomId).emit('player-left', {
+                    playerId: socket.id,
+                    playerCount: gameRoom.players.size,
+                    playersReady: gameRoom.areAllPlayersReady()
+                });
+                
+                if (gameRoom.players.size === 0) {
+                    gameRooms.delete(roomId);
+                }
+                break;
+            }
+        }
+    });
+    
+    socket.on('ship-control', (data) => {
+        // Find the room for this socket
+        for (const [roomId, gameRoom] of gameRooms) {
+            if (gameRoom.players.has(socket.id)) {
+                const control = {};
+                if (data.action === 'rudder') {
+                    control.targetRudderAngle = data.value;
+                } else if (data.action === 'cannon') {
+                    control.cannonAngle = data.value;
+                } else if (data.action === 'rudder-adjust') {
+                    const ship = gameRoom.gameState.ships.find(s => s.id === data.shipId && s.ownerId === socket.id);
+                    if (ship) {
+                        control.targetRudderAngle = Math.max(-Math.PI/4, Math.min(Math.PI/4, ship.targetRudderAngle + data.value));
+                    }
+                } else if (data.action === 'speed-adjust') {
+                    const ship = gameRoom.gameState.ships.find(s => s.id === data.shipId && s.ownerId === socket.id);
+                    if (ship) {
+                        ship.targetSpeed = Math.max(0, Math.min(50, ship.targetSpeed + data.value));
+                    }
+                }
+                
+                if (Object.keys(control).length > 0) {
+                    gameRoom.updateShipControl(socket.id, data.shipId, control);
+                }
+                break;
+            }
         }
     });
     
@@ -381,7 +480,8 @@ io.on('connection', (socket) => {
                 
                 socket.to(roomId).emit('player-left', {
                     playerId: socket.id,
-                    playerCount: gameRoom.players.size
+                    playerCount: gameRoom.players.size,
+                    playersReady: gameRoom.areAllPlayersReady()
                 });
                 
                 // Clean up empty rooms

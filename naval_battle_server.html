@@ -73,16 +73,7 @@
         }
         
         #multiplayerControls {
-            position: absolute;
-            top: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.9);
-            padding: 15px;
-            border-radius: 8px;
-            color: white;
-            text-align: center;
-            z-index: 150;
+            display: none;
         }
         
         #roomInput {
@@ -426,28 +417,15 @@
                     this.myPlayerId = data.playerId;
                     this.myTeam = data.team;
                     this.gameState = data.gameState;
+                    this.isHost = data.isHost;
                     
                     document.getElementById('connectionStatus').textContent = 
                         `In room ${data.roomId} - You are ${data.team === 'team1' ? 'Blue Team' : 'Red Team'}`;
                     
-                    // Show room menu with lobby option
-                    document.getElementById('menuTitle').textContent = `Room: ${data.roomId}`;
-                    document.getElementById('menuContent').innerHTML = `
-                        <div style="text-align: center;">
-                            <p>You are on the <strong>${data.team === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
-                            <button id="startBtn">Start Game</button>
-                            <button id="returnToLobbyBtn">Return to Lobby</button>
-                        </div>
-                    `;
-                    
-                    // Add event listeners
-                    document.getElementById('startBtn').addEventListener('click', () => this.startGame());
-                    document.getElementById('returnToLobbyBtn').addEventListener('click', () => this.returnToLobby());
-                    
                     document.getElementById('gameMenu').classList.remove('hidden');
                     
                     // Update player count and verification status
-                    this.updatePlayerStatus(data.playerCount, data.playersReady);
+                    this.updatePlayerStatus(data.playerCount || 1, data.playersReady || false);
                 });
                 
                 this.socket.on('game-state', (gameState) => {
@@ -472,6 +450,11 @@
                 
                 this.socket.on('players-ready', (data) => {
                     this.updatePlayerStatus(data.playerCount, data.playersReady);
+                });
+                
+                this.socket.on('player-ready-status', (data) => {
+                    this.playerReady = data.isReady;
+                    this.updatePlayerStatus(data.playerCount, data.allPlayersReady);
                 });
                 
                 this.socket.on('waiting-for-players', (data) => {
@@ -514,27 +497,55 @@
                 // Update the menu content to include player status
                 const menuContent = document.getElementById('menuContent');
                 if (menuContent && this.roomId) {
-                    menuContent.innerHTML = `
-                        <div style="text-align: center;">
-                            <p>You are on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
-                            <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
-                                <p>Players in room: ${playerCount}/2</p>
-                                ${playersReady ? '<p style="color: #4CAF50;">✓ All players ready!</p>' : '<p style="color: #FFA500;">Waiting for players...</p>'}
+                    const title = `Room: ${this.roomId}`;
+                    document.getElementById('menuTitle').textContent = title;
+                    
+                    const isReady = this.playerReady || false;
+                    
+                    if (this.isHost) {
+                        // Host view - can start game when all ready
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are <strong>Host</strong> on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    ${playersReady && playerCount === 2 ? '<p style="color: #4CAF50;">✓ All players ready!</p>' : '<p style="color: #FFA500;">Waiting for players to be ready...</p>'}
+                                </div>
+                                <button id="startBtn" ${!playersReady || playerCount < 2 ? 'disabled' : ''}>Start Game</button>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
                             </div>
-                            <button id="startBtn">Start Game</button>
-                            <button id="returnToLobbyBtn">Return to Lobby</button>
-                        </div>
-                    `;
+                        `;
+                    } else {
+                        // Non-host view - ready button
+                        menuContent.innerHTML = `
+                            <div style="text-align: center;">
+                                <p>You are on the <strong>${this.myTeam === 'team1' ? 'Blue Team' : 'Red Team'}</strong></p>
+                                <div style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin: 10px 0;">
+                                    <p>Players in room: ${playerCount}/2</p>
+                                    <p>Status: ${isReady ? '<span style="color: #4CAF50;">Ready ✓</span>' : '<span style="color: #FFA500;">Not Ready</span>'}</p>
+                                </div>
+                                <button id="readyBtn">${isReady ? 'Not Ready' : 'Ready'}</button>
+                                <button id="returnToLobbyBtn">Return to Lobby</button>
+                            </div>
+                        `;
+                    }
                     
                     // Re-add event listeners
-                    document.getElementById('startBtn').addEventListener('click', () => this.startGame());
-                    document.getElementById('returnToLobbyBtn').addEventListener('click', () => this.returnToLobby());
-                    
-                    // Enable/disable start button based on player readiness
                     const startBtn = document.getElementById('startBtn');
+                    const readyBtn = document.getElementById('readyBtn');
+                    const returnBtn = document.getElementById('returnToLobbyBtn');
+                    
                     if (startBtn) {
-                        startBtn.disabled = !playersReady;
-                        startBtn.style.opacity = playersReady ? '1' : '0.5';
+                        startBtn.addEventListener('click', () => this.startGame());
+                        startBtn.style.opacity = (!playersReady || playerCount < 2) ? '0.5' : '1';
+                    }
+                    
+                    if (readyBtn) {
+                        readyBtn.addEventListener('click', () => this.toggleReady());
+                    }
+                    
+                    if (returnBtn) {
+                        returnBtn.addEventListener('click', () => this.returnToLobby());
                     }
                 }
             }
@@ -628,8 +639,14 @@
             }
             
             startGame() {
-                if (this.socket && this.roomId) {
+                if (this.socket && this.roomId && this.isHost) {
                     this.socket.emit('start-game', this.roomId);
+                }
+            }
+            
+            toggleReady() {
+                if (this.socket && this.roomId) {
+                    this.socket.emit('toggle-ready', this.roomId);
                 }
             }
             
