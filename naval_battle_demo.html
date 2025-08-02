@@ -43,40 +43,56 @@
             color: white;
         }
         
-        #headingDisplay {
+        #dualDashboardContainer {
             margin-top: 20px;
-            width: min(500px, 95vw);
-            height: 280px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .aiDashboard {
+            width: 220px;
+            height: 200px;
             background: rgba(0, 0, 0, 0.3);
             border: 2px solid #16213e;
             border-radius: 10px;
-            position: relative;
+            padding: 10px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: flex-start;
-            padding: 10px;
         }
         
-        #headingCanvas {
-            background: transparent;
-            margin-top: 60px;
+        #blueDashboard {
+            border-color: #4169E1;
         }
         
-        #headingInfo {
-            position: relative;
-            color: white;
+        #redDashboard {
+            border-color: #DC143C;
+        }
+        
+        .dashboardHeader {
             text-align: center;
             margin-bottom: 10px;
+            color: white;
         }
         
-        #selectedObject {
-            font-size: 18px;
+        .teamTitle {
+            font-size: 16px;
             font-weight: bold;
             margin-bottom: 5px;
         }
         
-        #currentHeading {
+        #blueDashboard .teamTitle {
+            color: #4169E1;
+        }
+        
+        #redDashboard .teamTitle {
+            color: #DC143C;
+        }
+        
+        .shipInfo {
             font-size: 14px;
             color: #ccc;
         }
@@ -223,12 +239,22 @@
         
         <canvas id="gameCanvas" width="1000" height="700"></canvas>
         
-        <div id="headingDisplay">
-            <div id="headingInfo">
-                <div id="selectedObject">Blue AI vs Red AI - Demo Mode</div>
-                <div id="currentHeading">Two AI teams fighting each other</div>
+        <div id="dualDashboardContainer">
+            <div id="blueDashboard" class="aiDashboard">
+                <div class="dashboardHeader">
+                    <div class="teamTitle">Blue AI Team</div>
+                    <div class="shipInfo" id="blueShipInfo">Ship 1</div>
+                </div>
+                <canvas id="blueHeadingCanvas" width="200" height="150"></canvas>
             </div>
-            <canvas id="headingCanvas" width="400" height="200"></canvas>
+            
+            <div id="redDashboard" class="aiDashboard">
+                <div class="dashboardHeader">
+                    <div class="teamTitle">Red AI Team</div>
+                    <div class="shipInfo" id="redShipInfo">Ship 1</div>
+                </div>
+                <canvas id="redHeadingCanvas" width="200" height="150"></canvas>
+            </div>
         </div>
         
         <div id="demoControls">
@@ -278,8 +304,12 @@
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
-                this.headingCanvas = document.getElementById('headingCanvas');
-                this.headingCtx = this.headingCanvas.getContext('2d');
+                
+                // Dual dashboard canvases
+                this.blueCanvas = document.getElementById('blueHeadingCanvas');
+                this.blueCtx = this.blueCanvas.getContext('2d');
+                this.redCanvas = document.getElementById('redHeadingCanvas');
+                this.redCtx = this.redCanvas.getContext('2d');
                 this.gameState = {
                     ships: [],
                     cannonballs: [],
@@ -310,11 +340,14 @@
                 this.spawnTimeouts = [];
                 this.cameraFollowShip = null;
                 
-                // AI Demo tracking variables
-                this.currentDemoTeam = 'blue'; // Track which team we're watching
-                this.currentShipIndex = 0; // Track which ship in the team
-                this.autoSwitchInterval = 8000; // Auto-switch ships every 8 seconds
-                this.lastSwitchTime = 0;
+                // AI Demo tracking variables - track both teams separately
+                this.blueSelectedShip = null;
+                this.redSelectedShip = null;
+                this.blueShipIndex = 0;
+                this.redShipIndex = 0;
+                this.autoSwitchInterval = 5000; // Auto-switch ships every 5 seconds
+                this.lastBlueSwitchTime = 0;
+                this.lastRedSwitchTime = 0;
                 
                 this.init();
             }
@@ -369,14 +402,20 @@
             }
             
             updateSelectedDisplay() {
-                if (this.cameraFollowShip) {
-                    const teamName = this.cameraFollowShip.playerId === 'blue' ? 'Blue' : 'Red';
-                    document.getElementById('selectedObject').textContent = `${teamName} AI Team - Ship ${this.cameraFollowShip.shipNumber || ''}`;
-                    const heading = Math.round(this.cameraFollowShip.angle * 180 / Math.PI);
-                    document.getElementById('currentHeading').textContent = `Heading: ${heading}° | Two AI Teams Battle`;
+                // Update blue team display
+                if (this.blueSelectedShip) {
+                    document.getElementById('blueShipInfo').textContent = 
+                        `Ship ${this.blueSelectedShip.shipNumber || '?'} - ${Math.round(this.blueSelectedShip.health)}HP`;
                 } else {
-                    document.getElementById('selectedObject').textContent = 'Blue AI vs Red AI - Demo Mode';
-                    document.getElementById('currentHeading').textContent = 'Two AI teams fighting each other';
+                    document.getElementById('blueShipInfo').textContent = 'No ship selected';
+                }
+                
+                // Update red team display  
+                if (this.redSelectedShip) {
+                    document.getElementById('redShipInfo').textContent = 
+                        `Ship ${this.redSelectedShip.shipNumber || '?'} - ${Math.round(this.redSelectedShip.health)}HP`;
+                } else {
+                    document.getElementById('redShipInfo').textContent = 'No ship selected';
                 }
             }
             
@@ -384,45 +423,47 @@
                 if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
                 
                 const currentTime = Date.now();
-                
-                // Auto-switch ships every interval or if current ship is destroyed
-                if (currentTime - this.lastSwitchTime > this.autoSwitchInterval || 
-                    !this.cameraFollowShip || 
-                    this.cameraFollowShip.health <= 0) {
-                    
-                    this.selectNextAIShip();
-                    this.lastSwitchTime = currentTime;
-                }
-            }
-            
-            selectNextAIShip() {
                 const blueShips = this.gameState.ships.filter(s => s.playerId === 'blue' && s.health > 0);
                 const redShips = this.gameState.ships.filter(s => s.playerId === 'red' && s.health > 0);
                 
-                // Switch between teams every few ships
-                let targetShips = this.currentDemoTeam === 'blue' ? blueShips : redShips;
-                
-                if (targetShips.length === 0) {
-                    // Switch teams if current team has no ships
-                    this.currentDemoTeam = this.currentDemoTeam === 'blue' ? 'red' : 'blue';
-                    targetShips = this.currentDemoTeam === 'blue' ? blueShips : redShips;
-                    this.currentShipIndex = 0;
-                }
-                
-                if (targetShips.length > 0) {
-                    // Sort ships by ship number for consistent selection
-                    targetShips.sort((a, b) => (a.shipNumber || 0) - (b.shipNumber || 0));
+                // Update blue team selection
+                if (currentTime - this.lastBlueSwitchTime > this.autoSwitchInterval || 
+                    !this.blueSelectedShip || 
+                    this.blueSelectedShip.health <= 0) {
                     
-                    this.currentShipIndex = (this.currentShipIndex + 1) % targetShips.length;
-                    this.cameraFollowShip = targetShips[this.currentShipIndex];
-                    
-                    // Switch teams after cycling through all ships
-                    if (this.currentShipIndex === 0) {
-                        this.currentDemoTeam = this.currentDemoTeam === 'blue' ? 'red' : 'blue';
+                    if (blueShips.length > 0) {
+                        blueShips.sort((a, b) => (a.shipNumber || 0) - (b.shipNumber || 0));
+                        this.blueShipIndex = (this.blueShipIndex + 1) % blueShips.length;
+                        this.blueSelectedShip = blueShips[this.blueShipIndex];
+                        this.lastBlueSwitchTime = currentTime;
+                    } else {
+                        this.blueSelectedShip = null;
                     }
-                    
-                    this.updateSelectedDisplay();
                 }
+                
+                // Update red team selection
+                if (currentTime - this.lastRedSwitchTime > this.autoSwitchInterval + 2500 || // Offset timing
+                    !this.redSelectedShip || 
+                    this.redSelectedShip.health <= 0) {
+                    
+                    if (redShips.length > 0) {
+                        redShips.sort((a, b) => (a.shipNumber || 0) - (b.shipNumber || 0));
+                        this.redShipIndex = (this.redShipIndex + 1) % redShips.length;
+                        this.redSelectedShip = redShips[this.redShipIndex];
+                        this.lastRedSwitchTime = currentTime;
+                    } else {
+                        this.redSelectedShip = null;
+                    }
+                }
+                
+                // Camera follows whichever ship was selected most recently
+                if (this.lastBlueSwitchTime > this.lastRedSwitchTime && this.blueSelectedShip) {
+                    this.cameraFollowShip = this.blueSelectedShip;
+                } else if (this.redSelectedShip) {
+                    this.cameraFollowShip = this.redSelectedShip;
+                }
+                
+                this.updateSelectedDisplay();
             }
             
             generateObstacles() {
@@ -589,9 +630,9 @@
                     
                     this.scheduleInitialShipSpawning();
                     
-                    // Initialize AI demo ship selection
+                    // Initialize AI demo ship selection for both teams
                     setTimeout(() => {
-                        this.selectNextAIShip();
+                        this.updateAIDemoShipSelection();
                     }, 1000);
                 }
             }
@@ -1391,44 +1432,53 @@
             }
             
             renderHeadingDisplay() {
-                const ctx = this.headingCtx;
-                const canvas = this.headingCanvas;
+                // Render blue team dashboard
+                this.renderTeamDashboard(this.blueCtx, this.blueCanvas, this.blueSelectedShip, '#4169E1');
                 
+                // Render red team dashboard
+                this.renderTeamDashboard(this.redCtx, this.redCanvas, this.redSelectedShip, '#DC143C');
+            }
+            
+            renderTeamDashboard(ctx, canvas, ship, teamColor) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
-                if (!this.cameraFollowShip) {
+                if (!ship) {
+                    ctx.fillStyle = '#666';
+                    ctx.font = '12px Arial';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('No ship selected', canvas.width / 2, canvas.height / 2);
                     return;
                 }
                 
-                let tillerAngle = this.cameraFollowShip.rudderAngle;
+                const tillerAngle = ship.rudderAngle;
                 const degrees = Math.round(tillerAngle * 180 / Math.PI);
-                
-                // Get AI strategic information
-                const ship = this.cameraFollowShip;
                 const aiInfo = this.getAIDebugInfo(ship);
                 
                 const centerX = canvas.width / 2;
-                const centerY = canvas.height - 20;
-                const radius = 120;
+                const centerY = canvas.height - 15;
+                const radius = 60;
                 
-                ctx.strokeStyle = '#4169E1';
-                ctx.lineWidth = 3;
+                // Draw tiller gauge
+                ctx.strokeStyle = teamColor;
+                ctx.lineWidth = 2;
                 ctx.beginPath();
                 ctx.arc(centerX, centerY, radius, Math.PI, 0);
                 ctx.stroke();
                 
-                ctx.strokeStyle = '#ccc';
+                // Draw tick marks
+                ctx.strokeStyle = '#666';
                 ctx.lineWidth = 1;
-                ctx.fillStyle = '#ccc';
-                ctx.font = '12px Arial';
+                ctx.fillStyle = '#666';
+                ctx.font = '10px Arial';
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
                 
+                // Major ticks
                 for (let tillerDeg = -45; tillerDeg <= 45; tillerDeg += 15) {
                     const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
                     
-                    const x1 = centerX + Math.cos(protractorAngle) * (radius - 15);
-                    const y1 = centerY - Math.sin(protractorAngle) * (radius - 15);
+                    const x1 = centerX + Math.cos(protractorAngle) * (radius - 10);
+                    const y1 = centerY - Math.sin(protractorAngle) * (radius - 10);
                     const x2 = centerX + Math.cos(protractorAngle) * radius;
                     const y2 = centerY - Math.sin(protractorAngle) * radius;
                     
@@ -1436,35 +1486,9 @@
                     ctx.moveTo(x1, y1);
                     ctx.lineTo(x2, y2);
                     ctx.stroke();
-                    
-                    const labelX = centerX + Math.cos(protractorAngle) * (radius + 15);
-                    const labelY = centerY - Math.sin(protractorAngle) * (radius + 15);
-                    
-                    if (tillerDeg === 0) {
-                        ctx.fillText('0°', labelX, labelY);
-                    } else {
-                        const sign = tillerDeg > 0 ? '+' : '';
-                        ctx.fillText(sign + tillerDeg + '°', labelX, labelY);
-                    }
                 }
                 
-                ctx.lineWidth = 1;
-                for (let tillerDeg = -40; tillerDeg <= 40; tillerDeg += 5) {
-                    if (tillerDeg % 15 !== 0) {
-                        const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
-                        
-                        const x1 = centerX + Math.cos(protractorAngle) * (radius - 8);
-                        const y1 = centerY - Math.sin(protractorAngle) * (radius - 8);
-                        const x2 = centerX + Math.cos(protractorAngle) * radius;
-                        const y2 = centerY - Math.sin(protractorAngle) * radius;
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(x1, y1);
-                        ctx.lineTo(x2, y2);
-                        ctx.stroke();
-                    }
-                }
-                
+                // Draw tiller indicator
                 const tillerDegrees = tillerAngle * 180 / Math.PI;
                 const clampedTiller = Math.max(-45, Math.min(45, tillerDegrees));
                 const protractorAngle = Math.PI * (1 - (clampedTiller + 45) / 90);
@@ -1472,9 +1496,8 @@
                 const indicatorX = centerX + Math.cos(protractorAngle) * (radius - 5);
                 const indicatorY = centerY - Math.sin(protractorAngle) * (radius - 5);
                 
-                const teamColor = this.cameraFollowShip.playerId === 'blue' ? '#4169E1' : '#DC143C';
                 ctx.strokeStyle = teamColor;
-                ctx.lineWidth = 4;
+                ctx.lineWidth = 3;
                 ctx.beginPath();
                 ctx.moveTo(centerX, centerY);
                 ctx.lineTo(indicatorX, indicatorY);
@@ -1482,70 +1505,34 @@
                 
                 ctx.fillStyle = teamColor;
                 ctx.beginPath();
-                ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
+                ctx.arc(indicatorX, indicatorY, 4, 0, Math.PI * 2);
                 ctx.fill();
                 
-                ctx.fillStyle = '#4169E1';
+                // Draw center point
+                ctx.fillStyle = teamColor;
                 ctx.beginPath();
-                ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+                ctx.arc(centerX, centerY, 3, 0, Math.PI * 2);
                 ctx.fill();
                 
-                ctx.strokeStyle = '#666';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([3, 3]);
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(centerX, centerY - radius + 5);
-                ctx.stroke();
-                ctx.setLineDash([]);
-                
-                // Display AI strategic information on the right side
+                // Display compact AI info
                 ctx.fillStyle = '#fff';
-                ctx.font = 'bold 12px Arial';
-                ctx.textAlign = 'right';
+                ctx.font = '10px Arial';
+                ctx.textAlign = 'center';
                 ctx.textBaseline = 'top';
                 
-                const aiInfoX = canvas.width - 10;
-                const aiInfoY = 10;
-                const lineHeight = 16;
-                let currentY = aiInfoY;
-                
-                // Ship info
-                const teamName = ship.playerId === 'blue' ? 'Blue' : 'Red';
-                ctx.fillText(`${teamName} Ship ${ship.shipNumber} AI Status:`, aiInfoX, currentY);
-                currentY += lineHeight;
-                
-                // AI Behavior
+                // Behavior at top
                 ctx.fillStyle = aiInfo.behavior === 'ATTACKING' ? '#ff4444' : 
                                aiInfo.behavior === 'PURSUING' ? '#ffaa44' :
                                aiInfo.behavior === 'EVADING' ? '#44ff44' :
                                aiInfo.behavior === 'AVOIDING' ? '#ff44ff' : '#4444ff';
                 ctx.font = 'bold 11px Arial';
-                ctx.fillText(`• ${aiInfo.behavior}`, aiInfoX - 5, currentY);
-                currentY += lineHeight;
+                ctx.fillText(aiInfo.behavior, centerX, 5);
                 
-                // Reasoning
+                // Speed and rudder info
                 ctx.fillStyle = '#ccc';
-                ctx.font = '10px Arial';
-                ctx.fillText(`${aiInfo.reason}`, aiInfoX - 5, currentY);
-                currentY += lineHeight;
-                
-                // Target info
-                if (aiInfo.targetInfo) {
-                    ctx.fillText(`${aiInfo.targetInfo}`, aiInfoX - 5, currentY);
-                    currentY += lineHeight;
-                }
-                
-                // Technical data
-                ctx.fillStyle = '#aaa';
-                ctx.fillText(`Speed: ${aiInfo.speed}/${aiInfo.targetSpeed}`, aiInfoX - 5, currentY);
-                currentY += lineHeight;
-                ctx.fillText(`Rudder: ${aiInfo.rudderAngle}°`, aiInfoX - 5, currentY);
-                
-                if (aiInfo.distance && aiInfo.distance > 0) {
-                    currentY += lineHeight;
-                    ctx.fillText(`Range: ${aiInfo.distance}px`, aiInfoX - 5, currentY);
-                }
+                ctx.font = '9px Arial';
+                ctx.fillText(`Speed: ${aiInfo.speed}`, centerX, 20);
+                ctx.fillText(`Rudder: ${degrees}°`, centerX, 32);
             }
             
             resetGame() {
@@ -1680,16 +1667,18 @@
                     this.ctx.lineWidth = 1;
                     this.ctx.strokeRect(-8, -8, 16, 2);
                     
-                    if (ship === this.cameraFollowShip) {
+                    // Show selection for both AI team selected ships
+                    if (ship === this.blueSelectedShip || ship === this.redSelectedShip) {
                         // Enhanced selection highlighting
-                        this.ctx.strokeStyle = '#FFFF00';
+                        const isBlue = ship === this.blueSelectedShip;
+                        this.ctx.strokeStyle = isBlue ? '#4169E1' : '#DC143C';
                         this.ctx.lineWidth = 4;
                         this.ctx.strokeRect(-15, -10, 30, 20);
                         
                         // Add a pulsing outer glow effect
                         const time = Date.now() / 500;
                         const alpha = 0.3 + 0.2 * Math.sin(time);
-                        this.ctx.shadowColor = '#FFFF00';
+                        this.ctx.shadowColor = isBlue ? '#4169E1' : '#DC143C';
                         this.ctx.shadowBlur = 10;
                         this.ctx.globalAlpha = alpha;
                         this.ctx.strokeStyle = '#FFFFFF';
@@ -1710,14 +1699,15 @@
                         
                         this.ctx.save();
                         
-                        // Make followed ship number larger and more prominent
-                        const isFollowed = ship === this.cameraFollowShip;
-                        const fontSize = isFollowed ? 24 : 18;
+                        // Make selected ship numbers larger and more prominent
+                        const isSelected = ship === this.blueSelectedShip || ship === this.redSelectedShip;
+                        const fontSize = isSelected ? 24 : 18;
                         let fillColor = ship.playerId === 'blue' ? '#4169E1' : '#DC143C';
-                        if (isFollowed) {
-                            fillColor = '#FFFF00';
+                        if (isSelected) {
+                            // Keep team color but make it brighter
+                            fillColor = ship.playerId === 'blue' ? '#6495ED' : '#FF6B6B';
                         }
-                        const strokeWidth = isFollowed ? 3 : 2;
+                        const strokeWidth = isSelected ? 3 : 2;
                         
                         this.ctx.fillStyle = fillColor;
                         this.ctx.strokeStyle = '#000';
