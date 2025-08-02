@@ -1060,6 +1060,10 @@
                     const dx = mouseX - ship.x;
                     const dy = mouseY - ship.y;
                     this.mouseAimAngle = Math.atan2(dy, dx);
+                    // Update the ship's cannon angle continuously for player ships
+                    if (ship.playerId === 'player') {
+                        ship.cannonAngle = this.mouseAimAngle;
+                    }
                 } else if (this.gameState.selectedObjectType === 'dock') {
                     const dock = this.gameState.selectedObject;
                     const dx = mouseX - dock.x;
