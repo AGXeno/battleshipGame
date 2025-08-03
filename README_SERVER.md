@@ -17,7 +17,7 @@
 3. **Access the game:**
    Open your browser and navigate to:
    ```
-   http://localhost:3003/index.html
+   http://localhost:3003
    ```
 
 ## How it works
