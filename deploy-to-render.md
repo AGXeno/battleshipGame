@@ -27,6 +27,13 @@ git push origin webrtc-jjacobson-merge
 - **Start Command**: `node server/game-server.js`
 - **Plan**: Free
 
+**⚠️ IMPORTANT**: In Render's dashboard, make sure the **Start Command** is set to:
+```
+node server/game-server.js
+```
+
+If it shows `node game-server.js`, update it in Settings → Start Command → Save Changes → Redeploy
+
 ### 5. Deploy!
 - Click "Create Web Service"
 - Wait 2-3 minutes for deployment
