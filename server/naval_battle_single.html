@@ -215,6 +215,20 @@
         Your browser does not support the audio element.
       </audio>
       
+      <!-- Cannon Fire Sound Elements -->
+      <audio id="cannonSound1" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-1.wav" type="audio/wav">
+      </audio>
+      <audio id="cannonSound2" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-2.wav" type="audio/wav">
+      </audio>
+      <audio id="cannonSound3" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-3.wav" type="audio/wav">
+      </audio>
+      <audio id="cannonSound5" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-5.wav" type="audio/wav">
+      </audio>
+      
       <div id="topScore">
         <div class="score-item player-score">
           Player Ships Sunk: <span id="playerScore">0</span>
@@ -294,9 +308,20 @@
           </div>
           
           <div class="ship-controls">
-            <label>Volume: </label>
-            <input type="range" id="volumeSlider" min="0" max="100" value="50" style="width: 80px;" />
-            <span id="volumeValue">50%</span>
+            <label>Music Vol: </label>
+            <input type="range" id="musicVolumeSlider" min="0" max="100" value="50" style="width: 80px;" />
+            <span id="musicVolumeValue">50%</span>
+          </div>
+          
+          <div class="ship-controls">
+            <label>Sound Effects: </label>
+            <button id="soundToggle" style="padding: 2px 8px; font-size: 11px; margin: 0 5px;">On</button>
+          </div>
+          
+          <div class="ship-controls">
+            <label>Sound Vol: </label>
+            <input type="range" id="soundVolumeSlider" min="0" max="100" value="70" style="width: 80px;" />
+            <span id="soundVolumeValue">70%</span>
           </div>
         </div>
 
@@ -323,6 +348,12 @@
           this.headingCanvas = document.getElementById("headingCanvas");
           this.headingCtx = this.headingCanvas.getContext("2d");
           this.backgroundMusic = document.getElementById("backgroundMusic");
+          
+          // Get cannon sound elements
+          this.cannonSound1 = document.getElementById("cannonSound1");
+          this.cannonSound2 = document.getElementById("cannonSound2");
+          this.cannonSound3 = document.getElementById("cannonSound3");
+          this.cannonSound5 = document.getElementById("cannonSound5");
           this.gameState = {
             ships: [],
             cannonballs: [],
@@ -352,8 +383,11 @@
             totalPausedTime: 0, // Track total time spent paused
             audio: {
               musicEnabled: true,
-              volume: 0.5, // 0.0 to 1.0
-              musicStarted: false
+              musicVolume: 0.5, // 0.0 to 1.0
+              musicStarted: false,
+              soundEnabled: true,
+              soundVolume: 0.7, // 0.0 to 1.0
+              cannonSounds: [] // Array of preloaded audio elements
             }
           };
 
@@ -377,6 +411,7 @@
         init() {
           this.setupCanvas();
           this.setupControls();
+          this.setupCannonSounds();
           this.generateObstacles();
           this.selectPlayerDock(); // Start with dock selected
           this.gameLoop();
@@ -513,13 +548,20 @@
 
         setupAudioControls() {
           const musicToggle = document.getElementById("musicToggle");
-          const volumeSlider = document.getElementById("volumeSlider");
-          const volumeValue = document.getElementById("volumeValue");
+          const musicVolumeSlider = document.getElementById("musicVolumeSlider");
+          const musicVolumeValue = document.getElementById("musicVolumeValue");
+          const soundToggle = document.getElementById("soundToggle");
+          const soundVolumeSlider = document.getElementById("soundVolumeSlider");
+          const soundVolumeValue = document.getElementById("soundVolumeValue");
 
           // Initialize controls with current state
           musicToggle.textContent = this.gameState.audio.musicEnabled ? "On" : "Off";
-          volumeSlider.value = this.gameState.audio.volume * 100;
-          volumeValue.textContent = Math.round(this.gameState.audio.volume * 100) + "%";
+          musicVolumeSlider.value = this.gameState.audio.musicVolume * 100;
+          musicVolumeValue.textContent = Math.round(this.gameState.audio.musicVolume * 100) + "%";
+          
+          soundToggle.textContent = this.gameState.audio.soundEnabled ? "On" : "Off";
+          soundVolumeSlider.value = this.gameState.audio.soundVolume * 100;
+          soundVolumeValue.textContent = Math.round(this.gameState.audio.soundVolume * 100) + "%";
 
           // Music toggle
           musicToggle.addEventListener("click", () => {
@@ -535,21 +577,35 @@
             }
           });
 
-          // Volume slider
-          volumeSlider.addEventListener("input", (e) => {
+          // Music volume slider
+          musicVolumeSlider.addEventListener("input", (e) => {
             const volume = parseInt(e.target.value) / 100;
-            this.gameState.audio.volume = volume;
-            volumeValue.textContent = e.target.value + "%";
+            this.gameState.audio.musicVolume = volume;
+            musicVolumeValue.textContent = e.target.value + "%";
             
             if (this.backgroundMusic) {
               this.backgroundMusic.volume = volume;
             }
           });
+
+          // Sound effects toggle
+          soundToggle.addEventListener("click", () => {
+            this.gameState.audio.soundEnabled = !this.gameState.audio.soundEnabled;
+            soundToggle.textContent = this.gameState.audio.soundEnabled ? "On" : "Off";
+          });
+
+          // Sound effects volume slider
+          soundVolumeSlider.addEventListener("input", (e) => {
+            const volume = parseInt(e.target.value) / 100;
+            this.gameState.audio.soundVolume = volume;
+            soundVolumeValue.textContent = e.target.value + "%";
+            this.updateCannonSoundVolumes();
+          });
         }
 
         playBackgroundMusic() {
           if (this.backgroundMusic && this.gameState.audio.musicEnabled) {
-            this.backgroundMusic.volume = this.gameState.audio.volume;
+            this.backgroundMusic.volume = this.gameState.audio.musicVolume;
             this.backgroundMusic.play().catch(error => {
               console.log("Audio play failed:", error);
             });
@@ -559,6 +615,46 @@
         pauseBackgroundMusic() {
           if (this.backgroundMusic) {
             this.backgroundMusic.pause();
+          }
+        }
+
+        setupCannonSounds() {
+          // Store cannon sound elements in the game state
+          this.gameState.audio.cannonSounds = [
+            this.cannonSound1,
+            this.cannonSound2,
+            this.cannonSound3,
+            this.cannonSound5
+          ];
+          
+          // Set initial volume for all cannon sounds
+          this.updateCannonSoundVolumes();
+        }
+
+        updateCannonSoundVolumes() {
+          const volume = this.gameState.audio.soundVolume;
+          for (let sound of this.gameState.audio.cannonSounds) {
+            if (sound) {
+              sound.volume = volume;
+            }
+          }
+        }
+
+        playRandomCannonSound() {
+          if (!this.gameState.audio.soundEnabled || this.gameState.audio.cannonSounds.length === 0) {
+            return;
+          }
+
+          // Pick a random cannon sound
+          const randomIndex = Math.floor(Math.random() * this.gameState.audio.cannonSounds.length);
+          const sound = this.gameState.audio.cannonSounds[randomIndex];
+          
+          if (sound) {
+            // Reset the sound to the beginning and play
+            sound.currentTime = 0;
+            sound.play().catch(error => {
+              console.log("Cannon sound play failed:", error);
+            });
           }
         }
 
@@ -888,8 +984,11 @@
             totalPausedTime: 0,
             audio: {
               musicEnabled: true,
-              volume: 0.5,
-              musicStarted: false
+              musicVolume: 0.5,
+              musicStarted: false,
+              soundEnabled: true,
+              soundVolume: 0.7,
+              cannonSounds: []
             }
           };
 
@@ -2020,6 +2119,9 @@
 
               this.gameState.cannonballs.push(cannonball);
               ship.lastShot = currentTime;
+              
+              // Play cannon fire sound
+              this.playRandomCannonSound();
             }
           }
         }
