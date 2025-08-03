@@ -23,9 +23,8 @@ git push origin webrtc-jjacobson-merge
 ### 4. Configure:
 - **Name**: naval-battle (or whatever you want)
 - **Environment**: Node
-- **Root Directory**: `server`
 - **Build Command**: `npm install`
-- **Start Command**: `node game-server.js`
+- **Start Command**: `node server/game-server.js`
 - **Plan**: Free
 
 ### 5. Deploy!
