@@ -1060,6 +1060,10 @@
                     const dx = mouseX - ship.x;
                     const dy = mouseY - ship.y;
                     this.mouseAimAngle = Math.atan2(dy, dx);
+                    // Update the ship's cannon angle continuously for player ships
+                    if (ship.playerId === 'player') {
+                        ship.cannonAngle = this.mouseAimAngle;
+                    }
                 } else if (this.gameState.selectedObjectType === 'dock') {
                     const dock = this.gameState.selectedObject;
                     const dx = mouseX - dock.x;
@@ -1965,27 +1969,20 @@
                     this.ctx.translate(ship.x, ship.y);
                     this.ctx.rotate(ship.angle);
                     
+                    // Main ship body
                     this.ctx.fillStyle = ship.playerId === 'player' ? '#4169E1' : '#DC143C';
                     this.ctx.fillRect(-10, -5, 20, 10);
                     
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(10, 0);
-                    this.ctx.lineTo(14, -3);
-                    this.ctx.lineTo(14, 3);
-                    this.ctx.closePath();
-                    this.ctx.fill();
+                    // Rear section (darker color)
+                    this.ctx.fillStyle = ship.playerId === 'player' ? '#00008B' : '#8B0000';
+                    this.ctx.fillRect(5, -3, 5, 6);
                     
-                    // Only show health bars for player ships (owner can see their own ship health)
-                    if (ship.playerId === 'player') {
-                        const healthRatio = ship.health / ship.maxHealth;
-                        this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
-                        this.ctx.fillRect(-8, -8, healthRatio * 16, 2);
-                        
-                        this.ctx.strokeStyle = '#000';
-                        this.ctx.lineWidth = 1;
-                        this.ctx.strokeRect(-8, -8, 16, 2);
-                    }
+                    // Ship outline
+                    this.ctx.strokeStyle = '#000';
+                    this.ctx.lineWidth = 1;
+                    this.ctx.strokeRect(-10, -5, 20, 10);
                     
+                    // Selection highlighting (drawn first, before health bar)
                     if (ship === this.gameState.selectedObject) {
                         // Enhanced selection highlighting
                         this.ctx.strokeStyle = '#FFFF00';
@@ -2003,6 +2000,31 @@
                         this.ctx.strokeRect(-18, -12, 36, 24);
                         this.ctx.shadowBlur = 0;
                         this.ctx.globalAlpha = 1;
+                    }
+                    
+                    this.ctx.restore();
+                    
+                    // Health bar - only show for player ships (drawn after selection to appear on top)
+                    if (ship.playerId === 'player') {
+                        this.ctx.save();
+                        this.ctx.translate(ship.x, ship.y - 20);
+                        
+                        const healthRatio = ship.health / ship.maxHealth;
+                        
+                        // Health bar background (larger and more visible)
+                        this.ctx.fillStyle = '#333';
+                        this.ctx.fillRect(-12, 0, 24, 5);
+                        
+                        // Health bar
+                        this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
+                        this.ctx.fillRect(-12, 0, healthRatio * 24, 5);
+                        
+                        // Health bar border
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(-12, 0, 24, 5);
+                        
+                        this.ctx.restore();
                     }
                     
                     this.ctx.restore();

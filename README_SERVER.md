@@ -1,45 +1,49 @@
-# Naval Battle WebRTC Signaling Server
+# Naval Battle Game Server
 
 ## Setup Instructions
 
 1. **Install dependencies:**
    ```bash
+   cd server
    npm install
    ```
 
 2. **Start the server:**
    ```bash
-   npm start
-   ```
-   Or for development with auto-restart:
-   ```bash
-   npm run dev
+   cd server
+   node game-server.js
    ```
 
 3. **Access the game:**
    Open your browser and navigate to:
    ```
-   http://localhost:3001/naval_battle.html
+   http://localhost:3003
    ```
 
 ## How it works
 
-- The server runs on port 3001 by default (configurable via `PORT` environment variable)
-- It serves static files from the project directory (including naval_battle.html)
-- Handles WebRTC signaling for peer-to-peer connections between players
+- The server runs on port 3003 by default (configurable via `PORT` environment variable)
+- It serves static files from the root project directory
+- Handles real-time multiplayer game state via Socket.io
 - Manages game rooms and player connections
 
 ## Server Features
 
 - **Room Management**: Players can join/leave rooms
-- **WebRTC Signaling**: Relays offers, answers, and ICE candidates between peers
+- **Real-time Game State**: Synchronizes ship positions, combat, and scores
 - **Player Tracking**: Keeps track of players in each room
 - **Auto-cleanup**: Removes empty rooms when all players leave
+
+## Game Modes
+
+1. **Single Player**: Play against AI (no server needed - open naval_battle_single.html directly)
+2. **Multiplayer**: Real-time PvP via server
+3. **Demo**: AI vs AI demonstration (no server needed - open naval_battle_demo.html directly)
 
 ## Testing Multiplayer
 
 1. Start the server as described above
-2. Open two browser windows/tabs
-3. Navigate to `http://localhost:3001/naval_battle.html` in both
-4. Join the same room ID in both windows
-5. The WebRTC connection will be established automatically
+2. Open browser and go to `http://localhost:3003`
+3. Click "Multiplayer" → Enter room name → "Join Room"
+4. Have another player do the same with the same room name
+5. Host clicks "Start Game" when both players are ready

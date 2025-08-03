@@ -5,7 +5,7 @@ const server = http.createServer(app);
 const io = require('socket.io')(server);
 const path = require('path');
 
-// Serve static files
+// Serve static files from current directory
 app.use(express.static(__dirname));
 
 // Game state management
@@ -122,9 +122,15 @@ class GameRoom {
     spawnShip(ownerId, team, spawnPoint) {
         const angle = team === 'team1' ? -45 * Math.PI/180 : 135 * Math.PI/180;
         
-        // Calculate ship number based on existing ships for this owner
+        // Calculate ship number - find the lowest available number (1-5)
         const ownerShips = this.gameState.ships.filter(s => s.ownerId === ownerId);
-        const shipNumber = ownerShips.length + 1;
+        const usedNumbers = new Set(ownerShips.map(s => s.shipNumber));
+        let shipNumber = 1;
+        while (usedNumbers.has(shipNumber) && shipNumber <= 5) {
+            shipNumber++;
+        }
+        // Cap at 5 ships max per player
+        if (shipNumber > 5) shipNumber = 5;
         
         const ship = {
             id: `ship_${this.gameState.nextShipId++}`,
@@ -391,18 +397,28 @@ io.on('connection', (socket) => {
             playersReady: gameRoom.areAllPlayersReady()
         });
         
-        console.log(`Player ${socket.id} joined room ${roomId} as ${team}`);
+        console.log(`Player ${socket.id} joined room ${roomId} as ${playerInfo.team}`);
     });
     
     socket.on('start-game', (roomId) => {
+        console.log(`Start game requested for room ${roomId} by ${socket.id}`);
         const gameRoom = gameRooms.get(roomId);
         const player = gameRoom?.players.get(socket.id);
         
-        if (gameRoom && !gameRoom.gameState.gameStarted && player?.isHost && gameRoom.areAllPlayersReady()) {
+        console.log('Game room exists:', !!gameRoom);
+        console.log('Game already started:', gameRoom?.gameState.gameStarted);
+        console.log('Player is host:', player?.isHost);
+        console.log('Player count:', gameRoom?.players.size);
+        
+        // Simplified condition: host can start if game not started and enough players
+        if (gameRoom && !gameRoom.gameState.gameStarted && player?.isHost && gameRoom.players.size >= 2) {
+            console.log('✅ Starting game!');
             gameRoom.startGame();
             io.to(roomId).emit('game-started', {
                 gameStartTime: gameRoom.gameState.gameStartTime
             });
+        } else {
+            console.log('❌ Cannot start game - conditions not met');
         }
     });
     
@@ -493,7 +509,7 @@ io.on('connection', (socket) => {
     });
 });
 
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3003;
 const HOST = process.env.HOST || '0.0.0.0'; // Accept connections from any IP
 
 server.listen(PORT, HOST, () => {

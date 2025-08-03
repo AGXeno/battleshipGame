@@ -24,8 +24,15 @@ git push origin webrtc-jjacobson-merge
 - **Name**: naval-battle (or whatever you want)
 - **Environment**: Node
 - **Build Command**: `npm install`
-- **Start Command**: `node game-server.js`
+- **Start Command**: `node server/game-server.js`
 - **Plan**: Free
+
+**⚠️ IMPORTANT**: In Render's dashboard, make sure the **Start Command** is set to:
+```
+node server/game-server.js
+```
+
+If it shows `node game-server.js`, update it in Settings → Start Command → Save Changes → Redeploy
 
 ### 5. Deploy!
 - Click "Create Web Service"
