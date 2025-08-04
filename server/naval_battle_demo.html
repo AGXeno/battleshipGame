@@ -347,6 +347,10 @@
                     <input type="range" id="soundVolumeSlider" min="0" max="100" value="70" style="width: 80px;" />
                     <span id="soundVolumeValue">70%</span>
                 </div>
+                
+                <div class="ship-controls" style="margin-top: 10px;">
+                    <button id="testAudioBtn" style="padding: 5px 10px; font-size: 12px; background: #4169E1;">Test Audio</button>
+                </div>
             </div>
             
             <button onclick="document.getElementById('controlsPanel').classList.add('hidden')" 
@@ -374,6 +378,15 @@
                 this.cannonSound2 = document.getElementById('cannonSound2');
                 this.cannonSound3 = document.getElementById('cannonSound3');
                 this.cannonSound5 = document.getElementById('cannonSound5');
+                
+                // Debug audio elements
+                console.log('Audio elements found:');
+                console.log('backgroundMusic:', this.backgroundMusic);
+                console.log('cannonSound1:', this.cannonSound1);
+                console.log('cannonSound2:', this.cannonSound2);
+                console.log('cannonSound3:', this.cannonSound3);
+                console.log('cannonSound5:', this.cannonSound5);
+                
                 this.gameState = {
                     ships: [],
                     cannonballs: [],
@@ -532,13 +545,21 @@
                     soundVolumeValue.textContent = e.target.value + '%';
                     this.updateCannonSoundVolumes();
                 });
+                
+                // Test audio button
+                const testAudioBtn = document.getElementById('testAudioBtn');
+                if (testAudioBtn) {
+                    testAudioBtn.addEventListener('click', () => {
+                        this.playRandomCannonSound();
+                    });
+                }
             }
 
             playBackgroundMusic() {
                 if (this.backgroundMusic && this.gameState.audio.musicEnabled) {
                     this.backgroundMusic.volume = this.gameState.audio.musicVolume;
                     this.backgroundMusic.play().catch(error => {
-                        console.log('Audio play failed:', error);
+                        console.log('Background music play failed:', error);
                     });
                 }
             }
@@ -548,7 +569,7 @@
                     this.backgroundMusic.pause();
                 }
             }
-
+            
             setupCannonSounds() {
                 // Store cannon sound elements in the game state
                 this.gameState.audio.cannonSounds = [
@@ -561,7 +582,7 @@
                 // Set initial volume for all cannon sounds
                 this.updateCannonSoundVolumes();
             }
-
+            
             updateCannonSoundVolumes() {
                 const volume = this.gameState.audio.soundVolume;
                 for (let sound of this.gameState.audio.cannonSounds) {
