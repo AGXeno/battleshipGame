@@ -731,10 +731,17 @@
                     document.getElementById('connectionStatus').textContent = 
                         `In room ${data.roomId} - You are ${this.myTeam === 'team1' ? 'Blue Team (Host)' : 'Red Team'}`;
                     
-                    document.getElementById('gameMenu').classList.remove('hidden');
+                    // Make sure menu is visible
+                    const gameMenu = document.getElementById('gameMenu');
+                    console.log('Game menu before showing:', gameMenu.classList.contains('hidden'));
+                    gameMenu.classList.remove('hidden');
+                    console.log('Game menu after showing:', gameMenu.classList.contains('hidden'));
                     
                     // Show simplified ready state for signaling server
-                    this.showSimpleRoomStatus(data.playerCount, data.isHost);
+                    // Add small delay to ensure DOM is ready
+                    setTimeout(() => {
+                        this.showSimpleRoomStatus(data.playerCount, data.isHost);
+                    }, 100);
                 });
                 
                 this.socket.on('game-state', (gameState) => {
@@ -862,7 +869,11 @@
             }
             
             showSimpleRoomStatus(playerCount, isHost) {
+                console.log('showSimpleRoomStatus called:', { playerCount, isHost, roomId: this.roomId });
                 const menuContent = document.getElementById('menuContent');
+                const gameMenu = document.getElementById('gameMenu');
+                console.log('Menu visibility in showSimpleRoomStatus:', !gameMenu.classList.contains('hidden'));
+                
                 if (menuContent && this.roomId) {
                     const title = `Room: ${this.roomId}`;
                     document.getElementById('menuTitle').textContent = title;
