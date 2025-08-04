@@ -201,6 +201,17 @@
             font-size: 28px;
         }
         
+        .ship-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-top: 10px;
+        }
+        
+        input[type="range"] {
+            width: 80px;
+        }
+        
         button {
             padding: 10px 20px;
             margin: 5px;
@@ -225,6 +236,26 @@
 </head>
 <body>
     <div id="gameContainer">
+        <!-- Background Music Audio Element -->
+        <audio id="backgroundMusic" loop>
+            <source src="Assets/Audio/background_audio.wav" type="audio/wav">
+            Your browser does not support the audio element.
+        </audio>
+        
+        <!-- Cannon Fire Sound Elements -->
+        <audio id="cannonSound1" preload="auto">
+            <source src="Assets/Audio/ship-fire/fire-1.wav" type="audio/wav">
+        </audio>
+        <audio id="cannonSound2" preload="auto">
+            <source src="Assets/Audio/ship-fire/fire-2.wav" type="audio/wav">
+        </audio>
+        <audio id="cannonSound3" preload="auto">
+            <source src="Assets/Audio/ship-fire/fire-3.wav" type="audio/wav">
+        </audio>
+        <audio id="cannonSound5" preload="auto">
+            <source src="Assets/Audio/ship-fire/fire-5.wav" type="audio/wav">
+        </audio>
+        
         <div id="topScore">
             <div class="score-item blue-score">
                 Blue AI Ships Sunk: <span id="blueScore">0</span>
@@ -292,6 +323,36 @@
             <div>• Evade: Zigzag patterns</div>
             <div>• Patrol: Figure-8 movement</div>
             
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+                <div style="font-weight: bold; margin-bottom: 8px;">Sound Controls:</div>
+                
+                <div class="ship-controls">
+                    <label>Music: </label>
+                    <button id="musicToggle" style="padding: 2px 8px; font-size: 11px; margin: 0 5px;">On</button>
+                </div>
+                
+                <div class="ship-controls">
+                    <label>Music Vol: </label>
+                    <input type="range" id="musicVolumeSlider" min="0" max="100" value="50" style="width: 80px;" />
+                    <span id="musicVolumeValue">50%</span>
+                </div>
+                
+                <div class="ship-controls">
+                    <label>Sound Effects: </label>
+                    <button id="soundToggle" style="padding: 2px 8px; font-size: 11px; margin: 0 5px;">On</button>
+                </div>
+                
+                <div class="ship-controls">
+                    <label>Sound Vol: </label>
+                    <input type="range" id="soundVolumeSlider" min="0" max="100" value="70" style="width: 80px;" />
+                    <span id="soundVolumeValue">70%</span>
+                </div>
+                
+                <div class="ship-controls" style="margin-top: 10px;">
+                    <button id="testAudioBtn" style="padding: 5px 10px; font-size: 12px; background: #4169E1;">Test Audio</button>
+                </div>
+            </div>
+            
             <button onclick="document.getElementById('controlsPanel').classList.add('hidden')" 
                     style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">
                 Hide Info
@@ -310,6 +371,22 @@
                 this.blueCtx = this.blueCanvas.getContext('2d');
                 this.redCanvas = document.getElementById('redHeadingCanvas');
                 this.redCtx = this.redCanvas.getContext('2d');
+                
+                // Audio elements
+                this.backgroundMusic = document.getElementById('backgroundMusic');
+                this.cannonSound1 = document.getElementById('cannonSound1');
+                this.cannonSound2 = document.getElementById('cannonSound2');
+                this.cannonSound3 = document.getElementById('cannonSound3');
+                this.cannonSound5 = document.getElementById('cannonSound5');
+                
+                // Debug audio elements
+                console.log('Audio elements found:');
+                console.log('backgroundMusic:', this.backgroundMusic);
+                console.log('cannonSound1:', this.cannonSound1);
+                console.log('cannonSound2:', this.cannonSound2);
+                console.log('cannonSound3:', this.cannonSound3);
+                console.log('cannonSound5:', this.cannonSound5);
+                
                 this.gameState = {
                     ships: [],
                     cannonballs: [],
@@ -326,7 +403,15 @@
                     countdown: 0,
                     countdownActive: false,
                     pauseStartTime: null,
-                    totalPausedTime: 0
+                    totalPausedTime: 0,
+                    audio: {
+                        musicEnabled: true,
+                        musicVolume: 0.5,
+                        musicStarted: false,
+                        soundEnabled: true,
+                        soundVolume: 0.7,
+                        cannonSounds: []
+                    }
                 };
                 
                 this.lastTime = 0;
@@ -399,6 +484,142 @@
                         e.preventDefault();
                     }
                 });
+                
+                // Setup audio controls
+                this.setupAudioControls();
+                this.setupCannonSounds();
+            }
+            
+            setupAudioControls() {
+                const musicToggle = document.getElementById('musicToggle');
+                const musicVolumeSlider = document.getElementById('musicVolumeSlider');
+                const musicVolumeValue = document.getElementById('musicVolumeValue');
+                const soundToggle = document.getElementById('soundToggle');
+                const soundVolumeSlider = document.getElementById('soundVolumeSlider');
+                const soundVolumeValue = document.getElementById('soundVolumeValue');
+
+                // Initialize controls with current state
+                musicToggle.textContent = this.gameState.audio.musicEnabled ? 'On' : 'Off';
+                musicVolumeSlider.value = this.gameState.audio.musicVolume * 100;
+                musicVolumeValue.textContent = Math.round(this.gameState.audio.musicVolume * 100) + '%';
+                
+                soundToggle.textContent = this.gameState.audio.soundEnabled ? 'On' : 'Off';
+                soundVolumeSlider.value = this.gameState.audio.soundVolume * 100;
+                soundVolumeValue.textContent = Math.round(this.gameState.audio.soundVolume * 100) + '%';
+
+                // Music toggle
+                musicToggle.addEventListener('click', () => {
+                    this.gameState.audio.musicEnabled = !this.gameState.audio.musicEnabled;
+                    musicToggle.textContent = this.gameState.audio.musicEnabled ? 'On' : 'Off';
+                    
+                    if (this.gameState.audio.musicEnabled) {
+                        if (this.gameState.gameStarted && !this.gameState.gamePaused) {
+                            this.playBackgroundMusic();
+                        }
+                    } else {
+                        this.pauseBackgroundMusic();
+                    }
+                });
+
+                // Music volume slider
+                musicVolumeSlider.addEventListener('input', (e) => {
+                    const volume = parseInt(e.target.value) / 100;
+                    this.gameState.audio.musicVolume = volume;
+                    musicVolumeValue.textContent = e.target.value + '%';
+                    
+                    if (this.backgroundMusic) {
+                        this.backgroundMusic.volume = volume;
+                    }
+                });
+
+                // Sound effects toggle
+                soundToggle.addEventListener('click', () => {
+                    this.gameState.audio.soundEnabled = !this.gameState.audio.soundEnabled;
+                    soundToggle.textContent = this.gameState.audio.soundEnabled ? 'On' : 'Off';
+                });
+
+                // Sound effects volume slider
+                soundVolumeSlider.addEventListener('input', (e) => {
+                    const volume = parseInt(e.target.value) / 100;
+                    this.gameState.audio.soundVolume = volume;
+                    soundVolumeValue.textContent = e.target.value + '%';
+                    this.updateCannonSoundVolumes();
+                });
+                
+                // Test audio button
+                const testAudioBtn = document.getElementById('testAudioBtn');
+                if (testAudioBtn) {
+                    testAudioBtn.addEventListener('click', () => {
+                        this.playRandomCannonSound();
+                    });
+                }
+            }
+
+            playBackgroundMusic() {
+                if (this.backgroundMusic && this.gameState.audio.musicEnabled) {
+                    this.backgroundMusic.volume = this.gameState.audio.musicVolume;
+                    this.backgroundMusic.play().then(() => {
+                        console.log('Background music started successfully');
+                        this.gameState.audio.musicStarted = true;
+                    }).catch(error => {
+                        console.log('Background music play failed:', error);
+                        // Retry once after user interaction
+                        if (!this.gameState.audio.musicStarted) {
+                            console.log('Retrying audio playback...');
+                            setTimeout(() => {
+                                this.backgroundMusic.play().catch(e => {
+                                    console.log('Audio retry also failed:', e);
+                                });
+                            }, 1000);
+                        }
+                    });
+                }
+            }
+
+            pauseBackgroundMusic() {
+                if (this.backgroundMusic) {
+                    this.backgroundMusic.pause();
+                }
+            }
+            
+            setupCannonSounds() {
+                // Store cannon sound elements in the game state
+                this.gameState.audio.cannonSounds = [
+                    this.cannonSound1,
+                    this.cannonSound2,
+                    this.cannonSound3,
+                    this.cannonSound5
+                ];
+                
+                // Set initial volume for all cannon sounds
+                this.updateCannonSoundVolumes();
+            }
+            
+            updateCannonSoundVolumes() {
+                const volume = this.gameState.audio.soundVolume;
+                for (let sound of this.gameState.audio.cannonSounds) {
+                    if (sound) {
+                        sound.volume = volume;
+                    }
+                }
+            }
+
+            playRandomCannonSound() {
+                if (!this.gameState.audio.soundEnabled || this.gameState.audio.cannonSounds.length === 0) {
+                    return;
+                }
+
+                // Pick a random cannon sound
+                const randomIndex = Math.floor(Math.random() * this.gameState.audio.cannonSounds.length);
+                const sound = this.gameState.audio.cannonSounds[randomIndex];
+                
+                if (sound) {
+                    // Reset the sound to the beginning and play
+                    sound.currentTime = 0;
+                    sound.play().catch(error => {
+                        console.log('Cannon sound play failed:', error);
+                    });
+                }
             }
             
             updateSelectedDisplay() {
@@ -628,6 +849,9 @@
                     const titleElement = document.getElementById('menuTitle');
                     titleElement.className = '';
                     
+                    // Start background music right when gameplay begins
+                    this.playBackgroundMusic();
+                    
                     this.scheduleInitialShipSpawning();
                     
                     // Initialize AI demo ship selection for both teams
@@ -644,6 +868,10 @@
                 
                 if (this.gameState.gamePaused) {
                     this.gameState.pauseStartTime = Date.now();
+                    
+                    // Pause background music
+                    this.pauseBackgroundMusic();
+                    
                     document.getElementById('menuTitle').textContent = 'Game Paused';
                     document.getElementById('menuContent').innerHTML = `
                         <button id="resumeBtn">Resume Game</button>
@@ -664,6 +892,10 @@
                         this.gameState.totalPausedTime += Date.now() - this.gameState.pauseStartTime;
                         this.gameState.pauseStartTime = null;
                     }
+                    
+                    // Resume background music
+                    this.playBackgroundMusic();
+                    
                     document.getElementById('gameMenu').classList.add('hidden');
                 }
             }
@@ -1137,6 +1369,9 @@
                 };
                 
                 this.gameState.cannonballs.push(cannonball);
+                
+                // Play cannon fire sound
+                this.playRandomCannonSound();
             }
             
             checkCollisions() {
@@ -1521,6 +1756,9 @@
             resetGame() {
                 this.clearAllSpawnTimeouts();
                 
+                // Pause background music when resetting
+                this.pauseBackgroundMusic();
+                
                 this.gameState = {
                     ships: [],
                     cannonballs: [],
@@ -1537,7 +1775,15 @@
                     countdown: 0,
                     countdownActive: false,
                     pauseStartTime: null,
-                    totalPausedTime: 0
+                    totalPausedTime: 0,
+                    audio: {
+                        musicEnabled: true,
+                        musicVolume: 0.5,
+                        musicStarted: false,
+                        soundEnabled: true,
+                        soundVolume: 0.7,
+                        cannonSounds: []
+                    }
                 };
                 
                 this.blueAISelectedShipIndex = 0;
