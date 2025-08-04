@@ -754,18 +754,32 @@
                 this.socket.on('game-state', (gameState) => {
                     // Preserve audio settings when receiving game state from server
                     const audioSettings = this.gameState.audio;
+                    
+                    // Track previous cannonballs to detect new ones
+                    const previousCannonballs = this.gameState.cannonballs ? 
+                        new Set(this.gameState.cannonballs.map(c => c.id)) : new Set();
+                    
                     this.gameState = gameState;
                     // Restore audio settings if not provided by server
                     if (!this.gameState.audio) {
                         this.gameState.audio = audioSettings;
                     }
+                    
+                    // Check for new cannonballs and play sound
+                    if (this.gameState.cannonballs) {
+                        for (const cannonball of this.gameState.cannonballs) {
+                            if (!previousCannonballs.has(cannonball.id)) {
+                                // New cannonball detected, play sound
+                                this.playRandomCannonSound();
+                                break; // Only play one sound per update
+                            }
+                        }
+                    }
+                    
                     this.updateSelectedShipDisplay();
                 });
                 
-                this.socket.on('cannon-fired', (data) => {
-                    // Play cannon sound when server indicates a cannon was fired
-                    this.playRandomCannonSound();
-                });
+                // Note: cannon sounds are now played when detecting new cannonballs in game-state
                 
                 this.socket.on('game-started', (data) => {
                     console.log('🎮 Game started event received:', data);
