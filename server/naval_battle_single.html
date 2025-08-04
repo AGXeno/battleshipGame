@@ -1,2134 +1,2625 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Naval Battle - Single Player</title>
     <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background: #1a1a2e;
-            font-family: Arial, sans-serif;
-            overflow: auto;
-        }
-        
-        #gameContainer {
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            align-items: center;
-            background: #1a1a2e;
-            min-height: 900px;
-            padding-top: 20px;
-        }
-        
-        #gameCanvas {
-            border: 2px solid #16213e;
-            background: #0f3460;
-            cursor: crosshair;
-            max-width: 95vw;
-            max-height: 60vh;
-        }
-        
-        #topScore {
-            display: flex;
-            justify-content: space-between;
-            width: min(1004px, 95vw);
-            margin-bottom: 5px;
-            font-size: 28px;
-            color: white;
-        }
-        
-        #headingDisplay {
-            margin-top: 20px;
-            width: min(400px, 95vw);
-            height: 200px;
-            background: rgba(0, 0, 0, 0.3);
-            border: 2px solid #16213e;
-            border-radius: 10px;
-            position: relative;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        #headingCanvas {
-            background: transparent;
-        }
-        
-        #headingInfo {
-            position: absolute;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            font-size: 16px;
-            font-weight: bold;
-            text-align: center;
-        }
-        
-        #gameStatus {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            color: white;
-        }
-        
-        #gameMenu {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.9);
-            border: 2px solid #16213e;
-            border-radius: 15px;
-            padding: 30px;
-            color: white;
-            text-align: center;
-            z-index: 200;
-            min-width: 300px;
-        }
-        
-        #gameMenu.hidden {
-            display: none;
-        }
-        
-        #gameMenu h2 {
-            margin-top: 0;
-            margin-bottom: 20px;
-            color: #4169E1;
-            font-size: 2em;
-        }
-        
-        #gameMenu h2.countdown {
-            font-size: 6em;
-            color: #FFD700;
-            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
-            margin: 0;
-        }
-        
-        #controlsToggle {
-            position: absolute;
-            bottom: 10px;
-            left: 10px;
-            z-index: 100;
-            padding: 10px 20px;
-            border: none;
-            border-radius: 5px;
-            background: #16213e;
-            color: white;
-            cursor: pointer;
-        }
-        
-        #controlsPanel {
-            position: absolute;
-            left: 10px;
-            bottom: 60px;
-            background: rgba(0, 0, 0, 0.9);
-            border: 1px solid #16213e;
-            border-radius: 8px;
-            padding: 15px;
-            color: white;
-            max-width: 300px;
-            transition: transform 0.3s ease;
-            z-index: 99;
-        }
-        
-        #controlsPanel.hidden {
-            transform: translateX(-100%);
-        }
-        
-        .status {
-            padding: 10px;
-            margin: 5px 0;
-            border-radius: 5px;
-            background: rgba(0, 0, 0, 0.7);
-        }
-        
-        .player { background: rgba(0, 100, 200, 0.7); }
-        .computer { background: rgba(200, 0, 0, 0.7); }
-        .neutral { background: rgba(100, 100, 100, 0.7); }
-        
-        .score-item {
-            background: rgba(0, 0, 0, 0.3);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-        }
-        
-        .player-score {
-            color: #4169E1;
-        }
-        
-        .computer-score {
-            color: #DC143C;
-        }
-        
-        .game-info {
-            color: #ccc;
-            font-size: 28px;
-        }
-        
-        button {
-            padding: 10px 20px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            background: #16213e;
-            color: white;
-            cursor: pointer;
-            font-size: 14px;
-        }
-        
-        button:hover {
-            background: #1a2645;
-        }
-        
-        .ship-controls {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-            margin-top: 10px;
-        }
-        
-        input[type="range"] {
-            width: 80px;
-        }
+      body {
+        margin: 0;
+        padding: 0;
+        background: #1a1a2e;
+        font-family: Arial, sans-serif;
+        overflow: auto;
+      }
+
+      #gameContainer {
+        position: relative;
+        width: 100vw;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        align-items: center;
+        background: #1a1a2e;
+        min-height: 900px;
+        padding-top: 20px;
+      }
+
+      #gameCanvas {
+        border: 2px solid #16213e;
+        background: #0f3460;
+        cursor: crosshair;
+        max-width: 95vw;
+        max-height: 60vh;
+      }
+
+      #topScore {
+        display: flex;
+        justify-content: space-between;
+        width: min(1004px, 95vw);
+        margin-bottom: 5px;
+        font-size: 28px;
+        color: white;
+      }
+
+      #headingDisplay {
+        margin-top: 20px;
+        width: min(400px, 95vw);
+        height: 200px;
+        background: rgba(0, 0, 0, 0.3);
+        border: 2px solid #16213e;
+        border-radius: 10px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+      }
+
+      #headingCanvas {
+        background: transparent;
+      }
+
+      #headingInfo {
+        position: absolute;
+        bottom: 10px;
+        left: 50%;
+        transform: translateX(-50%);
+        color: white;
+        font-size: 16px;
+        font-weight: bold;
+        text-align: center;
+      }
+
+      #gameStatus {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        color: white;
+      }
+
+      #gameMenu {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.9);
+        border: 2px solid #16213e;
+        border-radius: 15px;
+        padding: 30px;
+        color: white;
+        text-align: center;
+        z-index: 200;
+        min-width: 300px;
+      }
+
+      #gameMenu.hidden {
+        display: none;
+      }
+
+      #gameMenu h2 {
+        margin-top: 0;
+        margin-bottom: 20px;
+        color: #4169e1;
+        font-size: 2em;
+      }
+
+      #gameMenu h2.countdown {
+        font-size: 6em;
+        color: #ffd700;
+        text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+        margin: 0;
+      }
+
+      #controlsToggle {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        z-index: 100;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        background: #16213e;
+        color: white;
+        cursor: pointer;
+      }
+
+      #controlsPanel {
+        position: absolute;
+        left: 10px;
+        bottom: 60px;
+        background: rgba(0, 0, 0, 0.9);
+        border: 1px solid #16213e;
+        border-radius: 8px;
+        padding: 15px;
+        color: white;
+        max-width: 300px;
+        transition: transform 0.3s ease;
+        z-index: 99;
+      }
+
+      #controlsPanel.hidden {
+        transform: translateX(-100%);
+      }
+
+      .status {
+        padding: 10px;
+        margin: 5px 0;
+        border-radius: 5px;
+        background: rgba(0, 0, 0, 0.7);
+      }
+
+      .player {
+        background: rgba(0, 100, 200, 0.7);
+      }
+      .computer {
+        background: rgba(200, 0, 0, 0.7);
+      }
+      .neutral {
+        background: rgba(100, 100, 100, 0.7);
+      }
+
+      .score-item {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-weight: bold;
+      }
+
+      .player-score {
+        color: #4169e1;
+      }
+
+      .computer-score {
+        color: #dc143c;
+      }
+
+      .game-info {
+        color: #ccc;
+        font-size: 28px;
+      }
+
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        border: none;
+        border-radius: 5px;
+        background: #16213e;
+        color: white;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      button:hover {
+        background: #1a2645;
+      }
+
+      .ship-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-top: 10px;
+      }
+
+      input[type="range"] {
+        width: 80px;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div id="gameContainer">
-        <div id="topScore">
-            <div class="score-item player-score">
-                Player Ships Sunk: <span id="playerScore">0</span>
-            </div>
-            <div class="score-item game-info">
-                Time: <span id="gameTime">0:00</span>
-            </div>
-            <div class="score-item computer-score">
-                Computer Ships Sunk: <span id="computerScore">0</span>
-            </div>
+      <!-- Background Music Audio Element -->
+      <audio id="backgroundMusic" loop>
+        <source src="Assets/Audio/background_audio.wav" type="audio/wav">
+        Your browser does not support the audio element.
+      </audio>
+      
+      <!-- Cannon Fire Sound Elements -->
+      <audio id="cannonSound1" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-1.wav" type="audio/wav">
+      </audio>
+      <audio id="cannonSound2" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-2.wav" type="audio/wav">
+      </audio>
+      <audio id="cannonSound3" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-3.wav" type="audio/wav">
+      </audio>
+      <audio id="cannonSound5" preload="auto">
+        <source src="Assets/Audio/ship-fire/fire-5.wav" type="audio/wav">
+      </audio>
+      
+      <div id="topScore">
+        <div class="score-item player-score">
+          Player Ships Sunk: <span id="playerScore">0</span>
         </div>
-        
-        <canvas id="gameCanvas" width="1000" height="700"></canvas>
-        
-        <div id="headingDisplay">
-            <canvas id="headingCanvas" width="350" height="160"></canvas>
-            <div id="headingInfo">
-                <div id="selectedObject">No selection</div>
-                <div id="currentHeading">Heading: 0°</div>
-            </div>
+        <div class="score-item game-info">
+          Time: <span id="gameTime">0:00</span>
         </div>
-        
-        <div id="gameMenu">
-            <h2 id="menuTitle">Naval Battle</h2>
-            <div id="menuContent">
-                <button id="startBtn">Start Game</button>
-                <button id="resetBtn">Change Map</button>
-            </div>
+        <div class="score-item computer-score">
+          Computer Ships Sunk: <span id="computerScore">0</span>
         </div>
-        
-        <button id="controlsToggle">Controls</button>
-        
-        <div id="controlsPanel" class="hidden">
-            <div><strong>Controls:</strong></div>
-            <div>• <strong>Left-click:</strong> Select ships/docks</div>
-            <div>• <strong>Right-click:</strong> Set cannon/spawn aim</div>
-            <div>• <strong>A/D keys:</strong> Steer left/right</div>
-            <div>• <strong>W/S keys:</strong> Speed up/down</div>
-            <div>• <strong>1-5 keys:</strong> Select ships by number</div>
-            <div>• <strong>Tab key:</strong> Select dock</div>
-            <div>• <strong>P/Esc keys:</strong> Pause game</div>
-            <div>• Red lines show cannon directions</div>
-            <div>• Yellow line shows aim preview</div>
-            <div>• Scroll wheel for fine-tuning</div>
-            <div>• Ships auto-fire every 5 seconds</div>
-            
-            <div class="ship-controls">
-                <label>Heading: </label>
-                <input type="range" id="headingSlider" min="-45" max="45" value="0">
-                <span id="headingValue">0°</span>
-            </div>
-            
-            <div class="ship-controls">
-                <label>Speed: </label>
-                <input type="range" id="speedSlider" min="0" max="25" value="25">
-                <span id="speedValue">25</span>
-            </div>
-            
-            <div class="ship-controls">
-                <label>Spawn Angle: </label>
-                <input type="range" id="spawnAngleSlider" min="-180" max="180" value="-45">
-                <span id="spawnAngleValue">-45°</span>
-            </div>
-            
-            <div style="font-size: 11px; color: #aaa; margin-top: 8px;">
-                Computer ships (red) are AI controlled<br>
-                Docks (blue/red circles) can be selected<br>
-                Icebergs slowly drift with ocean currents
-            </div>
-            
-            <button onclick="document.getElementById('controlsPanel').classList.add('hidden')" 
-                    style="margin-top: 10px; padding: 5px 10px; font-size: 12px;">
-                Hide Controls
-            </button>
+      </div>
+
+      <canvas id="gameCanvas" width="1000" height="700"></canvas>
+
+      <div id="headingDisplay">
+        <canvas id="headingCanvas" width="350" height="160"></canvas>
+        <div id="headingInfo">
+          <div id="selectedObject">No selection</div>
+          <div id="currentHeading">Heading: 0°</div>
         </div>
+      </div>
+
+      <div id="gameMenu">
+        <h2 id="menuTitle">Naval Battle</h2>
+        <div id="menuContent">
+          <button id="startBtn">Start Game</button>
+          <button id="resetBtn">Change Map</button>
+        </div>
+      </div>
+
+      <button id="controlsToggle">Controls</button>
+
+      <div id="controlsPanel" class="hidden">
+        <div><strong>Controls:</strong></div>
+        <div>• <strong>Left-click:</strong> Select ships/docks</div>
+        <div>• <strong>Right-click:</strong> Set cannon/spawn aim</div>
+        <div>• <strong>A/D keys:</strong> Steer left/right</div>
+        <div>• <strong>W/S keys:</strong> Speed up/down</div>
+        <div>• <strong>1-5 keys:</strong> Select ships by number</div>
+        <div>• <strong>Tab key:</strong> Select dock</div>
+        <div>• <strong>P/Esc keys:</strong> Pause game</div>
+        <div>• Red lines show cannon directions</div>
+        <div>• Yellow line shows aim preview</div>
+        <div>• Scroll wheel for fine-tuning</div>
+        <div>• Ships auto-fire every 5 seconds</div>
+
+        <div class="ship-controls">
+          <label>Heading: </label>
+          <input type="range" id="headingSlider" min="-45" max="45" value="0" />
+          <span id="headingValue">0°</span>
+        </div>
+
+        <div class="ship-controls">
+          <label>Speed: </label>
+          <input type="range" id="speedSlider" min="0" max="25" value="25" />
+          <span id="speedValue">25</span>
+        </div>
+
+        <div class="ship-controls">
+          <label>Spawn Angle: </label>
+          <input
+            type="range"
+            id="spawnAngleSlider"
+            min="-180"
+            max="180"
+            value="-45"
+          />
+          <span id="spawnAngleValue">-45°</span>
+        </div>
+
+        <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
+          <div style="font-weight: bold; margin-bottom: 8px;">Sound Controls:</div>
+          
+          <div class="ship-controls">
+            <label>Music: </label>
+            <button id="musicToggle" style="padding: 2px 8px; font-size: 11px; margin: 0 5px;">On</button>
+          </div>
+          
+          <div class="ship-controls">
+            <label>Music Vol: </label>
+            <input type="range" id="musicVolumeSlider" min="0" max="100" value="50" style="width: 80px;" />
+            <span id="musicVolumeValue">50%</span>
+          </div>
+          
+          <div class="ship-controls">
+            <label>Sound Effects: </label>
+            <button id="soundToggle" style="padding: 2px 8px; font-size: 11px; margin: 0 5px;">On</button>
+          </div>
+          
+          <div class="ship-controls">
+            <label>Sound Vol: </label>
+            <input type="range" id="soundVolumeSlider" min="0" max="100" value="70" style="width: 80px;" />
+            <span id="soundVolumeValue">70%</span>
+          </div>
+        </div>
+
+        <div style="font-size: 11px; color: #aaa; margin-top: 8px">
+          Computer ships (red) are AI controlled<br />
+          Docks (blue/red circles) can be selected<br />
+          Icebergs slowly drift with ocean currents
+        </div>
+
+        <button
+          onclick="document.getElementById('controlsPanel').classList.add('hidden')"
+          style="margin-top: 10px; padding: 5px 10px; font-size: 12px"
+        >
+          Hide Controls
+        </button>
+      </div>
     </div>
 
     <script>
-        class NavalBattleGame {
-            constructor() {
-                this.canvas = document.getElementById('gameCanvas');
-                this.ctx = this.canvas.getContext('2d');
-                this.headingCanvas = document.getElementById('headingCanvas');
-                this.headingCtx = this.headingCanvas.getContext('2d');
-                this.gameState = {
-                    ships: [],
-                    cannonballs: [],
-                    obstacles: [],
-                    players: {
-                        player: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0 },
-                        computer: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0 }
-                    },
-                    selectedObject: null,
-                    selectedObjectType: null, // 'ship' or 'dock'
-                    gameStarted: false,
-                    gamePaused: false,
-                    gameStartTime: null,
-                    countdown: 0,
-                    countdownActive: false,
-                    shipSpawnSchedule: [], // Track scheduled ship spawns
-                    nextShipSpawn: 0, // Index of next ship to spawn
-                    pauseStartTime: null, // Track when pause started
-                    totalPausedTime: 0 // Track total time spent paused
-                };
-                
-                this.lastTime = 0;
-                this.keys = {};
-                this.cannonAngleOffset = 0;
-                this.selectedShipIndex = 0;
-                this.selectedDockIndex = 0;
-                this.lastQPressed = false;
-                this.lastEPressed = false;
-                this.mouseAimAngle = 0;
-                this.aiSelectedShipIndex = 0;
-                this.aiLastShipSwitch = 0;
-                this.lastIcebergSpawn = 0;
-                this.icebergSpawnCooldown = 10000; // 10 seconds between potential spawns
-                this.spawnTimeouts = []; // Store timeout IDs for ship spawning
-                
-                this.init();
+      class NavalBattleGame {
+        constructor() {
+          this.canvas = document.getElementById("gameCanvas");
+          this.ctx = this.canvas.getContext("2d");
+          this.headingCanvas = document.getElementById("headingCanvas");
+          this.headingCtx = this.headingCanvas.getContext("2d");
+          this.backgroundMusic = document.getElementById("backgroundMusic");
+          
+          // Get cannon sound elements
+          this.cannonSound1 = document.getElementById("cannonSound1");
+          this.cannonSound2 = document.getElementById("cannonSound2");
+          this.cannonSound3 = document.getElementById("cannonSound3");
+          this.cannonSound5 = document.getElementById("cannonSound5");
+          this.gameState = {
+            ships: [],
+            cannonballs: [],
+            obstacles: [],
+            players: {
+              player: {
+                score: 0,
+                dock: { x: 100, y: 620, spawnAngle: (-45 * Math.PI) / 180 },
+                shipCount: 0,
+              },
+              computer: {
+                score: 0,
+                dock: { x: 900, y: 80, spawnAngle: (135 * Math.PI) / 180 },
+                shipCount: 0,
+              },
+            },
+            selectedObject: null,
+            selectedObjectType: null, // 'ship' or 'dock'
+            gameStarted: false,
+            gamePaused: false,
+            gameStartTime: null,
+            countdown: 0,
+            countdownActive: false,
+            shipSpawnSchedule: [], // Track scheduled ship spawns
+            nextShipSpawn: 0, // Index of next ship to spawn
+            pauseStartTime: null, // Track when pause started
+            totalPausedTime: 0, // Track total time spent paused
+            audio: {
+              musicEnabled: true,
+              musicVolume: 0.5, // 0.0 to 1.0
+              musicStarted: false,
+              soundEnabled: true,
+              soundVolume: 0.7, // 0.0 to 1.0
+              cannonSounds: [] // Array of preloaded audio elements
             }
-            
-            init() {
-                this.setupCanvas();
-                this.setupControls();
-                this.generateObstacles();
-                this.selectPlayerDock(); // Start with dock selected
-                this.gameLoop();
-            }
-            
-            selectPlayerDock() {
-                this.gameState.selectedObject = this.gameState.players.player.dock;
-                this.gameState.selectedObjectType = 'dock';
-                this.updateSelectedDisplay();
-            }
-            
-            selectShipByNumber(shipNumber) {
-                if (this.gameState.countdownActive) return;
-                
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                const targetShip = playerShips.find(ship => ship.shipNumber === shipNumber + 1); // Convert 0-based to 1-based
-                
-                if (targetShip) {
-                    this.gameState.selectedObject = targetShip;
-                    this.gameState.selectedObjectType = 'ship';
-                    this.selectedShipIndex = playerShips.indexOf(targetShip);
-                    this.updateSelectedDisplay();
-                }
-            }
-            
-            setupCanvas() {
-                this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
-                this.canvas.addEventListener('contextmenu', (e) => {
-                    e.preventDefault();
-                    this.handleCanvasRightClick(e);
-                });
-                this.canvas.addEventListener('mousemove', (e) => this.handleMouseMove(e));
-                this.canvas.addEventListener('wheel', (e) => this.handleMouseWheel(e));
-                
-                document.addEventListener('keydown', (e) => {
-                    this.keys[e.code] = true;
-                    
-                    // Handle pause/escape
-                    if (e.code === 'KeyP' || e.code === 'Escape') {
-                        this.togglePause();
-                        e.preventDefault();
-                    }
-                    
-                    // Handle number key selection (1-5)
-                    if (e.code >= 'Digit1' && e.code <= 'Digit5') {
-                        const shipNumber = parseInt(e.code.slice(-1)) - 1; // Convert to 0-based index
-                        this.selectShipByNumber(shipNumber);
-                        e.preventDefault();
-                    }
-                    
-                    // Handle Tab key for dock selection
-                    if (e.code === 'Tab') {
-                        this.selectPlayerDock();
-                        e.preventDefault();
-                    }
-                });
-                
-                document.addEventListener('keyup', (e) => {
-                    this.keys[e.code] = false;
-                });
-            }
-            
-            setupControls() {
-                const headingSlider = document.getElementById('headingSlider');
-                const headingValue = document.getElementById('headingValue');
-                const speedSlider = document.getElementById('speedSlider');
-                const speedValue = document.getElementById('speedValue');
-                const spawnAngleSlider = document.getElementById('spawnAngleSlider');
-                const spawnAngleValue = document.getElementById('spawnAngleValue');
-                
-                headingSlider.addEventListener('input', (e) => {
-                    const value = parseInt(e.target.value);
-                    headingValue.textContent = value + '°';
-                    
-                    if (this.gameState.selectedObject && this.gameState.selectedObjectType === 'ship' && 
-                        this.gameState.selectedObject.playerId === 'player') {
-                        this.gameState.selectedObject.targetRudderAngle = value * Math.PI/180;
-                    }
-                });
+          };
 
-                speedSlider.addEventListener('input', (e) => {
-                    const value = parseInt(e.target.value);
-                    speedValue.textContent = value;
-                    
-                    if (this.gameState.selectedObject && this.gameState.selectedObjectType === 'ship' && 
-                        this.gameState.selectedObject.playerId === 'player') {
-                        this.gameState.selectedObject.targetSpeed = value;
-                    }
-                });
+          this.lastTime = 0;
+          this.keys = {};
+          this.cannonAngleOffset = 0;
+          this.selectedShipIndex = 0;
+          this.selectedDockIndex = 0;
+          this.lastQPressed = false;
+          this.lastEPressed = false;
+          this.mouseAimAngle = 0;
+          this.aiSelectedShipIndex = 0;
+          this.aiLastShipSwitch = 0;
+          this.lastIcebergSpawn = 0;
+          this.icebergSpawnCooldown = 10000; // 10 seconds between potential spawns
+          this.spawnTimeouts = []; // Store timeout IDs for ship spawning
 
-                spawnAngleSlider.addEventListener('input', (e) => {
-                    const value = parseInt(e.target.value);
-                    spawnAngleValue.textContent = value + '°';
-                    
-                    if (this.gameState.selectedObject && this.gameState.selectedObjectType === 'dock') {
-                        this.gameState.selectedObject.spawnAngle = value * Math.PI/180;
+          this.init();
+        }
+
+        init() {
+          this.setupCanvas();
+          this.setupControls();
+          this.setupCannonSounds();
+          this.generateObstacles();
+          this.selectPlayerDock(); // Start with dock selected
+          this.gameLoop();
+        }
+
+        selectPlayerDock() {
+          this.gameState.selectedObject = this.gameState.players.player.dock;
+          this.gameState.selectedObjectType = "dock";
+          this.updateSelectedDisplay();
+        }
+
+        selectShipByNumber(shipNumber) {
+          if (this.gameState.countdownActive) return;
+
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          );
+          const targetShip = playerShips.find(
+            (ship) => ship.shipNumber === shipNumber + 1
+          ); // Convert 0-based to 1-based
+
+          if (targetShip) {
+            this.gameState.selectedObject = targetShip;
+            this.gameState.selectedObjectType = "ship";
+            this.selectedShipIndex = playerShips.indexOf(targetShip);
+            this.updateSelectedDisplay();
+          }
+        }
+
+        setupCanvas() {
+          this.canvas.addEventListener("click", (e) =>
+            this.handleCanvasClick(e)
+          );
+          this.canvas.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            this.handleCanvasRightClick(e);
+          });
+          this.canvas.addEventListener("mousemove", (e) =>
+            this.handleMouseMove(e)
+          );
+          this.canvas.addEventListener("wheel", (e) =>
+            this.handleMouseWheel(e)
+          );
+
+          document.addEventListener("keydown", (e) => {
+            this.keys[e.code] = true;
+
+            // Handle pause/escape
+            if (e.code === "KeyP" || e.code === "Escape") {
+              this.togglePause();
+              e.preventDefault();
+            }
+
+            // Handle number key selection (1-5)
+            if (e.code >= "Digit1" && e.code <= "Digit5") {
+              const shipNumber = parseInt(e.code.slice(-1)) - 1; // Convert to 0-based index
+              this.selectShipByNumber(shipNumber);
+              e.preventDefault();
+            }
+
+            // Handle Tab key for dock selection
+            if (e.code === "Tab") {
+              this.selectPlayerDock();
+              e.preventDefault();
+            }
+          });
+
+          document.addEventListener("keyup", (e) => {
+            this.keys[e.code] = false;
+          });
+        }
+
+        setupControls() {
+          const headingSlider = document.getElementById("headingSlider");
+          const headingValue = document.getElementById("headingValue");
+          const speedSlider = document.getElementById("speedSlider");
+          const speedValue = document.getElementById("speedValue");
+          const spawnAngleSlider = document.getElementById("spawnAngleSlider");
+          const spawnAngleValue = document.getElementById("spawnAngleValue");
+
+          headingSlider.addEventListener("input", (e) => {
+            const value = parseInt(e.target.value);
+            headingValue.textContent = value + "°";
+
+            if (
+              this.gameState.selectedObject &&
+              this.gameState.selectedObjectType === "ship" &&
+              this.gameState.selectedObject.playerId === "player"
+            ) {
+              this.gameState.selectedObject.targetRudderAngle =
+                (value * Math.PI) / 180;
+            }
+          });
+
+          speedSlider.addEventListener("input", (e) => {
+            const value = parseInt(e.target.value);
+            speedValue.textContent = value;
+
+            if (
+              this.gameState.selectedObject &&
+              this.gameState.selectedObjectType === "ship" &&
+              this.gameState.selectedObject.playerId === "player"
+            ) {
+              this.gameState.selectedObject.targetSpeed = value;
+            }
+          });
+
+          spawnAngleSlider.addEventListener("input", (e) => {
+            const value = parseInt(e.target.value);
+            spawnAngleValue.textContent = value + "°";
+
+            if (
+              this.gameState.selectedObject &&
+              this.gameState.selectedObjectType === "dock"
+            ) {
+              this.gameState.selectedObject.spawnAngle =
+                (value * Math.PI) / 180;
+            }
+          });
+
+          // Setup menu button handlers
+          this.setupMenuButtons();
+
+          document
+            .getElementById("controlsToggle")
+            .addEventListener("click", () => {
+              const panel = document.getElementById("controlsPanel");
+              panel.classList.toggle("hidden");
+            });
+
+          // Setup audio controls
+          this.setupAudioControls();
+        }
+
+        setupAudioControls() {
+          const musicToggle = document.getElementById("musicToggle");
+          const musicVolumeSlider = document.getElementById("musicVolumeSlider");
+          const musicVolumeValue = document.getElementById("musicVolumeValue");
+          const soundToggle = document.getElementById("soundToggle");
+          const soundVolumeSlider = document.getElementById("soundVolumeSlider");
+          const soundVolumeValue = document.getElementById("soundVolumeValue");
+
+          // Initialize controls with current state
+          musicToggle.textContent = this.gameState.audio.musicEnabled ? "On" : "Off";
+          musicVolumeSlider.value = this.gameState.audio.musicVolume * 100;
+          musicVolumeValue.textContent = Math.round(this.gameState.audio.musicVolume * 100) + "%";
+          
+          soundToggle.textContent = this.gameState.audio.soundEnabled ? "On" : "Off";
+          soundVolumeSlider.value = this.gameState.audio.soundVolume * 100;
+          soundVolumeValue.textContent = Math.round(this.gameState.audio.soundVolume * 100) + "%";
+
+          // Music toggle
+          musicToggle.addEventListener("click", () => {
+            this.gameState.audio.musicEnabled = !this.gameState.audio.musicEnabled;
+            musicToggle.textContent = this.gameState.audio.musicEnabled ? "On" : "Off";
+            
+            if (this.gameState.audio.musicEnabled) {
+              if (this.gameState.gameStarted && !this.gameState.gamePaused) {
+                this.playBackgroundMusic();
+              }
+            } else {
+              this.pauseBackgroundMusic();
+            }
+          });
+
+          // Music volume slider
+          musicVolumeSlider.addEventListener("input", (e) => {
+            const volume = parseInt(e.target.value) / 100;
+            this.gameState.audio.musicVolume = volume;
+            musicVolumeValue.textContent = e.target.value + "%";
+            
+            if (this.backgroundMusic) {
+              this.backgroundMusic.volume = volume;
+            }
+          });
+
+          // Sound effects toggle
+          soundToggle.addEventListener("click", () => {
+            this.gameState.audio.soundEnabled = !this.gameState.audio.soundEnabled;
+            soundToggle.textContent = this.gameState.audio.soundEnabled ? "On" : "Off";
+          });
+
+          // Sound effects volume slider
+          soundVolumeSlider.addEventListener("input", (e) => {
+            const volume = parseInt(e.target.value) / 100;
+            this.gameState.audio.soundVolume = volume;
+            soundVolumeValue.textContent = e.target.value + "%";
+            this.updateCannonSoundVolumes();
+          });
+        }
+
+        playBackgroundMusic() {
+          if (this.backgroundMusic && this.gameState.audio.musicEnabled) {
+            this.backgroundMusic.volume = this.gameState.audio.musicVolume;
+            this.backgroundMusic.play().catch(error => {
+              console.log("Audio play failed:", error);
+            });
+          }
+        }
+
+        pauseBackgroundMusic() {
+          if (this.backgroundMusic) {
+            this.backgroundMusic.pause();
+          }
+        }
+
+        setupCannonSounds() {
+          // Store cannon sound elements in the game state
+          this.gameState.audio.cannonSounds = [
+            this.cannonSound1,
+            this.cannonSound2,
+            this.cannonSound3,
+            this.cannonSound5
+          ];
+          
+          // Set initial volume for all cannon sounds
+          this.updateCannonSoundVolumes();
+        }
+
+        updateCannonSoundVolumes() {
+          const volume = this.gameState.audio.soundVolume;
+          for (let sound of this.gameState.audio.cannonSounds) {
+            if (sound) {
+              sound.volume = volume;
+            }
+          }
+        }
+
+        playRandomCannonSound() {
+          if (!this.gameState.audio.soundEnabled || this.gameState.audio.cannonSounds.length === 0) {
+            return;
+          }
+
+          // Pick a random cannon sound
+          const randomIndex = Math.floor(Math.random() * this.gameState.audio.cannonSounds.length);
+          const sound = this.gameState.audio.cannonSounds[randomIndex];
+          
+          if (sound) {
+            // Reset the sound to the beginning and play
+            sound.currentTime = 0;
+            sound.play().catch(error => {
+              console.log("Cannon sound play failed:", error);
+            });
+          }
+        }
+
+        setupMenuButtons() {
+          // Remove any existing listeners by cloning and replacing buttons
+          const menuContent = document.getElementById("menuContent");
+          const newMenuContent = menuContent.cloneNode(true);
+          menuContent.parentNode.replaceChild(newMenuContent, menuContent);
+
+          // Add fresh event listeners
+          const startBtn = document.getElementById("startBtn");
+          const resetBtn = document.getElementById("resetBtn");
+          const resumeBtn = document.getElementById("resumeBtn");
+          const resumeGameBtn = document.getElementById("resumeGameBtn");
+          const restartBtn = document.getElementById("restartBtn");
+          const mainMenuBtn = document.getElementById("mainMenuBtn");
+
+          if (startBtn) {
+            // Check if this is a "Start New Game" after win/loss
+            if (startBtn.textContent === "Start New Game") {
+              startBtn.addEventListener("click", () => {
+                this.resetGame();
+                this.startGame();
+              });
+            } else {
+              startBtn.addEventListener("click", () => this.startGame());
+            }
+          }
+          if (resetBtn)
+            resetBtn.addEventListener("click", () => this.resetGame());
+          if (resumeBtn)
+            resumeBtn.addEventListener("click", () => this.resumeGame());
+          if (resumeGameBtn)
+            resumeGameBtn.addEventListener("click", () => this.resumeGame());
+          if (restartBtn)
+            restartBtn.addEventListener("click", () => this.restartGame());
+          if (mainMenuBtn)
+            mainMenuBtn.addEventListener("click", () =>
+              this.returnToMainMenu()
+            );
+        }
+
+        handleMouseWheel(e) {
+          e.preventDefault();
+
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          );
+          const playerDocks = [this.gameState.players.player.dock];
+          const allSelectables = [...playerShips, ...playerDocks];
+
+          if (allSelectables.length > 0) {
+            let currentIndex = -1;
+
+            // Find current selection index
+            if (this.gameState.selectedObjectType === "ship") {
+              currentIndex = playerShips.indexOf(this.gameState.selectedObject);
+              if (currentIndex !== -1) currentIndex = currentIndex; // ships come first
+            } else if (this.gameState.selectedObjectType === "dock") {
+              currentIndex = playerShips.length; // dock comes after ships
+            }
+
+            if (e.deltaY > 0) {
+              currentIndex = (currentIndex + 1) % allSelectables.length;
+            } else {
+              currentIndex =
+                (currentIndex - 1 + allSelectables.length) %
+                allSelectables.length;
+            }
+
+            this.selectObjectByIndex(allSelectables, currentIndex);
+          }
+        }
+
+        clearAllSpawnTimeouts() {
+          // Clear all pending spawn timeouts
+          for (let timeoutId of this.spawnTimeouts) {
+            clearTimeout(timeoutId);
+          }
+          this.spawnTimeouts = [];
+        }
+
+        scheduleInitialShipSpawning() {
+          // Clear any existing timeouts first
+          this.clearAllSpawnTimeouts();
+
+          // Schedule all 5 ships to spawn
+          for (let i = 0; i < 5; i++) {
+            const timeoutId = setTimeout(() => {
+              if (this.gameState.gameStarted && !this.gameState.gamePaused) {
+                this.spawnShip("player");
+                this.spawnShip("computer");
+
+                // Auto-select first player ship when it spawns
+                if (i === 0) {
+                  setTimeout(() => {
+                    const playerShips = this.gameState.ships.filter(
+                      (s) => s.playerId === "player"
+                    );
+                    if (playerShips.length > 0) {
+                      this.gameState.selectedObject = playerShips[0];
+                      this.gameState.selectedObjectType = "ship";
+                      this.selectedShipIndex = 0;
+                      this.updateSelectedDisplay();
                     }
-                });
-                
-                // Setup menu button handlers
-                this.setupMenuButtons();
-                
-                document.getElementById('controlsToggle').addEventListener('click', () => {
-                    const panel = document.getElementById('controlsPanel');
-                    panel.classList.toggle('hidden');
-                });
-            }
-            
-            setupMenuButtons() {
-                // Remove any existing listeners by cloning and replacing buttons
-                const menuContent = document.getElementById('menuContent');
-                const newMenuContent = menuContent.cloneNode(true);
-                menuContent.parentNode.replaceChild(newMenuContent, menuContent);
-                
-                // Add fresh event listeners
-                const startBtn = document.getElementById('startBtn');
-                const resetBtn = document.getElementById('resetBtn');
-                const resumeBtn = document.getElementById('resumeBtn');
-                const resumeGameBtn = document.getElementById('resumeGameBtn');
-                const restartBtn = document.getElementById('restartBtn');
-                const mainMenuBtn = document.getElementById('mainMenuBtn');
-                
-                if (startBtn) {
-                    // Check if this is a "Start New Game" after win/loss
-                    if (startBtn.textContent === 'Start New Game') {
-                        startBtn.addEventListener('click', () => {
-                            this.resetGame();
-                            this.startGame();
-                        });
-                    } else {
-                        startBtn.addEventListener('click', () => this.startGame());
-                    }
+                  }, 100);
                 }
-                if (resetBtn) resetBtn.addEventListener('click', () => this.resetGame());
-                if (resumeBtn) resumeBtn.addEventListener('click', () => this.resumeGame());
-                if (resumeGameBtn) resumeGameBtn.addEventListener('click', () => this.resumeGame());
-                if (restartBtn) restartBtn.addEventListener('click', () => this.restartGame());
-                if (mainMenuBtn) mainMenuBtn.addEventListener('click', () => this.returnToMainMenu());
-            }
-            
-            handleMouseWheel(e) {
-                e.preventDefault();
-                
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                const playerDocks = [this.gameState.players.player.dock];
-                const allSelectables = [...playerShips, ...playerDocks];
-                
-                if (allSelectables.length > 0) {
-                    let currentIndex = -1;
-                    
-                    // Find current selection index
-                    if (this.gameState.selectedObjectType === 'ship') {
-                        currentIndex = playerShips.indexOf(this.gameState.selectedObject);
-                        if (currentIndex !== -1) currentIndex = currentIndex; // ships come first
-                    } else if (this.gameState.selectedObjectType === 'dock') {
-                        currentIndex = playerShips.length; // dock comes after ships
-                    }
-                    
-                    if (e.deltaY > 0) {
-                        currentIndex = (currentIndex + 1) % allSelectables.length;
-                    } else {
-                        currentIndex = (currentIndex - 1 + allSelectables.length) % allSelectables.length;
-                    }
-                    
-                    this.selectObjectByIndex(allSelectables, currentIndex);
-                }
-            }
-            
-            clearAllSpawnTimeouts() {
-                // Clear all pending spawn timeouts
-                for (let timeoutId of this.spawnTimeouts) {
-                    clearTimeout(timeoutId);
-                }
-                this.spawnTimeouts = [];
-            }
-            
-            scheduleInitialShipSpawning() {
-                // Clear any existing timeouts first
-                this.clearAllSpawnTimeouts();
-                
-                // Schedule all 5 ships to spawn
-                for (let i = 0; i < 5; i++) {
-                    const timeoutId = setTimeout(() => {
-                        if (this.gameState.gameStarted && !this.gameState.gamePaused) {
-                            this.spawnShip('player');
-                            this.spawnShip('computer');
-                            
-                            // Auto-select first player ship when it spawns
-                            if (i === 0) {
-                                setTimeout(() => {
-                                    const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                                    if (playerShips.length > 0) {
-                                        this.gameState.selectedObject = playerShips[0];
-                                        this.gameState.selectedObjectType = 'ship';
-                                        this.selectedShipIndex = 0;
-                                        this.updateSelectedDisplay();
-                                    }
-                                }, 100);
-                            }
-                        }
-                        
-                        // Remove this timeout from our tracking array
-                        const index = this.spawnTimeouts.indexOf(timeoutId);
-                        if (index > -1) {
-                            this.spawnTimeouts.splice(index, 1);
-                        }
-                    }, i * 3000);
-                    
-                    this.spawnTimeouts.push(timeoutId);
-                }
-            }
-            
-            startGame() {
-                this.gameState.gameStarted = true;
-                this.gameState.gamePaused = false;
-                this.gameState.countdownActive = true;
-                this.gameState.countdown = 3;
-                this.gameState.gameStartTime = Date.now();
-                this.gameState.totalPausedTime = 0;
-                this.selectedShipIndex = 0;
-                this.lastIcebergSpawn = Date.now();
-                
-                // Start with dock selected
-                this.selectPlayerDock();
-                
-                // Show countdown
-                this.showCountdown();
-            }
-            
-            showCountdown() {
-                if (this.gameState.countdown > 0) {
-                    const titleElement = document.getElementById('menuTitle');
-                    titleElement.textContent = this.gameState.countdown;
-                    titleElement.className = 'countdown';
-                    document.getElementById('menuContent').innerHTML = '';
-                    document.getElementById('gameMenu').classList.remove('hidden');
-                    
-                    this.gameState.countdown--;
-                    
-                    setTimeout(() => {
-                        this.showCountdown();
-                    }, 1000);
-                } else {
-                    // Countdown finished, start spawning ships
-                    this.gameState.countdownActive = false;
-                    document.getElementById('gameMenu').classList.add('hidden');
-                    
-                    // Reset title styling
-                    const titleElement = document.getElementById('menuTitle');
-                    titleElement.className = '';
-                    
-                    // Schedule the initial ship spawning
-                    this.scheduleInitialShipSpawning();
-                }
-            }
-            
-            togglePause() {
-                if (!this.gameState.gameStarted) return;
-                
-                this.gameState.gamePaused = !this.gameState.gamePaused;
-                
-                if (this.gameState.gamePaused) {
-                    // Store when pause started
-                    this.gameState.pauseStartTime = Date.now();
-                    
-                    // Clear all spawn timeouts when pausing
-                    this.clearAllSpawnTimeouts();
-                    
-                    document.getElementById('menuTitle').textContent = 'Game Paused';
-                    document.getElementById('menuContent').innerHTML = `
+              }
+
+              // Remove this timeout from our tracking array
+              const index = this.spawnTimeouts.indexOf(timeoutId);
+              if (index > -1) {
+                this.spawnTimeouts.splice(index, 1);
+              }
+            }, i * 3000);
+
+            this.spawnTimeouts.push(timeoutId);
+          }
+        }
+
+        startGame() {
+          this.gameState.gameStarted = true;
+          this.gameState.gamePaused = false;
+          this.gameState.countdownActive = true;
+          this.gameState.countdown = 3;
+          this.gameState.gameStartTime = Date.now();
+          this.gameState.totalPausedTime = 0;
+          this.selectedShipIndex = 0;
+          this.lastIcebergSpawn = Date.now();
+
+          // Start with dock selected
+          this.selectPlayerDock();
+
+          // Show countdown (music will start after countdown finishes)
+          this.showCountdown();
+        }
+
+        showCountdown() {
+          if (this.gameState.countdown > 0) {
+            const titleElement = document.getElementById("menuTitle");
+            titleElement.textContent = this.gameState.countdown;
+            titleElement.className = "countdown";
+            document.getElementById("menuContent").innerHTML = "";
+            document.getElementById("gameMenu").classList.remove("hidden");
+
+            this.gameState.countdown--;
+
+            setTimeout(() => {
+              this.showCountdown();
+            }, 1000);
+          } else {
+            // Countdown finished, start spawning ships
+            this.gameState.countdownActive = false;
+            document.getElementById("gameMenu").classList.add("hidden");
+
+            // Reset title styling
+            const titleElement = document.getElementById("menuTitle");
+            titleElement.className = "";
+
+            // Start background music right when gameplay begins
+            this.playBackgroundMusic();
+
+            // Schedule the initial ship spawning
+            this.scheduleInitialShipSpawning();
+          }
+        }
+
+        togglePause() {
+          if (!this.gameState.gameStarted) return;
+
+          this.gameState.gamePaused = !this.gameState.gamePaused;
+
+          if (this.gameState.gamePaused) {
+            // Store when pause started
+            this.gameState.pauseStartTime = Date.now();
+
+            // Clear all spawn timeouts when pausing
+            this.clearAllSpawnTimeouts();
+
+            // Pause background music
+            this.pauseBackgroundMusic();
+
+            document.getElementById("menuTitle").textContent = "Game Paused";
+            document.getElementById("menuContent").innerHTML = `
                         <button id="resumeBtn">Resume Game</button>
                         <button id="restartBtn">Restart Game</button>
                         <button id="mainMenuBtn">Return to Main Menu</button>
                     `;
-                    this.setupMenuButtons();
-                    document.getElementById('gameMenu').classList.remove('hidden');
-                } else {
-                    // Calculate how long we were paused and add to total
-                    if (this.gameState.pauseStartTime) {
-                        this.gameState.totalPausedTime += Date.now() - this.gameState.pauseStartTime;
-                        this.gameState.pauseStartTime = null;
-                    }
-                    
-                    // Reschedule any remaining ship spawns when resuming
-                    this.rescheduleRemainingSpawns();
-                    
-                    document.getElementById('gameMenu').classList.add('hidden');
+            this.setupMenuButtons();
+            document.getElementById("gameMenu").classList.remove("hidden");
+          } else {
+            // Calculate how long we were paused and add to total
+            if (this.gameState.pauseStartTime) {
+              this.gameState.totalPausedTime +=
+                Date.now() - this.gameState.pauseStartTime;
+              this.gameState.pauseStartTime = null;
+            }
+
+            // Reschedule any remaining ship spawns when resuming
+            this.rescheduleRemainingSpawns();
+
+            // Resume background music
+            this.playBackgroundMusic();
+
+            document.getElementById("gameMenu").classList.add("hidden");
+          }
+        }
+
+        rescheduleRemainingSpawns() {
+          // Count how many ships each player should have by now
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          ).length;
+          const computerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "computer"
+          ).length;
+
+          // Determine how many ships we still need to spawn for the initial 5
+          const playerShipsNeeded = Math.max(0, 5 - playerShips);
+          const computerShipsNeeded = Math.max(0, 5 - computerShips);
+
+          // Schedule the remaining spawns with proper timing
+          for (
+            let i = 0;
+            i < Math.max(playerShipsNeeded, computerShipsNeeded);
+            i++
+          ) {
+            const timeoutId = setTimeout(() => {
+              if (this.gameState.gameStarted && !this.gameState.gamePaused) {
+                if (i < playerShipsNeeded) {
+                  this.spawnShip("player");
+
+                  // Auto-select first player ship when it spawns (if no ships exist yet)
+                  if (
+                    this.gameState.ships.filter((s) => s.playerId === "player")
+                      .length === 1
+                  ) {
+                    setTimeout(() => {
+                      const playerShips = this.gameState.ships.filter(
+                        (s) => s.playerId === "player"
+                      );
+                      if (playerShips.length > 0) {
+                        this.gameState.selectedObject = playerShips[0];
+                        this.gameState.selectedObjectType = "ship";
+                        this.selectedShipIndex = 0;
+                        this.updateSelectedDisplay();
+                      }
+                    }, 100);
+                  }
                 }
-            }
-            
-            rescheduleRemainingSpawns() {
-                // Count how many ships each player should have by now
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player').length;
-                const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer').length;
-                
-                // Determine how many ships we still need to spawn for the initial 5
-                const playerShipsNeeded = Math.max(0, 5 - playerShips);
-                const computerShipsNeeded = Math.max(0, 5 - computerShips);
-                
-                // Schedule the remaining spawns with proper timing
-                for (let i = 0; i < Math.max(playerShipsNeeded, computerShipsNeeded); i++) {
-                    const timeoutId = setTimeout(() => {
-                        if (this.gameState.gameStarted && !this.gameState.gamePaused) {
-                            if (i < playerShipsNeeded) {
-                                this.spawnShip('player');
-                                
-                                // Auto-select first player ship when it spawns (if no ships exist yet)
-                                if (this.gameState.ships.filter(s => s.playerId === 'player').length === 1) {
-                                    setTimeout(() => {
-                                        const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                                        if (playerShips.length > 0) {
-                                            this.gameState.selectedObject = playerShips[0];
-                                            this.gameState.selectedObjectType = 'ship';
-                                            this.selectedShipIndex = 0;
-                                            this.updateSelectedDisplay();
-                                        }
-                                    }, 100);
-                                }
-                            }
-                            if (i < computerShipsNeeded) {
-                                this.spawnShip('computer');
-                            }
-                        }
-                        
-                        // Remove this timeout from our tracking array
-                        const index = this.spawnTimeouts.indexOf(timeoutId);
-                        if (index > -1) {
-                            this.spawnTimeouts.splice(index, 1);
-                        }
-                    }, i * 3000);
-                    
-                    this.spawnTimeouts.push(timeoutId);
+                if (i < computerShipsNeeded) {
+                  this.spawnShip("computer");
                 }
+              }
+
+              // Remove this timeout from our tracking array
+              const index = this.spawnTimeouts.indexOf(timeoutId);
+              if (index > -1) {
+                this.spawnTimeouts.splice(index, 1);
+              }
+            }, i * 3000);
+
+            this.spawnTimeouts.push(timeoutId);
+          }
+        }
+
+        resumeGame() {
+          this.gameState.gamePaused = false;
+
+          // Calculate how long we were paused and add to total
+          if (this.gameState.pauseStartTime) {
+            this.gameState.totalPausedTime +=
+              Date.now() - this.gameState.pauseStartTime;
+            this.gameState.pauseStartTime = null;
+          }
+
+          // Reschedule any remaining ship spawns when resuming
+          this.rescheduleRemainingSpawns();
+
+          // Resume background music
+          this.playBackgroundMusic();
+
+          document.getElementById("gameMenu").classList.add("hidden");
+        }
+
+        restartGame() {
+          this.resetGame();
+          this.startGame();
+        }
+
+        returnToMainMenu() {
+          // Navigate back to the main game selection menu
+          window.location.href = "index.html";
+        }
+
+        resetGame() {
+          // Clear all spawn timeouts
+          this.clearAllSpawnTimeouts();
+
+          // Pause background music when resetting
+          this.pauseBackgroundMusic();
+
+          this.gameState = {
+            ships: [],
+            cannonballs: [],
+            obstacles: [],
+            players: {
+              player: {
+                score: 0,
+                dock: { x: 100, y: 620, spawnAngle: (-45 * Math.PI) / 180 },
+                shipCount: 0,
+              },
+              computer: {
+                score: 0,
+                dock: { x: 900, y: 80, spawnAngle: (135 * Math.PI) / 180 },
+                shipCount: 0,
+              },
+            },
+            selectedObject: null,
+            selectedObjectType: null,
+            gameStarted: false,
+            gamePaused: false,
+            gameStartTime: null,
+            countdown: 0,
+            countdownActive: false,
+            pauseStartTime: null,
+            totalPausedTime: 0,
+            audio: {
+              musicEnabled: true,
+              musicVolume: 0.5,
+              musicStarted: false,
+              soundEnabled: true,
+              soundVolume: 0.7,
+              cannonSounds: []
             }
-            
-            resumeGame() {
-                this.gameState.gamePaused = false;
-                
-                // Calculate how long we were paused and add to total
-                if (this.gameState.pauseStartTime) {
-                    this.gameState.totalPausedTime += Date.now() - this.gameState.pauseStartTime;
-                    this.gameState.pauseStartTime = null;
-                }
-                
-                // Reschedule any remaining ship spawns when resuming
-                this.rescheduleRemainingSpawns();
-                
-                document.getElementById('gameMenu').classList.add('hidden');
-            }
-            
-            restartGame() {
-                this.resetGame();
-                this.startGame();
-            }
-            
-            returnToMainMenu() {
-                // Navigate back to the main game selection menu
-                window.location.href = 'index.html';
-            }
-            
-            resetGame() {
-                // Clear all spawn timeouts
-                this.clearAllSpawnTimeouts();
-                
-                this.gameState = {
-                    ships: [],
-                    cannonballs: [],
-                    obstacles: [],
-                    players: {
-                        player: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0 },
-                        computer: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0 }
-                    },
-                    selectedObject: null,
-                    selectedObjectType: null,
-                    gameStarted: false,
-                    gamePaused: false,
-                    gameStartTime: null,
-                    countdown: 0,
-                    countdownActive: false,
-                    pauseStartTime: null,
-                    totalPausedTime: 0
-                };
-                
-                this.selectedShipIndex = 0;
-                this.lastIcebergSpawn = 0;
-                this.generateObstacles();
-                this.selectPlayerDock(); // Always start with dock selected
-                document.getElementById('menuTitle').textContent = 'Naval Battle';
-                document.getElementById('menuContent').innerHTML = `
+          };
+
+          this.selectedShipIndex = 0;
+          this.lastIcebergSpawn = 0;
+          this.generateObstacles();
+          this.selectPlayerDock(); // Always start with dock selected
+          document.getElementById("menuTitle").textContent = "Naval Battle";
+          document.getElementById("menuContent").innerHTML = `
                     <button id="startBtn">Start Game</button>
                     <button id="resetBtn">Change Map</button>
                 `;
-                this.setupMenuButtons();
-                document.getElementById('gameMenu').classList.remove('hidden');
-                document.getElementById('headingSlider').value = 0;
-                document.getElementById('headingValue').textContent = '0°';
-                document.getElementById('speedSlider').value = 25;
-                document.getElementById('speedValue').textContent = '25';
-                document.getElementById('spawnAngleSlider').value = -45;
-                document.getElementById('spawnAngleValue').textContent = '-45°';
+          this.setupMenuButtons();
+          document.getElementById("gameMenu").classList.remove("hidden");
+          document.getElementById("headingSlider").value = 0;
+          document.getElementById("headingValue").textContent = "0°";
+          document.getElementById("speedSlider").value = 25;
+          document.getElementById("speedValue").textContent = "25";
+          document.getElementById("spawnAngleSlider").value = -45;
+          document.getElementById("spawnAngleValue").textContent = "-45°";
+        }
+
+        spawnShip(playerId) {
+          const dock = this.gameState.players[playerId].dock;
+          const currentTime = Date.now();
+
+          // For player ships, assign the next available number (1-5)
+          let shipNumber = null;
+          if (playerId === "player") {
+            const existingNumbers = this.gameState.ships
+              .filter((s) => s.playerId === "player")
+              .map((s) => s.shipNumber)
+              .filter((n) => n !== undefined);
+
+            // Find the lowest available number from 1-5
+            for (let i = 1; i <= 5; i++) {
+              if (!existingNumbers.includes(i)) {
+                shipNumber = i;
+                break;
+              }
             }
-            
-            spawnShip(playerId) {
-                const dock = this.gameState.players[playerId].dock;
-                const currentTime = Date.now();
-                
-                // For player ships, assign the next available number (1-5)
-                let shipNumber = null;
-                if (playerId === 'player') {
-                    const existingNumbers = this.gameState.ships
-                        .filter(s => s.playerId === 'player')
-                        .map(s => s.shipNumber)
-                        .filter(n => n !== undefined);
-                    
-                    // Find the lowest available number from 1-5
-                    for (let i = 1; i <= 5; i++) {
-                        if (!existingNumbers.includes(i)) {
-                            shipNumber = i;
-                            break;
-                        }
-                    }
+          }
+
+          const ship = {
+            id: Math.random().toString(36).substr(2, 9),
+            playerId: playerId,
+            shipNumber: shipNumber, // Store the ship's permanent number
+            x: dock.x + (Math.random() - 0.5) * 60,
+            y: dock.y + (Math.random() - 0.5) * 60,
+            angle: dock.spawnAngle,
+            rudderAngle: 0,
+            targetRudderAngle: 0,
+            cannonAngle: dock.spawnAngle,
+            speed: 25,
+            targetSpeed: 25,
+            defaultSpeed: 25,
+            health: 3,
+            maxHealth: 3,
+            lastShot: currentTime,
+            shotCooldown: 5000,
+            spawnTime: currentTime,
+            lastRamTime: 0,
+            aiTarget: null,
+            aiLastDecision: 0,
+            aiDecisionCooldown: 1000,
+            aiState: "patrol",
+          };
+
+          this.gameState.ships.push(ship);
+          this.gameState.players[playerId].shipCount++;
+          return ship;
+        }
+
+        generateObstacles() {
+          this.gameState.obstacles = [];
+
+          // Generate islands (static)
+          for (let i = 0; i < 2; i++) {
+            this.gameState.obstacles.push({
+              type: "island",
+              x: 250 + Math.random() * 500,
+              y: 150 + Math.random() * 400,
+              radius: 30 + Math.random() * 20,
+              destructible: false,
+            });
+          }
+
+          // Generate initial icebergs with drift properties
+          // Some spawn on-map, some spawn off-screen
+          for (let i = 0; i < 3; i++) {
+            this.createDriftingIceberg(i < 2); // First 2 spawn on-map
+          }
+        }
+
+        createDriftingIceberg(forceOnScreen = false) {
+          let x, y;
+
+          if (forceOnScreen) {
+            // Force spawn on-screen in a safe location
+            let attempts = 0;
+            let validPosition = false;
+
+            while (!validPosition && attempts < 10) {
+              x = 150 + Math.random() * 700;
+              y = 100 + Math.random() * 500;
+
+              // Check dock exclusion zones
+              const playerDock = this.gameState.players.player.dock;
+              const computerDock = this.gameState.players.computer.dock;
+
+              const distToPlayerDock = Math.sqrt(
+                (x - playerDock.x) ** 2 + (y - playerDock.y) ** 2
+              );
+              const distToComputerDock = Math.sqrt(
+                (x - computerDock.x) ** 2 + (y - computerDock.y) ** 2
+              );
+
+              // Check distance from islands
+              let tooCloseToIsland = false;
+              for (let obstacle of this.gameState.obstacles) {
+                if (obstacle.type === "island") {
+                  const distToIsland = Math.sqrt(
+                    (x - obstacle.x) ** 2 + (y - obstacle.y) ** 2
+                  );
+                  if (distToIsland < obstacle.radius + 50) {
+                    tooCloseToIsland = true;
+                    break;
+                  }
                 }
-                
-                const ship = {
-                    id: Math.random().toString(36).substr(2, 9),
-                    playerId: playerId,
-                    shipNumber: shipNumber, // Store the ship's permanent number
-                    x: dock.x + (Math.random() - 0.5) * 60,
-                    y: dock.y + (Math.random() - 0.5) * 60,
-                    angle: dock.spawnAngle,
-                    rudderAngle: 0,
-                    targetRudderAngle: 0,
-                    cannonAngle: dock.spawnAngle,
-                    speed: 25,
-                    targetSpeed: 25,
-                    defaultSpeed: 25,
-                    health: 3,
-                    maxHealth: 3,
-                    lastShot: currentTime,
-                    shotCooldown: 5000,
-                    spawnTime: currentTime,
-                    lastRamTime: 0,
-                    aiTarget: null,
-                    aiLastDecision: 0,
-                    aiDecisionCooldown: 1000,
-                    aiState: 'patrol'
-                };
-                
-                this.gameState.ships.push(ship);
-                this.gameState.players[playerId].shipCount++;
-                return ship;
+              }
+
+              if (
+                distToPlayerDock >= 80 &&
+                distToComputerDock >= 80 &&
+                !tooCloseToIsland
+              ) {
+                validPosition = true;
+              }
+              attempts++;
             }
-            
-            generateObstacles() {
-                this.gameState.obstacles = [];
-                
-                // Generate islands (static)
-                for (let i = 0; i < 2; i++) {
-                    this.gameState.obstacles.push({
-                        type: 'island',
-                        x: 250 + Math.random() * 500,
-                        y: 150 + Math.random() * 400,
-                        radius: 30 + Math.random() * 20,
-                        destructible: false
-                    });
-                }
-                
-                // Generate initial icebergs with drift properties
-                // Some spawn on-map, some spawn off-screen
-                for (let i = 0; i < 3; i++) {
-                    this.createDriftingIceberg(i < 2); // First 2 spawn on-map
-                }
+
+            if (!validPosition) {
+              // Fall back to off-screen spawn if we can't find a good on-screen spot
+              forceOnScreen = false;
             }
-            
-            createDriftingIceberg(forceOnScreen = false) {
-                let x, y;
-                
-                if (forceOnScreen) {
-                    // Force spawn on-screen in a safe location
-                    let attempts = 0;
-                    let validPosition = false;
-                    
-                    while (!validPosition && attempts < 10) {
-                        x = 150 + Math.random() * 700;
-                        y = 100 + Math.random() * 500;
-                        
-                        // Check dock exclusion zones
-                        const playerDock = this.gameState.players.player.dock;
-                        const computerDock = this.gameState.players.computer.dock;
-                        
-                        const distToPlayerDock = Math.sqrt((x - playerDock.x) ** 2 + (y - playerDock.y) ** 2);
-                        const distToComputerDock = Math.sqrt((x - computerDock.x) ** 2 + (y - computerDock.y) ** 2);
-                        
-                        // Check distance from islands
-                        let tooCloseToIsland = false;
-                        for (let obstacle of this.gameState.obstacles) {
-                            if (obstacle.type === 'island') {
-                                const distToIsland = Math.sqrt((x - obstacle.x) ** 2 + (y - obstacle.y) ** 2);
-                                if (distToIsland < obstacle.radius + 50) {
-                                    tooCloseToIsland = true;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        if (distToPlayerDock >= 80 && distToComputerDock >= 80 && !tooCloseToIsland) {
-                            validPosition = true;
-                        }
-                        attempts++;
-                    }
-                    
-                    if (!validPosition) {
-                        // Fall back to off-screen spawn if we can't find a good on-screen spot
-                        forceOnScreen = false;
-                    }
-                }
-                
-                if (!forceOnScreen) {
-                    // Random spawn position (can be off-screen)
-                    const spawnSide = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
-                    
-                    switch (spawnSide) {
-                        case 0: // Top
-                            x = Math.random() * this.canvas.width;
-                            y = -50;
-                            break;
-                        case 1: // Right
-                            x = this.canvas.width + 50;
-                            y = Math.random() * this.canvas.height;
-                            break;
-                        case 2: // Bottom
-                            x = Math.random() * this.canvas.width;
-                            y = this.canvas.height + 50;
-                            break;
-                        case 3: // Left
-                            x = -50;
-                            y = Math.random() * this.canvas.height;
-                            break;
-                    }
-                }
-                
-                const iceberg = {
-                    type: 'iceberg',
-                    x: x,
-                    y: y,
-                    radius: 20 + Math.random() * 15,
-                    destructible: true,
-                    // Drift properties - moderate speed
-                    driftAngle: Math.random() * Math.PI * 2, // Random direction
-                    driftSpeed: 3.5 + Math.random() * 4, // Moderate speed (3.5-7.5 pixels per second)
-                    lastPositionUpdate: Date.now()
-                };
-                
-                this.gameState.obstacles.push(iceberg);
+          }
+
+          if (!forceOnScreen) {
+            // Random spawn position (can be off-screen)
+            const spawnSide = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+
+            switch (spawnSide) {
+              case 0: // Top
+                x = Math.random() * this.canvas.width;
+                y = -50;
+                break;
+              case 1: // Right
+                x = this.canvas.width + 50;
+                y = Math.random() * this.canvas.height;
+                break;
+              case 2: // Bottom
+                x = Math.random() * this.canvas.width;
+                y = this.canvas.height + 50;
+                break;
+              case 3: // Left
+                x = -50;
+                y = Math.random() * this.canvas.height;
+                break;
             }
-            
-            updateIcebergDrift(deltaTime) {
-                if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
-                
-                const currentTime = Date.now();
-                
-                // Update existing iceberg positions
-                for (let i = this.gameState.obstacles.length - 1; i >= 0; i--) {
-                    const obstacle = this.gameState.obstacles[i];
-                    
-                    if (obstacle.type === 'iceberg') {
-                        // Calculate drift movement
-                        const driftX = Math.cos(obstacle.driftAngle) * obstacle.driftSpeed * deltaTime * 0.001;
-                        const driftY = Math.sin(obstacle.driftAngle) * obstacle.driftSpeed * deltaTime * 0.001;
-                        
-                        const newX = obstacle.x + driftX;
-                        const newY = obstacle.y + driftY;
-                        
-                        // Check if new position would overlap with islands
-                        let canMove = true;
-                        for (let otherObstacle of this.gameState.obstacles) {
-                            if (otherObstacle.type === 'island' && otherObstacle !== obstacle) {
-                                const dx = newX - otherObstacle.x;
-                                const dy = newY - otherObstacle.y;
-                                const distance = Math.sqrt(dx * dx + dy * dy);
-                                
-                                if (distance < obstacle.radius + otherObstacle.radius + 5) {
-                                    canMove = false;
-                                    break;
-                                }
-                            }
-                        }
-                        
-                        // Check dock exclusion zones
-                        const playerDock = this.gameState.players.player.dock;
-                        const computerDock = this.gameState.players.computer.dock;
-                        
-                        const distToPlayerDock = Math.sqrt((newX - playerDock.x) ** 2 + (newY - playerDock.y) ** 2);
-                        const distToComputerDock = Math.sqrt((newX - computerDock.x) ** 2 + (newY - computerDock.y) ** 2);
-                        
-                        if (distToPlayerDock < 60 || distToComputerDock < 60) {
-                            canMove = false;
-                        }
-                        
-                        if (canMove) {
-                            obstacle.x = newX;
-                            obstacle.y = newY;
-                        }
-                        
-                        // Remove icebergs that have drifted too far off the map
-                        const margin = 100;
-                        if (obstacle.x < -margin || obstacle.x > this.canvas.width + margin || 
-                            obstacle.y < -margin || obstacle.y > this.canvas.height + margin) {
-                            this.gameState.obstacles.splice(i, 1);
-                        }
-                    }
+          }
+
+          const iceberg = {
+            type: "iceberg",
+            x: x,
+            y: y,
+            radius: 20 + Math.random() * 15,
+            destructible: true,
+            // Drift properties - moderate speed
+            driftAngle: Math.random() * Math.PI * 2, // Random direction
+            driftSpeed: 3.5 + Math.random() * 4, // Moderate speed (3.5-7.5 pixels per second)
+            lastPositionUpdate: Date.now(),
+          };
+
+          this.gameState.obstacles.push(iceberg);
+        }
+
+        updateIcebergDrift(deltaTime) {
+          if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
+
+          const currentTime = Date.now();
+
+          // Update existing iceberg positions
+          for (let i = this.gameState.obstacles.length - 1; i >= 0; i--) {
+            const obstacle = this.gameState.obstacles[i];
+
+            if (obstacle.type === "iceberg") {
+              // Calculate drift movement
+              const driftX =
+                Math.cos(obstacle.driftAngle) *
+                obstacle.driftSpeed *
+                deltaTime *
+                0.001;
+              const driftY =
+                Math.sin(obstacle.driftAngle) *
+                obstacle.driftSpeed *
+                deltaTime *
+                0.001;
+
+              const newX = obstacle.x + driftX;
+              const newY = obstacle.y + driftY;
+
+              // Check if new position would overlap with islands
+              let canMove = true;
+              for (let otherObstacle of this.gameState.obstacles) {
+                if (
+                  otherObstacle.type === "island" &&
+                  otherObstacle !== obstacle
+                ) {
+                  const dx = newX - otherObstacle.x;
+                  const dy = newY - otherObstacle.y;
+                  const distance = Math.sqrt(dx * dx + dy * dy);
+
+                  if (distance < obstacle.radius + otherObstacle.radius + 5) {
+                    canMove = false;
+                    break;
+                  }
                 }
-                
-                // Spawn new icebergs periodically
-                if (currentTime - this.lastIcebergSpawn > this.icebergSpawnCooldown) {
-                    const icebergs = this.gameState.obstacles.filter(o => o.type === 'iceberg');
-                    
-                    // Maintain 2-10 icebergs on the map
-                    if (icebergs.length < 10) {
-                        // Increase spawn chance when we have fewer icebergs
-                        let spawnChance = 0.3;
-                        if (icebergs.length < 2) spawnChance = 1.0; // Always spawn if below minimum
-                        else if (icebergs.length < 4) spawnChance = 0.6; // Higher chance when low
-                        
-                        if (Math.random() < spawnChance) {
-                            this.createDriftingIceberg();
-                            this.lastIcebergSpawn = currentTime;
-                        }
-                    }
-                }
+              }
+
+              // Check dock exclusion zones
+              const playerDock = this.gameState.players.player.dock;
+              const computerDock = this.gameState.players.computer.dock;
+
+              const distToPlayerDock = Math.sqrt(
+                (newX - playerDock.x) ** 2 + (newY - playerDock.y) ** 2
+              );
+              const distToComputerDock = Math.sqrt(
+                (newX - computerDock.x) ** 2 + (newY - computerDock.y) ** 2
+              );
+
+              if (distToPlayerDock < 60 || distToComputerDock < 60) {
+                canMove = false;
+              }
+
+              if (canMove) {
+                obstacle.x = newX;
+                obstacle.y = newY;
+              }
+
+              // Remove icebergs that have drifted too far off the map
+              const margin = 100;
+              if (
+                obstacle.x < -margin ||
+                obstacle.x > this.canvas.width + margin ||
+                obstacle.y < -margin ||
+                obstacle.y > this.canvas.height + margin
+              ) {
+                this.gameState.obstacles.splice(i, 1);
+              }
             }
-            
-            handleCanvasClick(e) {
-                if (!this.gameState.gameStarted || this.gameState.gamePaused || this.gameState.countdownActive) return;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                // Check dock selection first
-                const playerDock = this.gameState.players.player.dock;
-                const dockDx = x - playerDock.x;
-                const dockDy = y - playerDock.y;
-                if (Math.sqrt(dockDx*dockDx + dockDy*dockDy) < 35) {
-                    this.gameState.selectedObject = playerDock;
-                    this.gameState.selectedObjectType = 'dock';
-                    this.updateSelectedDisplay();
-                    return;
-                }
-                
-                // Check ship selection
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                
-                for (let i = 0; i < playerShips.length; i++) {
-                    const ship = playerShips[i];
-                    const dx = x - ship.x;
-                    const dy = y - ship.y;
-                    if (Math.sqrt(dx*dx + dy*dy) < 15) {
-                        this.selectedShipIndex = i;
-                        this.gameState.selectedObject = ship;
-                        this.gameState.selectedObjectType = 'ship';
-                        this.updateSelectedDisplay();
-                        break;
-                    }
-                }
+          }
+
+          // Spawn new icebergs periodically
+          if (currentTime - this.lastIcebergSpawn > this.icebergSpawnCooldown) {
+            const icebergs = this.gameState.obstacles.filter(
+              (o) => o.type === "iceberg"
+            );
+
+            // Maintain 2-10 icebergs on the map
+            if (icebergs.length < 10) {
+              // Increase spawn chance when we have fewer icebergs
+              let spawnChance = 0.3;
+              if (icebergs.length < 2)
+                spawnChance = 1.0; // Always spawn if below minimum
+              else if (icebergs.length < 4) spawnChance = 0.6; // Higher chance when low
+
+              if (Math.random() < spawnChance) {
+                this.createDriftingIceberg();
+                this.lastIcebergSpawn = currentTime;
+              }
             }
-            
-            handleCanvasRightClick(e) {
-                if (this.gameState.countdownActive) {
-                    // During countdown, only allow dock spawn angle setting
-                    if (this.gameState.selectedObjectType === 'dock') {
-                        const rect = this.canvas.getBoundingClientRect();
-                        const scaleX = this.canvas.width / rect.width;
-                        const scaleY = this.canvas.height / rect.height;
-                        const x = (e.clientX - rect.left) * scaleX;
-                        const y = (e.clientY - rect.top) * scaleY;
-                        
-                        const dock = this.gameState.selectedObject;
-                        const dx = x - dock.x;
-                        const dy = y - dock.y;
-                        dock.spawnAngle = Math.atan2(dy, dx);
-                        
-                        const degrees = Math.round(dock.spawnAngle * 180/Math.PI);
-                        document.getElementById('spawnAngleSlider').value = degrees;
-                        document.getElementById('spawnAngleValue').textContent = degrees + '°';
-                    }
-                    return;
-                }
-                
-                if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
-                if (!this.gameState.selectedObject) return;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                const x = (e.clientX - rect.left) * scaleX;
-                const y = (e.clientY - rect.top) * scaleY;
-                
-                if (this.gameState.selectedObjectType === 'ship' && 
-                    this.gameState.selectedObject.playerId === 'player') {
-                    const ship = this.gameState.selectedObject;
-                    const dx = x - ship.x;
-                    const dy = y - ship.y;
-                    ship.cannonAngle = Math.atan2(dy, dx);
-                } else if (this.gameState.selectedObjectType === 'dock') {
-                    const dock = this.gameState.selectedObject;
-                    const dx = x - dock.x;
-                    const dy = y - dock.y;
-                    dock.spawnAngle = Math.atan2(dy, dx);
-                    
-                    const degrees = Math.round(dock.spawnAngle * 180/Math.PI);
-                    document.getElementById('spawnAngleSlider').value = degrees;
-                    document.getElementById('spawnAngleValue').textContent = degrees + '°';
-                }
+          }
+        }
+
+        handleCanvasClick(e) {
+          if (
+            !this.gameState.gameStarted ||
+            this.gameState.gamePaused ||
+            this.gameState.countdownActive
+          )
+            return;
+
+          const rect = this.canvas.getBoundingClientRect();
+          const scaleX = this.canvas.width / rect.width;
+          const scaleY = this.canvas.height / rect.height;
+          const x = (e.clientX - rect.left) * scaleX;
+          const y = (e.clientY - rect.top) * scaleY;
+
+          // Check dock selection first
+          const playerDock = this.gameState.players.player.dock;
+          const dockDx = x - playerDock.x;
+          const dockDy = y - playerDock.y;
+          if (Math.sqrt(dockDx * dockDx + dockDy * dockDy) < 35) {
+            this.gameState.selectedObject = playerDock;
+            this.gameState.selectedObjectType = "dock";
+            this.updateSelectedDisplay();
+            return;
+          }
+
+          // Check ship selection
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          );
+
+          for (let i = 0; i < playerShips.length; i++) {
+            const ship = playerShips[i];
+            const dx = x - ship.x;
+            const dy = y - ship.y;
+            if (Math.sqrt(dx * dx + dy * dy) < 15) {
+              this.selectedShipIndex = i;
+              this.gameState.selectedObject = ship;
+              this.gameState.selectedObjectType = "ship";
+              this.updateSelectedDisplay();
+              break;
             }
-            
-            handleMouseMove(e) {
-                if (!this.gameState.selectedObject) return;
-                
-                const rect = this.canvas.getBoundingClientRect();
-                const scaleX = this.canvas.width / rect.width;
-                const scaleY = this.canvas.height / rect.height;
-                const mouseX = (e.clientX - rect.left) * scaleX;
-                const mouseY = (e.clientY - rect.top) * scaleY;
-                
-                if (this.gameState.selectedObjectType === 'ship') {
-                    const ship = this.gameState.selectedObject;
-                    const dx = mouseX - ship.x;
-                    const dy = mouseY - ship.y;
-                    this.mouseAimAngle = Math.atan2(dy, dx);
-                    // Update the ship's cannon angle continuously for player ships
-                    if (ship.playerId === 'player') {
-                        ship.cannonAngle = this.mouseAimAngle;
-                    }
-                } else if (this.gameState.selectedObjectType === 'dock') {
-                    const dock = this.gameState.selectedObject;
-                    const dx = mouseX - dock.x;
-                    const dy = mouseY - dock.y;
-                    this.mouseAimAngle = Math.atan2(dy, dx);
-                }
+          }
+        }
+
+        handleCanvasRightClick(e) {
+          if (this.gameState.countdownActive) {
+            // During countdown, only allow dock spawn angle setting
+            if (this.gameState.selectedObjectType === "dock") {
+              const rect = this.canvas.getBoundingClientRect();
+              const scaleX = this.canvas.width / rect.width;
+              const scaleY = this.canvas.height / rect.height;
+              const x = (e.clientX - rect.left) * scaleX;
+              const y = (e.clientY - rect.top) * scaleY;
+
+              const dock = this.gameState.selectedObject;
+              const dx = x - dock.x;
+              const dy = y - dock.y;
+              dock.spawnAngle = Math.atan2(dy, dx);
+
+              const degrees = Math.round((dock.spawnAngle * 180) / Math.PI);
+              document.getElementById("spawnAngleSlider").value = degrees;
+              document.getElementById("spawnAngleValue").textContent =
+                degrees + "°";
             }
-            
-            updatePlayerControls() {
-                // Don't allow ship/dock cycling during countdown
-                if (this.gameState.countdownActive) return;
-                
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                const playerDocks = [this.gameState.players.player.dock];
-                const allSelectables = [...playerShips, ...playerDocks];
-                
-                // Ensure something is always selected
-                if (!this.gameState.selectedObject && allSelectables.length > 0) {
-                    if (playerShips.length > 0) {
-                        this.gameState.selectedObject = playerShips[0];
-                        this.gameState.selectedObjectType = 'ship';
-                        this.selectedShipIndex = 0;
-                    } else {
-                        this.selectPlayerDock();
-                    }
-                    this.updateSelectedDisplay();
-                }
-                
-                // Q/E for selection cycling
-                if (this.keys['KeyQ'] && !this.lastQPressed) {
-                    this.lastQPressed = true;
-                    if (allSelectables.length > 0) {
-                        let currentIndex = this.getCurrentSelectionIndex(allSelectables);
-                        currentIndex = (currentIndex + 1) % allSelectables.length;
-                        this.selectObjectByIndex(allSelectables, currentIndex);
-                    }
-                } else if (!this.keys['KeyQ']) {
-                    this.lastQPressed = false;
-                }
-                
-                if (this.keys['KeyE'] && !this.lastEPressed) {
-                    this.lastEPressed = true;
-                    if (allSelectables.length > 0) {
-                        let currentIndex = this.getCurrentSelectionIndex(allSelectables);
-                        currentIndex = (currentIndex - 1 + allSelectables.length) % allSelectables.length;
-                        this.selectObjectByIndex(allSelectables, currentIndex);
-                    }
-                } else if (!this.keys['KeyE']) {
-                    this.lastEPressed = false;
-                }
-                
-                if (!this.gameState.selectedObject) return;
-                
-                if (this.gameState.selectedObjectType === 'ship' && 
-                    this.gameState.selectedObject.playerId === 'player') {
-                    const ship = this.gameState.selectedObject;
-                    
-                    // A/D for steering
-                    if (this.keys['KeyA']) {
-                        ship.targetRudderAngle = Math.max(ship.targetRudderAngle - 0.02, -Math.PI/4);
-                    }
-                    if (this.keys['KeyD']) {
-                        ship.targetRudderAngle = Math.min(ship.targetRudderAngle + 0.02, Math.PI/4);
-                    }
-                    
-                    // W/S for speed control
-                    if (this.keys['KeyW']) {
-                        ship.targetSpeed = Math.min(ship.targetSpeed + 0.5, ship.defaultSpeed);
-                    }
-                    if (this.keys['KeyS']) {
-                        ship.targetSpeed = Math.max(ship.targetSpeed - 0.5, 0);
-                    }
-                    
-                    const degrees = Math.round(ship.targetRudderAngle * 180/Math.PI);
-                    document.getElementById('headingSlider').value = degrees;
-                    document.getElementById('headingValue').textContent = degrees + '°';
-                    
-                    document.getElementById('speedSlider').value = Math.round(ship.targetSpeed);
-                    document.getElementById('speedValue').textContent = Math.round(ship.targetSpeed);
-                }
+            return;
+          }
+
+          if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
+          if (!this.gameState.selectedObject) return;
+
+          const rect = this.canvas.getBoundingClientRect();
+          const scaleX = this.canvas.width / rect.width;
+          const scaleY = this.canvas.height / rect.height;
+          const x = (e.clientX - rect.left) * scaleX;
+          const y = (e.clientY - rect.top) * scaleY;
+
+          if (
+            this.gameState.selectedObjectType === "ship" &&
+            this.gameState.selectedObject.playerId === "player"
+          ) {
+            const ship = this.gameState.selectedObject;
+            const dx = x - ship.x;
+            const dy = y - ship.y;
+            ship.cannonAngle = Math.atan2(dy, dx);
+          } else if (this.gameState.selectedObjectType === "dock") {
+            const dock = this.gameState.selectedObject;
+            const dx = x - dock.x;
+            const dy = y - dock.y;
+            dock.spawnAngle = Math.atan2(dy, dx);
+
+            const degrees = Math.round((dock.spawnAngle * 180) / Math.PI);
+            document.getElementById("spawnAngleSlider").value = degrees;
+            document.getElementById("spawnAngleValue").textContent =
+              degrees + "°";
+          }
+        }
+
+        handleMouseMove(e) {
+          if (!this.gameState.selectedObject) return;
+
+          const rect = this.canvas.getBoundingClientRect();
+          const scaleX = this.canvas.width / rect.width;
+          const scaleY = this.canvas.height / rect.height;
+          const mouseX = (e.clientX - rect.left) * scaleX;
+          const mouseY = (e.clientY - rect.top) * scaleY;
+
+          if (this.gameState.selectedObjectType === "ship") {
+            const ship = this.gameState.selectedObject;
+            const dx = mouseX - ship.x;
+            const dy = mouseY - ship.y;
+            this.mouseAimAngle = Math.atan2(dy, dx);
+            // Update the ship's cannon angle continuously for player ships
+            if (ship.playerId === "player") {
+              ship.cannonAngle = this.mouseAimAngle;
             }
-            
-            getCurrentSelectionIndex(allSelectables) {
-                if (!this.gameState.selectedObject) return 0;
-                
-                for (let i = 0; i < allSelectables.length; i++) {
-                    if (allSelectables[i] === this.gameState.selectedObject) {
-                        return i;
-                    }
-                }
-                return 0;
+          } else if (this.gameState.selectedObjectType === "dock") {
+            const dock = this.gameState.selectedObject;
+            const dx = mouseX - dock.x;
+            const dy = mouseY - dock.y;
+            this.mouseAimAngle = Math.atan2(dy, dx);
+          }
+        }
+
+        updatePlayerControls() {
+          // Don't allow ship/dock cycling during countdown
+          if (this.gameState.countdownActive) return;
+
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          );
+          const playerDocks = [this.gameState.players.player.dock];
+          const allSelectables = [...playerShips, ...playerDocks];
+
+          // Ensure something is always selected
+          if (!this.gameState.selectedObject && allSelectables.length > 0) {
+            if (playerShips.length > 0) {
+              this.gameState.selectedObject = playerShips[0];
+              this.gameState.selectedObjectType = "ship";
+              this.selectedShipIndex = 0;
+            } else {
+              this.selectPlayerDock();
             }
-            
-            selectObjectByIndex(allSelectables, index) {
-                if (index < 0 || index >= allSelectables.length) return;
-                
-                const obj = allSelectables[index];
-                this.gameState.selectedObject = obj;
-                
-                // Determine type
-                if (obj.hasOwnProperty('health')) {
-                    this.gameState.selectedObjectType = 'ship';
-                    this.selectedShipIndex = this.gameState.ships.filter(s => s.playerId === 'player').indexOf(obj);
-                } else {
-                    this.gameState.selectedObjectType = 'dock';
-                }
-                
-                this.updateSelectedDisplay();
+            this.updateSelectedDisplay();
+          }
+
+          // Q/E for selection cycling
+          if (this.keys["KeyQ"] && !this.lastQPressed) {
+            this.lastQPressed = true;
+            if (allSelectables.length > 0) {
+              let currentIndex = this.getCurrentSelectionIndex(allSelectables);
+              currentIndex = (currentIndex + 1) % allSelectables.length;
+              this.selectObjectByIndex(allSelectables, currentIndex);
             }
-            
-            updateSelectedDisplay() {
-                // Update the heading display info
-                if (this.gameState.selectedObject) {
-                    if (this.gameState.selectedObjectType === 'ship') {
-                        const ship = this.gameState.selectedObject;
-                        if (ship.shipNumber) {
-                            document.getElementById('selectedObject').textContent = `Ship ${ship.shipNumber} (${ship.playerId})`;
-                        } else {
-                            document.getElementById('selectedObject').textContent = `${ship.playerId} Ship`;
-                        }
-                    } else if (this.gameState.selectedObjectType === 'dock') {
-                        document.getElementById('selectedObject').textContent = 'Player Dock';
-                    }
-                } else {
-                    document.getElementById('selectedObject').textContent = 'No selection';
-                }
+          } else if (!this.keys["KeyQ"]) {
+            this.lastQPressed = false;
+          }
+
+          if (this.keys["KeyE"] && !this.lastEPressed) {
+            this.lastEPressed = true;
+            if (allSelectables.length > 0) {
+              let currentIndex = this.getCurrentSelectionIndex(allSelectables);
+              currentIndex =
+                (currentIndex - 1 + allSelectables.length) %
+                allSelectables.length;
+              this.selectObjectByIndex(allSelectables, currentIndex);
             }
-            
-            updateAI(deltaTime) {
-                const currentTime = Date.now();
-                const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer');
-                
-                if (currentTime - this.aiLastShipSwitch > (2000 + Math.random() * 2000)) {
-                    if (computerShips.length > 0) {
-                        this.aiSelectedShipIndex = Math.floor(Math.random() * computerShips.length);
-                        this.aiLastShipSwitch = currentTime;
-                    }
-                }
-                
-                if (computerShips.length > 0 && this.aiSelectedShipIndex < computerShips.length) {
-                    const selectedAIShip = computerShips[this.aiSelectedShipIndex];
-                    
-                    if (currentTime - selectedAIShip.aiLastDecision > selectedAIShip.aiDecisionCooldown) {
-                        this.makeAIDecision(selectedAIShip);
-                        selectedAIShip.aiLastDecision = currentTime;
-                    }
-                    
-                    this.executeAIBehavior(selectedAIShip);
-                }
+          } else if (!this.keys["KeyE"]) {
+            this.lastEPressed = false;
+          }
+
+          if (!this.gameState.selectedObject) return;
+
+          if (
+            this.gameState.selectedObjectType === "ship" &&
+            this.gameState.selectedObject.playerId === "player"
+          ) {
+            const ship = this.gameState.selectedObject;
+
+            // A/D for steering
+            if (this.keys["KeyA"]) {
+              ship.targetRudderAngle = Math.max(
+                ship.targetRudderAngle - 0.02,
+                -Math.PI / 4
+              );
             }
-            
-            makeAIDecision(ship) {
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                
-                if (playerShips.length === 0) return;
-                
-                let closestShip = null;
-                let closestDistance = Infinity;
-                
-                for (let playerShip of playerShips) {
-                    const dx = ship.x - playerShip.x;
-                    const dy = ship.y - playerShip.y;
-                    const distance = Math.sqrt(dx*dx + dy*dy);
-                    
-                    if (distance < closestDistance) {
-                        closestDistance = distance;
-                        closestShip = playerShip;
-                    }
-                }
-                
-                ship.aiTarget = closestShip;
-                
-                if (closestDistance < 150) {
-                    ship.aiState = ship.health <= 1 ? 'evade' : 'attack';
-                } else {
-                    ship.aiState = 'patrol';
-                }
+            if (this.keys["KeyD"]) {
+              ship.targetRudderAngle = Math.min(
+                ship.targetRudderAngle + 0.02,
+                Math.PI / 4
+              );
             }
-            
-            executeAIBehavior(ship) {
-                if (!ship.aiTarget) return;
-                
-                const dx = ship.aiTarget.x - ship.x;
-                const dy = ship.aiTarget.y - ship.y;
-                const distance = Math.sqrt(dx*dx + dy*dy);
-                const angleToTarget = Math.atan2(dy, dx);
-                
-                // Calculate target's velocity for predictive aiming
-                const targetVelX = Math.cos(ship.aiTarget.angle) * ship.aiTarget.speed;
-                const targetVelY = Math.sin(ship.aiTarget.angle) * ship.aiTarget.speed;
-                
-                // Predict where target will be (lead the target)
-                const cannonballSpeed = 80;
-                const timeToImpact = distance / cannonballSpeed;
-                const predictedX = ship.aiTarget.x + targetVelX * timeToImpact * 0.05;
-                const predictedY = ship.aiTarget.y + targetVelY * timeToImpact * 0.05;
-                const predictedAngle = Math.atan2(predictedY - ship.y, predictedX - ship.x);
-                
-                switch (ship.aiState) {
-                    case 'attack':
-                        // Use predictive aiming
-                        ship.cannonAngle = predictedAngle;
-                        
-                        // Optimal combat distance is 100-200 pixels
-                        if (distance < 100) {
-                            // Too close, back off while maintaining fire angle
-                            ship.targetSpeed = ship.defaultSpeed * 0.6;
-                            const retreatAngle = angleToTarget + Math.PI;
-                            const retreatDiff = this.normalizeAngle(retreatAngle - ship.angle);
-                            ship.targetRudderAngle = Math.sign(retreatDiff) * Math.min(Math.abs(retreatDiff) * 0.4, Math.PI/6);
-                        } else if (distance > 200) {
-                            // Chase target
-                            ship.targetSpeed = ship.defaultSpeed;
-                            const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
-                            ship.targetRudderAngle = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.5, Math.PI/6);
-                        } else {
-                            // Optimal range - circle strafe
-                            ship.targetSpeed = ship.defaultSpeed * 0.8;
-                            const strafeAngle = angleToTarget + Math.PI/2;
-                            const strafeDiff = this.normalizeAngle(strafeAngle - ship.angle);
-                            ship.targetRudderAngle = Math.sign(strafeDiff) * Math.min(Math.abs(strafeDiff) * 0.4, Math.PI/6);
-                        }
-                        break;
-                        
-                    case 'evade':
-                        // Still aim at target for opportunistic shots
-                        ship.cannonAngle = predictedAngle;
-                        ship.targetSpeed = ship.defaultSpeed;
-                        
-                        // Zigzag evasion pattern
-                        const evadeTime = Date.now() / 1000;
-                        const zigzagOffset = Math.sin(evadeTime * 2) * Math.PI/3;
-                        const evadeAngle = angleToTarget + Math.PI + zigzagOffset;
-                        const evadeAngleDiff = this.normalizeAngle(evadeAngle - ship.angle);
-                        ship.targetRudderAngle = Math.sign(evadeAngleDiff) * Math.min(Math.abs(evadeAngleDiff) * 0.6, Math.PI/4);
-                        break;
-                        
-                    case 'patrol':
-                        ship.cannonAngle = angleToTarget;
-                        ship.targetSpeed = ship.defaultSpeed * 0.7;
-                        
-                        // Patrol in a figure-8 pattern around the area
-                        const patrolTime = Date.now() / 1000;
-                        const figure8Offset = Math.sin(patrolTime * 0.5) * Math.PI/4;
-                        const patrolAngle = angleToTarget + figure8Offset;
-                        const patrolAngleDiff = this.normalizeAngle(patrolAngle - ship.angle);
-                        ship.targetRudderAngle = Math.sign(patrolAngleDiff) * Math.min(Math.abs(patrolAngleDiff) * 0.3, Math.PI/8);
-                        break;
-                }
-                
-                this.avoidObstacles(ship);
+
+            // W/S for speed control
+            if (this.keys["KeyW"]) {
+              ship.targetSpeed = Math.min(
+                ship.targetSpeed + 0.5,
+                ship.defaultSpeed
+              );
             }
-            
-            avoidObstacles(ship) {
-                const avoidanceRadius = 100;
-                const lookAheadDistance = 60;
-                let avoidanceForceX = 0;
-                let avoidanceForceY = 0;
-                
-                // Look ahead in the direction we're moving
-                const futureX = ship.x + Math.cos(ship.angle) * lookAheadDistance;
-                const futureY = ship.y + Math.sin(ship.angle) * lookAheadDistance;
-                
-                // Check obstacles
-                for (let obstacle of this.gameState.obstacles) {
-                    const dx = ship.x - obstacle.x;
-                    const dy = ship.y - obstacle.y;
-                    const distance = Math.sqrt(dx*dx + dy*dy);
-                    
-                    // Also check future position
-                    const futureDx = futureX - obstacle.x;
-                    const futureDy = futureY - obstacle.y;
-                    const futureDistance = Math.sqrt(futureDx*futureDx + futureDy*futureDy);
-                    
-                    if (distance < avoidanceRadius + obstacle.radius) {
-                        // Strong avoidance for close obstacles
-                        const force = Math.pow((avoidanceRadius + obstacle.radius - distance) / avoidanceRadius, 2);
-                        avoidanceForceX += (dx / distance) * force * 2;
-                        avoidanceForceY += (dy / distance) * force * 2;
-                    }
-                    
-                    // Predictive avoidance
-                    if (futureDistance < obstacle.radius + 30) {
-                        // We're about to hit this obstacle, strong evasion needed
-                        avoidanceForceX += (futureDx / futureDistance) * 3;
-                        avoidanceForceY += (futureDy / futureDistance) * 3;
-                    }
-                }
-                
-                // Wall avoidance with stronger forces
-                const wallBuffer = 120;
-                if (ship.x < wallBuffer) {
-                    avoidanceForceX += Math.pow((wallBuffer - ship.x) / wallBuffer, 2) * 2;
-                }
-                if (ship.x > this.canvas.width - wallBuffer) {
-                    avoidanceForceX -= Math.pow((ship.x - (this.canvas.width - wallBuffer)) / wallBuffer, 2) * 2;
-                }
-                if (ship.y < wallBuffer) {
-                    avoidanceForceY += Math.pow((wallBuffer - ship.y) / wallBuffer, 2) * 2;
-                }
-                if (ship.y > this.canvas.height - wallBuffer) {
-                    avoidanceForceY -= Math.pow((ship.y - (this.canvas.height - wallBuffer)) / wallBuffer, 2) * 2;
-                }
-                
-                // Apply avoidance if needed
-                if (avoidanceForceX !== 0 || avoidanceForceY !== 0) {
-                    const avoidanceAngle = Math.atan2(avoidanceForceY, avoidanceForceX);
-                    const angleDiff = this.normalizeAngle(avoidanceAngle - ship.angle);
-                    
-                    // Stronger turning for obstacle avoidance, overrides other behaviors
-                    const avoidanceTurn = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.8, Math.PI/4);
-                    
-                    // Blend with existing target rudder angle, but prioritize avoidance
-                    ship.targetRudderAngle = ship.targetRudderAngle * 0.3 + avoidanceTurn * 0.7;
-                    
-                    // Slow down when avoiding obstacles
-                    const avoidanceStrength = Math.sqrt(avoidanceForceX*avoidanceForceX + avoidanceForceY*avoidanceForceY);
-                    if (avoidanceStrength > 1) {
-                        ship.targetSpeed = Math.max(ship.defaultSpeed * 0.4, ship.targetSpeed * 0.7);
-                    }
-                }
+            if (this.keys["KeyS"]) {
+              ship.targetSpeed = Math.max(ship.targetSpeed - 0.5, 0);
             }
-            
-            normalizeAngle(angle) {
-                while (angle > Math.PI) angle -= 2 * Math.PI;
-                while (angle < -Math.PI) angle += 2 * Math.PI;
-                return angle;
+
+            const degrees = Math.round(
+              (ship.targetRudderAngle * 180) / Math.PI
+            );
+            document.getElementById("headingSlider").value = degrees;
+            document.getElementById("headingValue").textContent = degrees + "°";
+
+            document.getElementById("speedSlider").value = Math.round(
+              ship.targetSpeed
+            );
+            document.getElementById("speedValue").textContent = Math.round(
+              ship.targetSpeed
+            );
+          }
+        }
+
+        getCurrentSelectionIndex(allSelectables) {
+          if (!this.gameState.selectedObject) return 0;
+
+          for (let i = 0; i < allSelectables.length; i++) {
+            if (allSelectables[i] === this.gameState.selectedObject) {
+              return i;
             }
-            
-            update(deltaTime) {
-                if (!this.gameState.gameStarted || this.gameState.gamePaused || this.gameState.countdownActive) return;
-                
-                this.updatePlayerControls();
-                this.updateAI(deltaTime);
-                this.updateShips(deltaTime);
-                this.updateCannonballs(deltaTime);
-                this.updateIcebergDrift(deltaTime);
-                this.checkCollisions();
-                this.cleanupDeadObjects();
-                this.handleShooting();
-                this.updateGameStatus();
-                this.renderHeadingDisplay();
+          }
+          return 0;
+        }
+
+        selectObjectByIndex(allSelectables, index) {
+          if (index < 0 || index >= allSelectables.length) return;
+
+          const obj = allSelectables[index];
+          this.gameState.selectedObject = obj;
+
+          // Determine type
+          if (obj.hasOwnProperty("health")) {
+            this.gameState.selectedObjectType = "ship";
+            this.selectedShipIndex = this.gameState.ships
+              .filter((s) => s.playerId === "player")
+              .indexOf(obj);
+          } else {
+            this.gameState.selectedObjectType = "dock";
+          }
+
+          this.updateSelectedDisplay();
+        }
+
+        updateSelectedDisplay() {
+          // Update the heading display info
+          if (this.gameState.selectedObject) {
+            if (this.gameState.selectedObjectType === "ship") {
+              const ship = this.gameState.selectedObject;
+              if (ship.shipNumber) {
+                document.getElementById(
+                  "selectedObject"
+                ).textContent = `Ship ${ship.shipNumber} (${ship.playerId})`;
+              } else {
+                document.getElementById(
+                  "selectedObject"
+                ).textContent = `${ship.playerId} Ship`;
+              }
+            } else if (this.gameState.selectedObjectType === "dock") {
+              document.getElementById("selectedObject").textContent =
+                "Player Dock";
             }
-            
-            updateShips(deltaTime) {
-                for (let ship of this.gameState.ships) {
-                    // Update speed gradually towards target
-                    const speedDiff = ship.targetSpeed - ship.speed;
-                    ship.speed += Math.sign(speedDiff) * Math.min(Math.abs(speedDiff), 15 * deltaTime * 0.001);
-                    
-                    const rudderSpeed = 2.0;
-                    const rudderDiff = ship.targetRudderAngle - ship.rudderAngle;
-                    ship.rudderAngle += Math.sign(rudderDiff) * Math.min(Math.abs(rudderDiff), rudderSpeed * deltaTime * 0.001);
-                    
-                    // Scale turn rate with current speed - ships turn slower when moving slower
-                    const speedRatio = ship.speed / ship.defaultSpeed;
-                    const baseTurnRate = 0.8;
-                    const minTurnRate = 0.1; // Minimum turn rate even when stopped
-                    const turnRate = minTurnRate + (baseTurnRate - minTurnRate) * speedRatio;
-                    ship.angle += ship.rudderAngle * turnRate * deltaTime * 0.001;
-                    
-                    ship.x += Math.cos(ship.angle) * ship.speed * deltaTime * 0.001;
-                    ship.y += Math.sin(ship.angle) * ship.speed * deltaTime * 0.001;
-                    
-                    // Check boundaries with ricochet physics
-                    let bounced = false;
-                    
-                    if (ship.x < 0) {
-                        ship.x = 0;
-                        ship.angle = Math.PI - ship.angle;
-                        bounced = true;
-                    } else if (ship.x > this.canvas.width) {
-                        ship.x = this.canvas.width;
-                        ship.angle = Math.PI - ship.angle;
-                        bounced = true;
-                    }
-                    
-                    if (ship.y < 0) {
-                        ship.y = 0;
-                        ship.angle = -ship.angle;
-                        bounced = true;
-                    } else if (ship.y > this.canvas.height) {
-                        ship.y = this.canvas.height;
-                        ship.angle = -ship.angle;
-                        bounced = true;
-                    }
-                    
-                    if (bounced) {
-                        while (ship.angle > Math.PI) ship.angle -= 2 * Math.PI;
-                        while (ship.angle < -Math.PI) ship.angle += 2 * Math.PI;
-                        
-                        ship.rudderAngle = 0;
-                        ship.targetRudderAngle = 0;
-                    }
-                }
+          } else {
+            document.getElementById("selectedObject").textContent =
+              "No selection";
+          }
+        }
+
+        updateAI(deltaTime) {
+          const currentTime = Date.now();
+          const computerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "computer"
+          );
+
+          if (
+            currentTime - this.aiLastShipSwitch >
+            2000 + Math.random() * 2000
+          ) {
+            if (computerShips.length > 0) {
+              this.aiSelectedShipIndex = Math.floor(
+                Math.random() * computerShips.length
+              );
+              this.aiLastShipSwitch = currentTime;
             }
-            
-            updateCannonballs(deltaTime) {
-                for (let cannonball of this.gameState.cannonballs) {
-                    cannonball.x += Math.cos(cannonball.angle) * cannonball.speed * deltaTime * 0.001;
-                    cannonball.y += Math.sin(cannonball.angle) * cannonball.speed * deltaTime * 0.001;
-                    
-                    if (cannonball.x < -10 || cannonball.x > this.canvas.width + 10 || 
-                        cannonball.y < -10 || cannonball.y > this.canvas.height + 10) {
-                        cannonball.dead = true;
-                    }
-                }
+          }
+
+          if (
+            computerShips.length > 0 &&
+            this.aiSelectedShipIndex < computerShips.length
+          ) {
+            const selectedAIShip = computerShips[this.aiSelectedShipIndex];
+
+            if (
+              currentTime - selectedAIShip.aiLastDecision >
+              selectedAIShip.aiDecisionCooldown
+            ) {
+              this.makeAIDecision(selectedAIShip);
+              selectedAIShip.aiLastDecision = currentTime;
             }
-            
-            checkCollisions() {
-                // Ship-ship ramming collisions
-                for (let i = 0; i < this.gameState.ships.length; i++) {
-                    for (let j = i + 1; j < this.gameState.ships.length; j++) {
-                        const ship1 = this.gameState.ships[i];
-                        const ship2 = this.gameState.ships[j];
-                        
-                        if (ship1.playerId === ship2.playerId) continue;
-                        
-                        const dx = ship2.x - ship1.x;
-                        const dy = ship2.y - ship1.y;
-                        const distance = Math.sqrt(dx * dx + dy * dy);
-                        
-                        if (distance < 20) {
-                            const ship1FrontX = ship1.x + Math.cos(ship1.angle) * 14;
-                            const ship1FrontY = ship1.y + Math.sin(ship1.angle) * 14;
-                            const ship2FrontX = ship2.x + Math.cos(ship2.angle) * 14;
-                            const ship2FrontY = ship2.y + Math.sin(ship2.angle) * 14;
-                            
-                            const ship1FrontToShip2 = Math.sqrt((ship1FrontX - ship2.x) ** 2 + (ship1FrontY - ship2.y) ** 2);
-                            const ship2FrontToShip1 = Math.sqrt((ship2FrontX - ship1.x) ** 2 + (ship2FrontY - ship1.y) ** 2);
-                            
-                            if (ship1FrontToShip2 < 12 && ship2FrontToShip1 < 12) {
-                                if (ship1FrontToShip2 < ship2FrontToShip1) {
-                                    if (!ship1.lastRamTime || Date.now() - ship1.lastRamTime > 2000) {
-                                        ship2.health -= 1;
-                                        ship1.lastRamTime = Date.now();
-                                        
-                                        const pushX = (dx / distance) * 20;
-                                        const pushY = (dy / distance) * 20;
-                                        ship2.x += pushX;
-                                        ship2.y += pushY;
-                                        
-                                        if (ship2.health <= 0) {
-                                            this.gameState.players[ship1.playerId].score++;
-                                        }
-                                    }
-                                } else {
-                                    if (!ship2.lastRamTime || Date.now() - ship2.lastRamTime > 2000) {
-                                        ship1.health -= 1;
-                                        ship2.lastRamTime = Date.now();
-                                        
-                                        const pushX = (-dx / distance) * 20;
-                                        const pushY = (-dy / distance) * 20;
-                                        ship1.x += pushX;
-                                        ship1.y += pushY;
-                                        
-                                        if (ship1.health <= 0) {
-                                            this.gameState.players[ship2.playerId].score++;
-                                        }
-                                    }
-                                }
-                            } else if (ship1FrontToShip2 < 12) {
-                                if (!ship1.lastRamTime || Date.now() - ship1.lastRamTime > 2000) {
-                                    ship2.health -= 1;
-                                    ship1.lastRamTime = Date.now();
-                                    
-                                    const pushX = (dx / distance) * 20;
-                                    const pushY = (dy / distance) * 20;
-                                    ship2.x += pushX;
-                                    ship2.y += pushY;
-                                    
-                                    if (ship2.health <= 0) {
-                                        this.gameState.players[ship1.playerId].score++;
-                                    }
-                                }
-                            } else if (ship2FrontToShip1 < 12) {
-                                if (!ship2.lastRamTime || Date.now() - ship2.lastRamTime > 2000) {
-                                    ship1.health -= 1;
-                                    ship2.lastRamTime = Date.now();
-                                    
-                                    const pushX = (-dx / distance) * 20;
-                                    const pushY = (-dy / distance) * 20;
-                                    ship1.x += pushX;
-                                    ship1.y += pushY;
-                                    
-                                    if (ship1.health <= 0) {
-                                        this.gameState.players[ship2.playerId].score++;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Ship-obstacle collisions
-                for (let ship of this.gameState.ships) {
-                    for (let obstacle of this.gameState.obstacles) {
-                        const dx = ship.x - obstacle.x;
-                        const dy = ship.y - obstacle.y;
-                        const distance = Math.sqrt(dx*dx + dy*dy);
-                        
-                        if (distance < obstacle.radius + 12) {
-                            ship.health -= 0.1;
-                            const pushX = (dx / distance) * 15;
-                            const pushY = (dy / distance) * 15;
-                            ship.x += pushX;
-                            ship.y += pushY;
-                        }
-                    }
-                }
-                
-                // Cannonball-obstacle collisions
-                for (let cannonball of this.gameState.cannonballs) {
-                    for (let obstacle of this.gameState.obstacles) {
-                        const dx = cannonball.x - obstacle.x;
-                        const dy = cannonball.y - obstacle.y;
-                        const distance = Math.sqrt(dx*dx + dy*dy);
-                        
-                        if (distance < obstacle.radius + 3) {
-                            cannonball.dead = true;
-                            
-                            if (obstacle.destructible) {
-                                obstacle.radius -= 5;
-                                if (obstacle.radius <= 10) {
-                                    obstacle.dead = true;
-                                }
-                            }
-                        }
-                    }
-                }
-                
-                // Cannonball-ship collisions
-                for (let cannonball of this.gameState.cannonballs) {
-                    for (let ship of this.gameState.ships) {
-                        if (cannonball.shooterId === ship.id) continue;
-                        if (cannonball.shooterPlayerId === ship.playerId) continue;
-                        
-                        const dx = cannonball.x - ship.x;
-                        const dy = cannonball.y - ship.y;
-                        const distance = Math.sqrt(dx*dx + dy*dy);
-                        
-                        if (distance < 15) {
-                            cannonball.dead = true;
-                            ship.health -= 1;
-                            
-                            if (ship.health <= 0 && cannonball.shooterPlayerId) {
-                                this.gameState.players[cannonball.shooterPlayerId].score++;
-                            }
-                        }
-                    }
-                }
+
+            this.executeAIBehavior(selectedAIShip);
+          }
+        }
+
+        makeAIDecision(ship) {
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          );
+
+          if (playerShips.length === 0) return;
+
+          let closestShip = null;
+          let closestDistance = Infinity;
+
+          for (let playerShip of playerShips) {
+            const dx = ship.x - playerShip.x;
+            const dy = ship.y - playerShip.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            if (distance < closestDistance) {
+              closestDistance = distance;
+              closestShip = playerShip;
             }
-            
-            cleanupDeadObjects() {
-                for (let i = this.gameState.ships.length - 1; i >= 0; i--) {
-                    const ship = this.gameState.ships[i];
-                    if (ship.health <= 0) {
-                        if (ship === this.gameState.selectedObject) {
-                            this.gameState.selectedObject = null;
-                            this.gameState.selectedObjectType = null;
-                        }
-                        
-                        this.gameState.players[ship.playerId].shipCount--;
-                        this.gameState.ships.splice(i, 1);
-                        
-                        setTimeout(() => {
-                            if (this.gameState.gameStarted) {
-                                this.spawnShip(ship.playerId);
-                            }
-                        }, 3000);
-                    }
-                }
-                
-                this.gameState.cannonballs = this.gameState.cannonballs.filter(c => !c.dead);
-                this.gameState.obstacles = this.gameState.obstacles.filter(o => !o.dead);
+          }
+
+          ship.aiTarget = closestShip;
+
+          if (closestDistance < 150) {
+            ship.aiState = ship.health <= 1 ? "evade" : "attack";
+          } else {
+            ship.aiState = "patrol";
+          }
+        }
+
+        executeAIBehavior(ship) {
+          if (!ship.aiTarget) return;
+
+          const dx = ship.aiTarget.x - ship.x;
+          const dy = ship.aiTarget.y - ship.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          const angleToTarget = Math.atan2(dy, dx);
+
+          // Calculate target's velocity for predictive aiming
+          const targetVelX =
+            Math.cos(ship.aiTarget.angle) * ship.aiTarget.speed;
+          const targetVelY =
+            Math.sin(ship.aiTarget.angle) * ship.aiTarget.speed;
+
+          // Predict where target will be (lead the target)
+          const cannonballSpeed = 80;
+          const timeToImpact = distance / cannonballSpeed;
+          const predictedX = ship.aiTarget.x + targetVelX * timeToImpact * 0.05;
+          const predictedY = ship.aiTarget.y + targetVelY * timeToImpact * 0.05;
+          const predictedAngle = Math.atan2(
+            predictedY - ship.y,
+            predictedX - ship.x
+          );
+
+          switch (ship.aiState) {
+            case "attack":
+              // Use predictive aiming
+              ship.cannonAngle = predictedAngle;
+
+              // Optimal combat distance is 100-200 pixels
+              if (distance < 100) {
+                // Too close, back off while maintaining fire angle
+                ship.targetSpeed = ship.defaultSpeed * 0.6;
+                const retreatAngle = angleToTarget + Math.PI;
+                const retreatDiff = this.normalizeAngle(
+                  retreatAngle - ship.angle
+                );
+                ship.targetRudderAngle =
+                  Math.sign(retreatDiff) *
+                  Math.min(Math.abs(retreatDiff) * 0.4, Math.PI / 6);
+              } else if (distance > 200) {
+                // Chase target
+                ship.targetSpeed = ship.defaultSpeed;
+                const angleDiff = this.normalizeAngle(
+                  angleToTarget - ship.angle
+                );
+                ship.targetRudderAngle =
+                  Math.sign(angleDiff) *
+                  Math.min(Math.abs(angleDiff) * 0.5, Math.PI / 6);
+              } else {
+                // Optimal range - circle strafe
+                ship.targetSpeed = ship.defaultSpeed * 0.8;
+                const strafeAngle = angleToTarget + Math.PI / 2;
+                const strafeDiff = this.normalizeAngle(
+                  strafeAngle - ship.angle
+                );
+                ship.targetRudderAngle =
+                  Math.sign(strafeDiff) *
+                  Math.min(Math.abs(strafeDiff) * 0.4, Math.PI / 6);
+              }
+              break;
+
+            case "evade":
+              // Still aim at target for opportunistic shots
+              ship.cannonAngle = predictedAngle;
+              ship.targetSpeed = ship.defaultSpeed;
+
+              // Zigzag evasion pattern
+              const evadeTime = Date.now() / 1000;
+              const zigzagOffset = (Math.sin(evadeTime * 2) * Math.PI) / 3;
+              const evadeAngle = angleToTarget + Math.PI + zigzagOffset;
+              const evadeAngleDiff = this.normalizeAngle(
+                evadeAngle - ship.angle
+              );
+              ship.targetRudderAngle =
+                Math.sign(evadeAngleDiff) *
+                Math.min(Math.abs(evadeAngleDiff) * 0.6, Math.PI / 4);
+              break;
+
+            case "patrol":
+              ship.cannonAngle = angleToTarget;
+              ship.targetSpeed = ship.defaultSpeed * 0.7;
+
+              // Patrol in a figure-8 pattern around the area
+              const patrolTime = Date.now() / 1000;
+              const figure8Offset = (Math.sin(patrolTime * 0.5) * Math.PI) / 4;
+              const patrolAngle = angleToTarget + figure8Offset;
+              const patrolAngleDiff = this.normalizeAngle(
+                patrolAngle - ship.angle
+              );
+              ship.targetRudderAngle =
+                Math.sign(patrolAngleDiff) *
+                Math.min(Math.abs(patrolAngleDiff) * 0.3, Math.PI / 8);
+              break;
+          }
+
+          this.avoidObstacles(ship);
+        }
+
+        avoidObstacles(ship) {
+          const avoidanceRadius = 100;
+          const lookAheadDistance = 60;
+          let avoidanceForceX = 0;
+          let avoidanceForceY = 0;
+
+          // Look ahead in the direction we're moving
+          const futureX = ship.x + Math.cos(ship.angle) * lookAheadDistance;
+          const futureY = ship.y + Math.sin(ship.angle) * lookAheadDistance;
+
+          // Check obstacles
+          for (let obstacle of this.gameState.obstacles) {
+            const dx = ship.x - obstacle.x;
+            const dy = ship.y - obstacle.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+
+            // Also check future position
+            const futureDx = futureX - obstacle.x;
+            const futureDy = futureY - obstacle.y;
+            const futureDistance = Math.sqrt(
+              futureDx * futureDx + futureDy * futureDy
+            );
+
+            if (distance < avoidanceRadius + obstacle.radius) {
+              // Strong avoidance for close obstacles
+              const force = Math.pow(
+                (avoidanceRadius + obstacle.radius - distance) /
+                  avoidanceRadius,
+                2
+              );
+              avoidanceForceX += (dx / distance) * force * 2;
+              avoidanceForceY += (dy / distance) * force * 2;
             }
-            
-            handleShooting() {
-                const currentTime = Date.now();
-                
-                for (let ship of this.gameState.ships) {
-                    const timeSinceSpawn = currentTime - ship.spawnTime;
-                    const timeSinceLastShot = currentTime - ship.lastShot;
-                    
-                    if (timeSinceSpawn >= 5000 && timeSinceLastShot >= ship.shotCooldown) {
-                        const cannonball = {
-                            id: Math.random().toString(36).substr(2, 9),
-                            shooterId: ship.id,
-                            shooterPlayerId: ship.playerId,
-                            x: ship.x + Math.cos(ship.cannonAngle) * 25,
-                            y: ship.y + Math.sin(ship.cannonAngle) * 25,
-                            angle: ship.cannonAngle,
-                            speed: 150,
-                            dead: false
-                        };
-                        
-                        this.gameState.cannonballs.push(cannonball);
-                        ship.lastShot = currentTime;
-                    }
-                }
+
+            // Predictive avoidance
+            if (futureDistance < obstacle.radius + 30) {
+              // We're about to hit this obstacle, strong evasion needed
+              avoidanceForceX += (futureDx / futureDistance) * 3;
+              avoidanceForceY += (futureDy / futureDistance) * 3;
             }
-            
-            updateGameStatus() {
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player').length;
-                const computerShips = this.gameState.ships.filter(s => s.playerId === 'computer').length;
-                
-                if (this.gameState.gameStartTime) {
-                    // Calculate elapsed time accounting for paused time
-                    let elapsed = Math.floor((Date.now() - this.gameState.gameStartTime - this.gameState.totalPausedTime) / 1000);
-                    
-                    // If currently paused, also subtract the current pause duration
-                    if (this.gameState.gamePaused && this.gameState.pauseStartTime) {
-                        elapsed -= Math.floor((Date.now() - this.gameState.pauseStartTime) / 1000);
+          }
+
+          // Wall avoidance with stronger forces
+          const wallBuffer = 120;
+          if (ship.x < wallBuffer) {
+            avoidanceForceX +=
+              Math.pow((wallBuffer - ship.x) / wallBuffer, 2) * 2;
+          }
+          if (ship.x > this.canvas.width - wallBuffer) {
+            avoidanceForceX -=
+              Math.pow(
+                (ship.x - (this.canvas.width - wallBuffer)) / wallBuffer,
+                2
+              ) * 2;
+          }
+          if (ship.y < wallBuffer) {
+            avoidanceForceY +=
+              Math.pow((wallBuffer - ship.y) / wallBuffer, 2) * 2;
+          }
+          if (ship.y > this.canvas.height - wallBuffer) {
+            avoidanceForceY -=
+              Math.pow(
+                (ship.y - (this.canvas.height - wallBuffer)) / wallBuffer,
+                2
+              ) * 2;
+          }
+
+          // Apply avoidance if needed
+          if (avoidanceForceX !== 0 || avoidanceForceY !== 0) {
+            const avoidanceAngle = Math.atan2(avoidanceForceY, avoidanceForceX);
+            const angleDiff = this.normalizeAngle(avoidanceAngle - ship.angle);
+
+            // Stronger turning for obstacle avoidance, overrides other behaviors
+            const avoidanceTurn =
+              Math.sign(angleDiff) *
+              Math.min(Math.abs(angleDiff) * 0.8, Math.PI / 4);
+
+            // Blend with existing target rudder angle, but prioritize avoidance
+            ship.targetRudderAngle =
+              ship.targetRudderAngle * 0.3 + avoidanceTurn * 0.7;
+
+            // Slow down when avoiding obstacles
+            const avoidanceStrength = Math.sqrt(
+              avoidanceForceX * avoidanceForceX +
+                avoidanceForceY * avoidanceForceY
+            );
+            if (avoidanceStrength > 1) {
+              ship.targetSpeed = Math.max(
+                ship.defaultSpeed * 0.4,
+                ship.targetSpeed * 0.7
+              );
+            }
+          }
+        }
+
+        normalizeAngle(angle) {
+          while (angle > Math.PI) angle -= 2 * Math.PI;
+          while (angle < -Math.PI) angle += 2 * Math.PI;
+          return angle;
+        }
+
+        update(deltaTime) {
+          if (
+            !this.gameState.gameStarted ||
+            this.gameState.gamePaused ||
+            this.gameState.countdownActive
+          )
+            return;
+
+          this.updatePlayerControls();
+          this.updateAI(deltaTime);
+          this.updateShips(deltaTime);
+          this.updateCannonballs(deltaTime);
+          this.updateIcebergDrift(deltaTime);
+          this.checkCollisions();
+          this.cleanupDeadObjects();
+          this.handleShooting();
+          this.updateGameStatus();
+          this.renderHeadingDisplay();
+        }
+
+        updateShips(deltaTime) {
+          for (let ship of this.gameState.ships) {
+            // Update speed gradually towards target
+            const speedDiff = ship.targetSpeed - ship.speed;
+            ship.speed +=
+              Math.sign(speedDiff) *
+              Math.min(Math.abs(speedDiff), 15 * deltaTime * 0.001);
+
+            const rudderSpeed = 2.0;
+            const rudderDiff = ship.targetRudderAngle - ship.rudderAngle;
+            ship.rudderAngle +=
+              Math.sign(rudderDiff) *
+              Math.min(Math.abs(rudderDiff), rudderSpeed * deltaTime * 0.001);
+
+            // Scale turn rate with current speed - ships turn slower when moving slower
+            const speedRatio = ship.speed / ship.defaultSpeed;
+            const baseTurnRate = 0.8;
+            const minTurnRate = 0.1; // Minimum turn rate even when stopped
+            const turnRate =
+              minTurnRate + (baseTurnRate - minTurnRate) * speedRatio;
+            ship.angle += ship.rudderAngle * turnRate * deltaTime * 0.001;
+
+            ship.x += Math.cos(ship.angle) * ship.speed * deltaTime * 0.001;
+            ship.y += Math.sin(ship.angle) * ship.speed * deltaTime * 0.001;
+
+            // Check boundaries with ricochet physics
+            let bounced = false;
+
+            if (ship.x < 0) {
+              ship.x = 0;
+              ship.angle = Math.PI - ship.angle;
+              bounced = true;
+            } else if (ship.x > this.canvas.width) {
+              ship.x = this.canvas.width;
+              ship.angle = Math.PI - ship.angle;
+              bounced = true;
+            }
+
+            if (ship.y < 0) {
+              ship.y = 0;
+              ship.angle = -ship.angle;
+              bounced = true;
+            } else if (ship.y > this.canvas.height) {
+              ship.y = this.canvas.height;
+              ship.angle = -ship.angle;
+              bounced = true;
+            }
+
+            if (bounced) {
+              while (ship.angle > Math.PI) ship.angle -= 2 * Math.PI;
+              while (ship.angle < -Math.PI) ship.angle += 2 * Math.PI;
+
+              ship.rudderAngle = 0;
+              ship.targetRudderAngle = 0;
+            }
+          }
+        }
+
+        updateCannonballs(deltaTime) {
+          for (let cannonball of this.gameState.cannonballs) {
+            cannonball.x +=
+              Math.cos(cannonball.angle) * cannonball.speed * deltaTime * 0.001;
+            cannonball.y +=
+              Math.sin(cannonball.angle) * cannonball.speed * deltaTime * 0.001;
+
+            if (
+              cannonball.x < -10 ||
+              cannonball.x > this.canvas.width + 10 ||
+              cannonball.y < -10 ||
+              cannonball.y > this.canvas.height + 10
+            ) {
+              cannonball.dead = true;
+            }
+          }
+        }
+
+        checkCollisions() {
+          // Ship-ship ramming collisions
+          for (let i = 0; i < this.gameState.ships.length; i++) {
+            for (let j = i + 1; j < this.gameState.ships.length; j++) {
+              const ship1 = this.gameState.ships[i];
+              const ship2 = this.gameState.ships[j];
+
+              if (ship1.playerId === ship2.playerId) continue;
+
+              const dx = ship2.x - ship1.x;
+              const dy = ship2.y - ship1.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (distance < 20) {
+                const ship1FrontX = ship1.x + Math.cos(ship1.angle) * 14;
+                const ship1FrontY = ship1.y + Math.sin(ship1.angle) * 14;
+                const ship2FrontX = ship2.x + Math.cos(ship2.angle) * 14;
+                const ship2FrontY = ship2.y + Math.sin(ship2.angle) * 14;
+
+                const ship1FrontToShip2 = Math.sqrt(
+                  (ship1FrontX - ship2.x) ** 2 + (ship1FrontY - ship2.y) ** 2
+                );
+                const ship2FrontToShip1 = Math.sqrt(
+                  (ship2FrontX - ship1.x) ** 2 + (ship2FrontY - ship1.y) ** 2
+                );
+
+                if (ship1FrontToShip2 < 12 && ship2FrontToShip1 < 12) {
+                  if (ship1FrontToShip2 < ship2FrontToShip1) {
+                    if (
+                      !ship1.lastRamTime ||
+                      Date.now() - ship1.lastRamTime > 2000
+                    ) {
+                      ship2.health -= 1;
+                      ship1.lastRamTime = Date.now();
+
+                      const pushX = (dx / distance) * 20;
+                      const pushY = (dy / distance) * 20;
+                      ship2.x += pushX;
+                      ship2.y += pushY;
+
+                      if (ship2.health <= 0) {
+                        this.gameState.players[ship1.playerId].score++;
+                      }
                     }
-                    
-                    const minutes = Math.floor(elapsed / 60);
-                    const seconds = elapsed % 60;
-                    document.getElementById('gameTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                  } else {
+                    if (
+                      !ship2.lastRamTime ||
+                      Date.now() - ship2.lastRamTime > 2000
+                    ) {
+                      ship1.health -= 1;
+                      ship2.lastRamTime = Date.now();
+
+                      const pushX = (-dx / distance) * 20;
+                      const pushY = (-dy / distance) * 20;
+                      ship1.x += pushX;
+                      ship1.y += pushY;
+
+                      if (ship1.health <= 0) {
+                        this.gameState.players[ship2.playerId].score++;
+                      }
+                    }
+                  }
+                } else if (ship1FrontToShip2 < 12) {
+                  if (
+                    !ship1.lastRamTime ||
+                    Date.now() - ship1.lastRamTime > 2000
+                  ) {
+                    ship2.health -= 1;
+                    ship1.lastRamTime = Date.now();
+
+                    const pushX = (dx / distance) * 20;
+                    const pushY = (dy / distance) * 20;
+                    ship2.x += pushX;
+                    ship2.y += pushY;
+
+                    if (ship2.health <= 0) {
+                      this.gameState.players[ship1.playerId].score++;
+                    }
+                  }
+                } else if (ship2FrontToShip1 < 12) {
+                  if (
+                    !ship2.lastRamTime ||
+                    Date.now() - ship2.lastRamTime > 2000
+                  ) {
+                    ship1.health -= 1;
+                    ship2.lastRamTime = Date.now();
+
+                    const pushX = (-dx / distance) * 20;
+                    const pushY = (-dy / distance) * 20;
+                    ship1.x += pushX;
+                    ship1.y += pushY;
+
+                    if (ship1.health <= 0) {
+                      this.gameState.players[ship2.playerId].score++;
+                    }
+                  }
                 }
-                
-                if (this.gameState.players.player.score >= 15) {
-                    this.gameState.gameStarted = false;
-                    this.clearAllSpawnTimeouts();
-                    document.getElementById('menuTitle').textContent = 'Player Wins!';
-                    document.getElementById('menuContent').innerHTML = `
+              }
+            }
+          }
+
+          // Ship-obstacle collisions
+          for (let ship of this.gameState.ships) {
+            for (let obstacle of this.gameState.obstacles) {
+              const dx = ship.x - obstacle.x;
+              const dy = ship.y - obstacle.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (distance < obstacle.radius + 12) {
+                ship.health -= 0.1;
+                const pushX = (dx / distance) * 15;
+                const pushY = (dy / distance) * 15;
+                ship.x += pushX;
+                ship.y += pushY;
+              }
+            }
+          }
+
+          // Cannonball-obstacle collisions
+          for (let cannonball of this.gameState.cannonballs) {
+            for (let obstacle of this.gameState.obstacles) {
+              const dx = cannonball.x - obstacle.x;
+              const dy = cannonball.y - obstacle.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (distance < obstacle.radius + 3) {
+                cannonball.dead = true;
+
+                if (obstacle.destructible) {
+                  obstacle.radius -= 5;
+                  if (obstacle.radius <= 10) {
+                    obstacle.dead = true;
+                  }
+                }
+              }
+            }
+          }
+
+          // Cannonball-ship collisions
+          for (let cannonball of this.gameState.cannonballs) {
+            for (let ship of this.gameState.ships) {
+              if (cannonball.shooterId === ship.id) continue;
+              if (cannonball.shooterPlayerId === ship.playerId) continue;
+
+              const dx = cannonball.x - ship.x;
+              const dy = cannonball.y - ship.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+
+              if (distance < 15) {
+                cannonball.dead = true;
+                ship.health -= 1;
+
+                if (ship.health <= 0 && cannonball.shooterPlayerId) {
+                  this.gameState.players[cannonball.shooterPlayerId].score++;
+                }
+              }
+            }
+          }
+        }
+
+        cleanupDeadObjects() {
+          for (let i = this.gameState.ships.length - 1; i >= 0; i--) {
+            const ship = this.gameState.ships[i];
+            if (ship.health <= 0) {
+              if (ship === this.gameState.selectedObject) {
+                this.gameState.selectedObject = null;
+                this.gameState.selectedObjectType = null;
+              }
+
+              this.gameState.players[ship.playerId].shipCount--;
+              this.gameState.ships.splice(i, 1);
+
+              setTimeout(() => {
+                if (this.gameState.gameStarted) {
+                  this.spawnShip(ship.playerId);
+                }
+              }, 3000);
+            }
+          }
+
+          this.gameState.cannonballs = this.gameState.cannonballs.filter(
+            (c) => !c.dead
+          );
+          this.gameState.obstacles = this.gameState.obstacles.filter(
+            (o) => !o.dead
+          );
+        }
+
+        handleShooting() {
+          const currentTime = Date.now();
+
+          for (let ship of this.gameState.ships) {
+            const timeSinceSpawn = currentTime - ship.spawnTime;
+            const timeSinceLastShot = currentTime - ship.lastShot;
+
+            if (
+              timeSinceSpawn >= 5000 &&
+              timeSinceLastShot >= ship.shotCooldown
+            ) {
+              const cannonball = {
+                id: Math.random().toString(36).substr(2, 9),
+                shooterId: ship.id,
+                shooterPlayerId: ship.playerId,
+                x: ship.x + Math.cos(ship.cannonAngle) * 25,
+                y: ship.y + Math.sin(ship.cannonAngle) * 25,
+                angle: ship.cannonAngle,
+                speed: 150,
+                dead: false,
+              };
+
+              this.gameState.cannonballs.push(cannonball);
+              ship.lastShot = currentTime;
+              
+              // Play cannon fire sound
+              this.playRandomCannonSound();
+            }
+          }
+        }
+
+        updateGameStatus() {
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          ).length;
+          const computerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "computer"
+          ).length;
+
+          if (this.gameState.gameStartTime) {
+            // Calculate elapsed time accounting for paused time
+            let elapsed = Math.floor(
+              (Date.now() -
+                this.gameState.gameStartTime -
+                this.gameState.totalPausedTime) /
+                1000
+            );
+
+            // If currently paused, also subtract the current pause duration
+            if (this.gameState.gamePaused && this.gameState.pauseStartTime) {
+              elapsed -= Math.floor(
+                (Date.now() - this.gameState.pauseStartTime) / 1000
+              );
+            }
+
+            const minutes = Math.floor(elapsed / 60);
+            const seconds = elapsed % 60;
+            document.getElementById(
+              "gameTime"
+            ).textContent = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+          }
+
+          if (this.gameState.players.player.score >= 15) {
+            this.gameState.gameStarted = false;
+            this.clearAllSpawnTimeouts();
+            document.getElementById("menuTitle").textContent = "Player Wins!";
+            document.getElementById("menuContent").innerHTML = `
                         <button id="startBtn">Start New Game</button>
                         <button id="resetBtn">Change Map</button>
                     `;
-                    this.setupMenuButtons();
-                    document.getElementById('gameMenu').classList.remove('hidden');
-                } else if (this.gameState.players.computer.score >= 15) {
-                    this.gameState.gameStarted = false;
-                    this.clearAllSpawnTimeouts();
-                    document.getElementById('menuTitle').textContent = 'Computer Wins!';
-                    document.getElementById('menuContent').innerHTML = `
+            this.setupMenuButtons();
+            document.getElementById("gameMenu").classList.remove("hidden");
+          } else if (this.gameState.players.computer.score >= 15) {
+            this.gameState.gameStarted = false;
+            this.clearAllSpawnTimeouts();
+            document.getElementById("menuTitle").textContent = "Computer Wins!";
+            document.getElementById("menuContent").innerHTML = `
                         <button id="startBtn">Start New Game</button>
                         <button id="resetBtn">Change Map</button>
                     `;
-                    this.setupMenuButtons();
-                    document.getElementById('gameMenu').classList.remove('hidden');
-                }
-                
-                document.getElementById('playerScore').textContent = this.gameState.players.player.score;
-                document.getElementById('computerScore').textContent = this.gameState.players.computer.score;
+            this.setupMenuButtons();
+            document.getElementById("gameMenu").classList.remove("hidden");
+          }
+
+          document.getElementById("playerScore").textContent =
+            this.gameState.players.player.score;
+          document.getElementById("computerScore").textContent =
+            this.gameState.players.computer.score;
+        }
+
+        renderHeadingDisplay() {
+          const ctx = this.headingCtx;
+          const canvas = this.headingCanvas;
+
+          // Clear the canvas
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+          if (!this.gameState.selectedObject) {
+            document.getElementById("currentHeading").textContent =
+              "Tiller: --";
+            return;
+          }
+
+          // Get the tiller angle based on object type
+          let tillerAngle = 0;
+          let displayText = "Tiller: --";
+
+          if (this.gameState.selectedObjectType === "ship") {
+            tillerAngle = this.gameState.selectedObject.rudderAngle;
+            const degrees = Math.round((tillerAngle * 180) / Math.PI);
+            displayText = `Tiller: ${degrees}°`;
+          } else if (this.gameState.selectedObjectType === "dock") {
+            tillerAngle = this.gameState.selectedObject.spawnAngle;
+            const degrees = Math.round((tillerAngle * 180) / Math.PI);
+            displayText = `Spawn Angle: ${degrees}°`;
+          }
+
+          // Update the text display
+          document.getElementById("currentHeading").textContent = displayText;
+
+          // Draw the protractor
+          const centerX = canvas.width / 2;
+          const centerY = canvas.height - 20;
+          const radius = 120;
+
+          // Draw the semi-circle outline
+          ctx.strokeStyle = "#4169E1";
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, Math.PI, 0);
+          ctx.stroke();
+
+          // Draw degree markings for tiller angles (-45° to +45°)
+          ctx.strokeStyle = "#ccc";
+          ctx.lineWidth = 1;
+          ctx.fillStyle = "#ccc";
+          ctx.font = "12px Arial";
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+
+          // For tiller display, we want -45° on the left, 0° at center, +45° on the right
+          // The semi-circle is drawn from π (left) to 0 (right)
+          // We need: -45° -> π, 0° -> π/2, +45° -> 0
+
+          // Major markings every 15 degrees (-45, -30, -15, 0, 15, 30, 45)
+          for (let tillerDeg = -45; tillerDeg <= 45; tillerDeg += 15) {
+            // Map tiller angle to the semi-circle angle
+            // -45° -> π (left), 0° -> π/2 (up), +45° -> 0 (right)
+            const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
+
+            const x1 = centerX + Math.cos(protractorAngle) * (radius - 15);
+            const y1 = centerY - Math.sin(protractorAngle) * (radius - 15); // Use minus to go up
+            const x2 = centerX + Math.cos(protractorAngle) * radius;
+            const y2 = centerY - Math.sin(protractorAngle) * radius; // Use minus to go up
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+
+            // Label the major markings
+            const labelX = centerX + Math.cos(protractorAngle) * (radius + 15);
+            const labelY = centerY - Math.sin(protractorAngle) * (radius + 15); // Use minus to go up
+
+            if (tillerDeg === 0) {
+              ctx.fillText("0°", labelX, labelY);
+            } else {
+              const sign = tillerDeg > 0 ? "+" : "";
+              ctx.fillText(sign + tillerDeg + "°", labelX, labelY);
             }
-            
-            renderHeadingDisplay() {
-                const ctx = this.headingCtx;
-                const canvas = this.headingCanvas;
-                
-                // Clear the canvas
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                if (!this.gameState.selectedObject) {
-                    document.getElementById('currentHeading').textContent = 'Tiller: --';
-                    return;
-                }
-                
-                // Get the tiller angle based on object type
-                let tillerAngle = 0;
-                let displayText = 'Tiller: --';
-                
-                if (this.gameState.selectedObjectType === 'ship') {
-                    tillerAngle = this.gameState.selectedObject.rudderAngle;
-                    const degrees = Math.round(tillerAngle * 180 / Math.PI);
-                    displayText = `Tiller: ${degrees}°`;
-                } else if (this.gameState.selectedObjectType === 'dock') {
-                    tillerAngle = this.gameState.selectedObject.spawnAngle;
-                    const degrees = Math.round(tillerAngle * 180 / Math.PI);
-                    displayText = `Spawn Angle: ${degrees}°`;
-                }
-                
-                // Update the text display
-                document.getElementById('currentHeading').textContent = displayText;
-                
-                // Draw the protractor
-                const centerX = canvas.width / 2;
-                const centerY = canvas.height - 20;
-                const radius = 120;
-                
-                // Draw the semi-circle outline
-                ctx.strokeStyle = '#4169E1';
-                ctx.lineWidth = 3;
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, radius, Math.PI, 0);
-                ctx.stroke();
-                
-                // Draw degree markings for tiller angles (-45° to +45°)
-                ctx.strokeStyle = '#ccc';
-                ctx.lineWidth = 1;
-                ctx.fillStyle = '#ccc';
-                ctx.font = '12px Arial';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'middle';
-                
-                // For tiller display, we want -45° on the left, 0° at center, +45° on the right
-                // The semi-circle is drawn from π (left) to 0 (right)
-                // We need: -45° -> π, 0° -> π/2, +45° -> 0
-                
-                // Major markings every 15 degrees (-45, -30, -15, 0, 15, 30, 45)
-                for (let tillerDeg = -45; tillerDeg <= 45; tillerDeg += 15) {
-                    // Map tiller angle to the semi-circle angle
-                    // -45° -> π (left), 0° -> π/2 (up), +45° -> 0 (right)
-                    const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
-                    
-                    const x1 = centerX + Math.cos(protractorAngle) * (radius - 15);
-                    const y1 = centerY - Math.sin(protractorAngle) * (radius - 15); // Use minus to go up
-                    const x2 = centerX + Math.cos(protractorAngle) * radius;
-                    const y2 = centerY - Math.sin(protractorAngle) * radius; // Use minus to go up
-                    
-                    ctx.beginPath();
-                    ctx.moveTo(x1, y1);
-                    ctx.lineTo(x2, y2);
-                    ctx.stroke();
-                    
-                    // Label the major markings
-                    const labelX = centerX + Math.cos(protractorAngle) * (radius + 15);
-                    const labelY = centerY - Math.sin(protractorAngle) * (radius + 15); // Use minus to go up
-                    
-                    if (tillerDeg === 0) {
-                        ctx.fillText('0°', labelX, labelY);
-                    } else {
-                        const sign = tillerDeg > 0 ? '+' : '';
-                        ctx.fillText(sign + tillerDeg + '°', labelX, labelY);
-                    }
-                }
-                
-                // Minor markings every 5 degrees
-                ctx.lineWidth = 1;
-                for (let tillerDeg = -40; tillerDeg <= 40; tillerDeg += 5) {
-                    if (tillerDeg % 15 !== 0) {
-                        const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
-                        
-                        const x1 = centerX + Math.cos(protractorAngle) * (radius - 8);
-                        const y1 = centerY - Math.sin(protractorAngle) * (radius - 8); // Use minus to go up
-                        const x2 = centerX + Math.cos(protractorAngle) * radius;
-                        const y2 = centerY - Math.sin(protractorAngle) * radius; // Use minus to go up
-                        
-                        ctx.beginPath();
-                        ctx.moveTo(x1, y1);
-                        ctx.lineTo(x2, y2);
-                        ctx.stroke();
-                    }
-                }
-                
-                // Draw the tiller indicator line
-                let protractorAngle;
-                
-                if (this.gameState.selectedObjectType === 'ship') {
-                    // For ships, show the rudder angle (-45° to +45°)
-                    const tillerDegrees = tillerAngle * 180 / Math.PI;
-                    // Clamp to the display range
-                    const clampedTiller = Math.max(-45, Math.min(45, tillerDegrees));
-                    // Map to protractor angle: 0° -> π/2 (straight up)
-                    protractorAngle = Math.PI * (1 - (clampedTiller + 45) / 90);
-                } else {
-                    // For docks, show spawn angle (can be full range)
-                    let spawnDegrees = (tillerAngle * 180 / Math.PI) % 360;
-                    if (spawnDegrees < 0) spawnDegrees += 360;
-                    
-                    // Map spawn angle to a tiller-like display (-180 to +180)
-                    if (spawnDegrees > 180) spawnDegrees -= 360;
-                    
-                    // Clamp to display range for visualization
-                    const clampedSpawn = Math.max(-45, Math.min(45, spawnDegrees));
-                    protractorAngle = Math.PI * (1 - (clampedSpawn + 45) / 90);
-                }
-                
-                const indicatorX = centerX + Math.cos(protractorAngle) * (radius - 5);
-                const indicatorY = centerY - Math.sin(protractorAngle) * (radius - 5); // Use minus to go up
-                
-                // Draw the indicator line
-                ctx.strokeStyle = this.gameState.selectedObjectType === 'ship' ? '#FFD700' : '#00FF00';
-                ctx.lineWidth = 4;
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(indicatorX, indicatorY);
-                ctx.stroke();
-                
-                // Draw a circle at the end of the indicator
-                ctx.fillStyle = this.gameState.selectedObjectType === 'ship' ? '#FFD700' : '#00FF00';
-                ctx.beginPath();
-                ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Draw center point
-                ctx.fillStyle = '#4169E1';
-                ctx.beginPath();
-                ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
-                ctx.fill();
-                
-                // Add center line for reference (0° tiller position)
-                ctx.strokeStyle = '#666';
-                ctx.lineWidth = 1;
-                ctx.setLineDash([3, 3]);
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY);
-                ctx.lineTo(centerX, centerY - radius + 5);
-                ctx.stroke();
-                ctx.setLineDash([]);
+          }
+
+          // Minor markings every 5 degrees
+          ctx.lineWidth = 1;
+          for (let tillerDeg = -40; tillerDeg <= 40; tillerDeg += 5) {
+            if (tillerDeg % 15 !== 0) {
+              const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
+
+              const x1 = centerX + Math.cos(protractorAngle) * (radius - 8);
+              const y1 = centerY - Math.sin(protractorAngle) * (radius - 8); // Use minus to go up
+              const x2 = centerX + Math.cos(protractorAngle) * radius;
+              const y2 = centerY - Math.sin(protractorAngle) * radius; // Use minus to go up
+
+              ctx.beginPath();
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              ctx.stroke();
             }
-            
-            render() {
-                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                this.ctx.fillStyle = '#0f3460';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-                
-                // Render obstacles
-                for (let obstacle of this.gameState.obstacles) {
-                    this.ctx.save();
-                    this.ctx.translate(obstacle.x, obstacle.y);
-                    
-                    if (obstacle.type === 'island') {
-                        this.ctx.fillStyle = '#8B4513';
-                        this.ctx.beginPath();
-                        this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
-                        this.ctx.fill();
-                        
-                        this.ctx.fillStyle = '#228B22';
-                        this.ctx.beginPath();
-                        this.ctx.arc(0, 0, obstacle.radius * 0.7, 0, Math.PI * 2);
-                        this.ctx.fill();
-                    } else {
-                        this.ctx.fillStyle = '#E0FFFF';
-                        this.ctx.beginPath();
-                        this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
-                        this.ctx.fill();
-                        
-                        this.ctx.fillStyle = '#ADD8E6';
-                        this.ctx.beginPath();
-                        this.ctx.arc(-5, -5, obstacle.radius * 0.6, 0, Math.PI * 2);
-                        this.ctx.fill();
-                    }
-                    
-                    this.ctx.restore();
-                }
-                
-                // Render docks
-                const playerDock = this.gameState.players.player.dock;
-                const computerDock = this.gameState.players.computer.dock;
-                
-                // Player dock
-                this.ctx.save();
-                this.ctx.fillStyle = 'rgba(65, 105, 225, 0.4)';
+          }
+
+          // Draw the tiller indicator line
+          let protractorAngle;
+
+          if (this.gameState.selectedObjectType === "ship") {
+            // For ships, show the rudder angle (-45° to +45°)
+            const tillerDegrees = (tillerAngle * 180) / Math.PI;
+            // Clamp to the display range
+            const clampedTiller = Math.max(-45, Math.min(45, tillerDegrees));
+            // Map to protractor angle: 0° -> π/2 (straight up)
+            protractorAngle = Math.PI * (1 - (clampedTiller + 45) / 90);
+          } else {
+            // For docks, show spawn angle (can be full range)
+            let spawnDegrees = ((tillerAngle * 180) / Math.PI) % 360;
+            if (spawnDegrees < 0) spawnDegrees += 360;
+
+            // Map spawn angle to a tiller-like display (-180 to +180)
+            if (spawnDegrees > 180) spawnDegrees -= 360;
+
+            // Clamp to display range for visualization
+            const clampedSpawn = Math.max(-45, Math.min(45, spawnDegrees));
+            protractorAngle = Math.PI * (1 - (clampedSpawn + 45) / 90);
+          }
+
+          const indicatorX = centerX + Math.cos(protractorAngle) * (radius - 5);
+          const indicatorY = centerY - Math.sin(protractorAngle) * (radius - 5); // Use minus to go up
+
+          // Draw the indicator line
+          ctx.strokeStyle =
+            this.gameState.selectedObjectType === "ship"
+              ? "#FFD700"
+              : "#00FF00";
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(indicatorX, indicatorY);
+          ctx.stroke();
+
+          // Draw a circle at the end of the indicator
+          ctx.fillStyle =
+            this.gameState.selectedObjectType === "ship"
+              ? "#FFD700"
+              : "#00FF00";
+          ctx.beginPath();
+          ctx.arc(indicatorX, indicatorY, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw center point
+          ctx.fillStyle = "#4169E1";
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, 4, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Add center line for reference (0° tiller position)
+          ctx.strokeStyle = "#666";
+          ctx.lineWidth = 1;
+          ctx.setLineDash([3, 3]);
+          ctx.beginPath();
+          ctx.moveTo(centerX, centerY);
+          ctx.lineTo(centerX, centerY - radius + 5);
+          ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        render() {
+          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+          this.ctx.fillStyle = "#0f3460";
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+          // Render obstacles
+          for (let obstacle of this.gameState.obstacles) {
+            this.ctx.save();
+            this.ctx.translate(obstacle.x, obstacle.y);
+
+            if (obstacle.type === "island") {
+              this.ctx.fillStyle = "#8B4513";
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              this.ctx.fillStyle = "#228B22";
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, obstacle.radius * 0.7, 0, Math.PI * 2);
+              this.ctx.fill();
+            } else {
+              this.ctx.fillStyle = "#E0FFFF";
+              this.ctx.beginPath();
+              this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
+              this.ctx.fill();
+
+              this.ctx.fillStyle = "#ADD8E6";
+              this.ctx.beginPath();
+              this.ctx.arc(-5, -5, obstacle.radius * 0.6, 0, Math.PI * 2);
+              this.ctx.fill();
+            }
+
+            this.ctx.restore();
+          }
+
+          // Render docks
+          const playerDock = this.gameState.players.player.dock;
+          const computerDock = this.gameState.players.computer.dock;
+
+          // Player dock
+          this.ctx.save();
+          this.ctx.fillStyle = "rgba(65, 105, 225, 0.4)";
+          this.ctx.beginPath();
+          this.ctx.arc(playerDock.x, playerDock.y, 35, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          this.ctx.fillStyle = "#4169E1";
+          this.ctx.beginPath();
+          this.ctx.arc(playerDock.x, playerDock.y, 25, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          // Show spawn direction for player dock
+          this.ctx.strokeStyle = "#FFD700";
+          this.ctx.lineWidth = 3;
+          this.ctx.beginPath();
+          this.ctx.moveTo(playerDock.x, playerDock.y);
+          this.ctx.lineTo(
+            playerDock.x + Math.cos(playerDock.spawnAngle) * 50,
+            playerDock.y + Math.sin(playerDock.spawnAngle) * 50
+          );
+          this.ctx.stroke();
+
+          if (this.gameState.selectedObject === playerDock) {
+            this.ctx.strokeStyle = "#FFD700";
+            this.ctx.lineWidth = 3;
+            this.ctx.beginPath();
+            this.ctx.arc(playerDock.x, playerDock.y, 40, 0, Math.PI * 2);
+            this.ctx.stroke();
+
+            // Show aim preview
+            this.ctx.strokeStyle = "#FFFF00";
+            this.ctx.lineWidth = 2;
+            this.ctx.setLineDash([5, 5]);
+            this.ctx.beginPath();
+            this.ctx.moveTo(playerDock.x, playerDock.y);
+            this.ctx.lineTo(
+              playerDock.x + Math.cos(this.mouseAimAngle) * 50,
+              playerDock.y + Math.sin(this.mouseAimAngle) * 50
+            );
+            this.ctx.stroke();
+            this.ctx.setLineDash([]);
+          }
+
+          // Computer dock
+          this.ctx.fillStyle = "rgba(220, 20, 60, 0.4)";
+          this.ctx.beginPath();
+          this.ctx.arc(computerDock.x, computerDock.y, 35, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          this.ctx.fillStyle = "#DC143C";
+          this.ctx.beginPath();
+          this.ctx.arc(computerDock.x, computerDock.y, 25, 0, Math.PI * 2);
+          this.ctx.fill();
+
+          this.ctx.restore();
+
+          // Render ships
+          for (let ship of this.gameState.ships) {
+            this.ctx.save();
+            this.ctx.translate(ship.x, ship.y);
+            this.ctx.rotate(ship.angle);
+
+            // Main ship body
+            this.ctx.fillStyle =
+              ship.playerId === "player" ? "#4169E1" : "#DC143C";
+            this.ctx.fillRect(-10, -5, 20, 10);
+
+            // Rear section (darker color)
+            this.ctx.fillStyle =
+              ship.playerId === "player" ? "#00008B" : "#8B0000";
+            this.ctx.fillRect(5, -3, 5, 6);
+
+            // Ship outline
+            this.ctx.strokeStyle = "#000";
+            this.ctx.lineWidth = 1;
+            this.ctx.strokeRect(-10, -5, 20, 10);
+
+            // Selection highlighting (drawn first, before health bar)
+            if (ship === this.gameState.selectedObject) {
+              // Enhanced selection highlighting
+              this.ctx.strokeStyle = "#FFFF00";
+              this.ctx.lineWidth = 4;
+              this.ctx.strokeRect(-15, -10, 30, 20);
+
+              // Add a pulsing outer glow effect
+              const time = Date.now() / 500;
+              const alpha = 0.3 + 0.2 * Math.sin(time);
+              this.ctx.shadowColor = "#FFFF00";
+              this.ctx.shadowBlur = 10;
+              this.ctx.globalAlpha = alpha;
+              this.ctx.strokeStyle = "#FFFFFF";
+              this.ctx.lineWidth = 2;
+              this.ctx.strokeRect(-18, -12, 36, 24);
+              this.ctx.shadowBlur = 0;
+              this.ctx.globalAlpha = 1;
+            }
+
+            this.ctx.restore();
+
+            // Health bar - only show for player ships (drawn after selection to appear on top)
+            if (ship.playerId === "player") {
+              this.ctx.save();
+              this.ctx.translate(ship.x, ship.y - 20);
+
+              const healthRatio = ship.health / ship.maxHealth;
+
+              // Health bar background (larger and more visible)
+              this.ctx.fillStyle = "#333";
+              this.ctx.fillRect(-12, 0, 24, 5);
+
+              // Health bar
+              this.ctx.fillStyle =
+                healthRatio > 0.66
+                  ? "#00FF00"
+                  : healthRatio > 0.33
+                  ? "#FFFF00"
+                  : "#FF0000";
+              this.ctx.fillRect(-12, 0, healthRatio * 24, 5);
+
+              // Health bar border
+              this.ctx.strokeStyle = "#000";
+              this.ctx.lineWidth = 1;
+              this.ctx.strokeRect(-12, 0, 24, 5);
+
+              this.ctx.restore();
+            }
+
+            this.ctx.restore();
+          }
+
+          // Render ship numbers for player ships (always bottom-left relative to screen)
+          const playerShips = this.gameState.ships.filter(
+            (s) => s.playerId === "player"
+          );
+          for (let ship of playerShips) {
+            if (ship.shipNumber) {
+              // Position number to bottom-left of ship, but screen-aligned
+              const numberX = ship.x - 15;
+              const numberY = ship.y + 15;
+
+              this.ctx.save();
+
+              // Make selected ship number larger and more prominent
+              const isSelected = ship === this.gameState.selectedObject;
+              const fontSize = isSelected ? 24 : 18;
+              const fillColor = isSelected ? "#FFFF00" : "#FFD700";
+              const strokeWidth = isSelected ? 3 : 2;
+
+              this.ctx.fillStyle = fillColor;
+              this.ctx.strokeStyle = "#000";
+              this.ctx.lineWidth = strokeWidth;
+              this.ctx.font = `bold ${fontSize}px Arial`;
+              this.ctx.textAlign = "center";
+              this.ctx.textBaseline = "middle";
+
+              // Draw number with black outline
+              this.ctx.strokeText(ship.shipNumber.toString(), numberX, numberY);
+              this.ctx.fillText(ship.shipNumber.toString(), numberX, numberY);
+
+              this.ctx.restore();
+            }
+          }
+
+          // Render cannon directions for all ships
+          for (let ship of this.gameState.ships) {
+            if (ship.playerId === "player") {
+              this.ctx.strokeStyle = "#FF0000";
+              this.ctx.lineWidth = 2;
+              this.ctx.beginPath();
+              this.ctx.moveTo(ship.x, ship.y);
+              this.ctx.lineTo(
+                ship.x + Math.cos(ship.cannonAngle) * 50,
+                ship.y + Math.sin(ship.cannonAngle) * 50
+              );
+              this.ctx.stroke();
+
+              if (ship === this.gameState.selectedObject) {
+                this.ctx.strokeStyle = "#FFFF00";
+                this.ctx.lineWidth = 2;
+                this.ctx.setLineDash([5, 5]);
                 this.ctx.beginPath();
-                this.ctx.arc(playerDock.x, playerDock.y, 35, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                this.ctx.fillStyle = '#4169E1';
-                this.ctx.beginPath();
-                this.ctx.arc(playerDock.x, playerDock.y, 25, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                // Show spawn direction for player dock
-                this.ctx.strokeStyle = '#FFD700';
-                this.ctx.lineWidth = 3;
-                this.ctx.beginPath();
-                this.ctx.moveTo(playerDock.x, playerDock.y);
+                this.ctx.moveTo(ship.x, ship.y);
                 this.ctx.lineTo(
-                    playerDock.x + Math.cos(playerDock.spawnAngle) * 50,
-                    playerDock.y + Math.sin(playerDock.spawnAngle) * 50
+                  ship.x + Math.cos(this.mouseAimAngle) * 50,
+                  ship.y + Math.sin(this.mouseAimAngle) * 50
                 );
                 this.ctx.stroke();
-                
-                if (this.gameState.selectedObject === playerDock) {
-                    this.ctx.strokeStyle = '#FFD700';
-                    this.ctx.lineWidth = 3;
-                    this.ctx.beginPath();
-                    this.ctx.arc(playerDock.x, playerDock.y, 40, 0, Math.PI * 2);
-                    this.ctx.stroke();
-                    
-                    // Show aim preview
-                    this.ctx.strokeStyle = '#FFFF00';
-                    this.ctx.lineWidth = 2;
-                    this.ctx.setLineDash([5, 5]);
-                    this.ctx.beginPath();
-                    this.ctx.moveTo(playerDock.x, playerDock.y);
-                    this.ctx.lineTo(
-                        playerDock.x + Math.cos(this.mouseAimAngle) * 50,
-                        playerDock.y + Math.sin(this.mouseAimAngle) * 50
-                    );
-                    this.ctx.stroke();
-                    this.ctx.setLineDash([]);
-                }
-                
-                // Computer dock
-                this.ctx.fillStyle = 'rgba(220, 20, 60, 0.4)';
-                this.ctx.beginPath();
-                this.ctx.arc(computerDock.x, computerDock.y, 35, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                this.ctx.fillStyle = '#DC143C';
-                this.ctx.beginPath();
-                this.ctx.arc(computerDock.x, computerDock.y, 25, 0, Math.PI * 2);
-                this.ctx.fill();
-                
-                this.ctx.restore();
-                
-                // Render ships
-                for (let ship of this.gameState.ships) {
-                    this.ctx.save();
-                    this.ctx.translate(ship.x, ship.y);
-                    this.ctx.rotate(ship.angle);
-                    
-                    // Main ship body
-                    this.ctx.fillStyle = ship.playerId === 'player' ? '#4169E1' : '#DC143C';
-                    this.ctx.fillRect(-10, -5, 20, 10);
-                    
-                    // Rear section (darker color)
-                    this.ctx.fillStyle = ship.playerId === 'player' ? '#00008B' : '#8B0000';
-                    this.ctx.fillRect(5, -3, 5, 6);
-                    
-                    // Ship outline
-                    this.ctx.strokeStyle = '#000';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.strokeRect(-10, -5, 20, 10);
-                    
-                    // Selection highlighting (drawn first, before health bar)
-                    if (ship === this.gameState.selectedObject) {
-                        // Enhanced selection highlighting
-                        this.ctx.strokeStyle = '#FFFF00';
-                        this.ctx.lineWidth = 4;
-                        this.ctx.strokeRect(-15, -10, 30, 20);
-                        
-                        // Add a pulsing outer glow effect
-                        const time = Date.now() / 500;
-                        const alpha = 0.3 + 0.2 * Math.sin(time);
-                        this.ctx.shadowColor = '#FFFF00';
-                        this.ctx.shadowBlur = 10;
-                        this.ctx.globalAlpha = alpha;
-                        this.ctx.strokeStyle = '#FFFFFF';
-                        this.ctx.lineWidth = 2;
-                        this.ctx.strokeRect(-18, -12, 36, 24);
-                        this.ctx.shadowBlur = 0;
-                        this.ctx.globalAlpha = 1;
-                    }
-                    
-                    this.ctx.restore();
-                    
-                    // Health bar - only show for player ships (drawn after selection to appear on top)
-                    if (ship.playerId === 'player') {
-                        this.ctx.save();
-                        this.ctx.translate(ship.x, ship.y - 20);
-                        
-                        const healthRatio = ship.health / ship.maxHealth;
-                        
-                        // Health bar background (larger and more visible)
-                        this.ctx.fillStyle = '#333';
-                        this.ctx.fillRect(-12, 0, 24, 5);
-                        
-                        // Health bar
-                        this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
-                        this.ctx.fillRect(-12, 0, healthRatio * 24, 5);
-                        
-                        // Health bar border
-                        this.ctx.strokeStyle = '#000';
-                        this.ctx.lineWidth = 1;
-                        this.ctx.strokeRect(-12, 0, 24, 5);
-                        
-                        this.ctx.restore();
-                    }
-                    
-                    this.ctx.restore();
-                }
-                
-                // Render ship numbers for player ships (always bottom-left relative to screen)
-                const playerShips = this.gameState.ships.filter(s => s.playerId === 'player');
-                for (let ship of playerShips) {
-                    if (ship.shipNumber) {
-                        // Position number to bottom-left of ship, but screen-aligned
-                        const numberX = ship.x - 15;
-                        const numberY = ship.y + 15;
-                        
-                        this.ctx.save();
-                        
-                        // Make selected ship number larger and more prominent
-                        const isSelected = ship === this.gameState.selectedObject;
-                        const fontSize = isSelected ? 24 : 18;
-                        const fillColor = isSelected ? '#FFFF00' : '#FFD700';
-                        const strokeWidth = isSelected ? 3 : 2;
-                        
-                        this.ctx.fillStyle = fillColor;
-                        this.ctx.strokeStyle = '#000';
-                        this.ctx.lineWidth = strokeWidth;
-                        this.ctx.font = `bold ${fontSize}px Arial`;
-                        this.ctx.textAlign = 'center';
-                        this.ctx.textBaseline = 'middle';
-                        
-                        // Draw number with black outline
-                        this.ctx.strokeText(ship.shipNumber.toString(), numberX, numberY);
-                        this.ctx.fillText(ship.shipNumber.toString(), numberX, numberY);
-                        
-                        this.ctx.restore();
-                    }
-                }
-                
-                // Render cannon directions for all ships
-                for (let ship of this.gameState.ships) {
-                    if (ship.playerId === 'player') {
-                        this.ctx.strokeStyle = '#FF0000';
-                        this.ctx.lineWidth = 2;
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(ship.x, ship.y);
-                        this.ctx.lineTo(
-                            ship.x + Math.cos(ship.cannonAngle) * 50,
-                            ship.y + Math.sin(ship.cannonAngle) * 50
-                        );
-                        this.ctx.stroke();
-                        
-                        if (ship === this.gameState.selectedObject) {
-                            this.ctx.strokeStyle = '#FFFF00';
-                            this.ctx.lineWidth = 2;
-                            this.ctx.setLineDash([5, 5]);
-                            this.ctx.beginPath();
-                            this.ctx.moveTo(ship.x, ship.y);
-                            this.ctx.lineTo(
-                                ship.x + Math.cos(this.mouseAimAngle) * 50,
-                                ship.y + Math.sin(this.mouseAimAngle) * 50
-                            );
-                            this.ctx.stroke();
-                            this.ctx.setLineDash([]);
-                        }
-                    } else {
-                        // Show computer ship cannon directions
-                        this.ctx.strokeStyle = '#FF4444';
-                        this.ctx.lineWidth = 2;
-                        this.ctx.beginPath();
-                        this.ctx.moveTo(ship.x, ship.y);
-                        this.ctx.lineTo(
-                            ship.x + Math.cos(ship.cannonAngle) * 50,
-                            ship.y + Math.sin(ship.cannonAngle) * 50
-                        );
-                        this.ctx.stroke();
-                    }
-                }
-                
-                // Render cannonballs
-                for (let cannonball of this.gameState.cannonballs) {
-                    this.ctx.fillStyle = '#1a1a1a';
-                    this.ctx.beginPath();
-                    this.ctx.arc(cannonball.x, cannonball.y, 4, 0, Math.PI * 2);
-                    this.ctx.fill();
-                    
-                    this.ctx.strokeStyle = '#fff';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.stroke();
-                }
+                this.ctx.setLineDash([]);
+              }
+            } else {
+              // Show computer ship cannon directions
+              this.ctx.strokeStyle = "#FF4444";
+              this.ctx.lineWidth = 2;
+              this.ctx.beginPath();
+              this.ctx.moveTo(ship.x, ship.y);
+              this.ctx.lineTo(
+                ship.x + Math.cos(ship.cannonAngle) * 50,
+                ship.y + Math.sin(ship.cannonAngle) * 50
+              );
+              this.ctx.stroke();
             }
-            
-            gameLoop() {
-                const currentTime = performance.now();
-                const deltaTime = currentTime - this.lastTime;
-                this.lastTime = currentTime;
-                
-                this.update(deltaTime);
-                this.render();
-                
-                requestAnimationFrame(() => this.gameLoop());
-            }
+          }
+
+          // Render cannonballs
+          for (let cannonball of this.gameState.cannonballs) {
+            this.ctx.fillStyle = "#1a1a1a";
+            this.ctx.beginPath();
+            this.ctx.arc(cannonball.x, cannonball.y, 4, 0, Math.PI * 2);
+            this.ctx.fill();
+
+            this.ctx.strokeStyle = "#fff";
+            this.ctx.lineWidth = 1;
+            this.ctx.stroke();
+          }
         }
-        
-        window.addEventListener('load', () => {
-            new NavalBattleGame();
-        });
+
+        gameLoop() {
+          const currentTime = performance.now();
+          const deltaTime = currentTime - this.lastTime;
+          this.lastTime = currentTime;
+
+          this.update(deltaTime);
+          this.render();
+
+          requestAnimationFrame(() => this.gameLoop());
+        }
+      }
+
+      window.addEventListener("load", () => {
+        new NavalBattleGame();
+      });
     </script>
-</body>
+  </body>
 </html>
