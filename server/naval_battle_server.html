@@ -362,7 +362,17 @@
                 this.cannonSound5 = document.getElementById('cannonSound5');
                 
                 this.socket = null;
-                this.gameState = null;
+                // Initialize gameState with audio properties to prevent null errors
+                this.gameState = {
+                    audio: {
+                        musicEnabled: true,
+                        musicVolume: 0.5,
+                        musicStarted: false,
+                        soundEnabled: true,
+                        soundVolume: 0.7,
+                        cannonSounds: []
+                    }
+                };
                 this.selectedShipId = null;
                 this.roomId = null;
                 this.myPlayerId = null;
@@ -732,10 +742,7 @@
                         `In room ${data.roomId} - You are ${this.myTeam === 'team1' ? 'Blue Team (Host)' : 'Red Team'}`;
                     
                     // Make sure menu is visible
-                    const gameMenu = document.getElementById('gameMenu');
-                    console.log('Game menu before showing:', gameMenu.classList.contains('hidden'));
-                    gameMenu.classList.remove('hidden');
-                    console.log('Game menu after showing:', gameMenu.classList.contains('hidden'));
+                    document.getElementById('gameMenu').classList.remove('hidden');
                     
                     // Show simplified ready state for signaling server
                     // Add small delay to ensure DOM is ready
@@ -745,7 +752,13 @@
                 });
                 
                 this.socket.on('game-state', (gameState) => {
+                    // Preserve audio settings when receiving game state from server
+                    const audioSettings = this.gameState.audio;
                     this.gameState = gameState;
+                    // Restore audio settings if not provided by server
+                    if (!this.gameState.audio) {
+                        this.gameState.audio = audioSettings;
+                    }
                     this.updateSelectedShipDisplay();
                 });
                 
@@ -869,10 +882,7 @@
             }
             
             showSimpleRoomStatus(playerCount, isHost) {
-                console.log('showSimpleRoomStatus called:', { playerCount, isHost, roomId: this.roomId });
                 const menuContent = document.getElementById('menuContent');
-                const gameMenu = document.getElementById('gameMenu');
-                console.log('Menu visibility in showSimpleRoomStatus:', !gameMenu.classList.contains('hidden'));
                 
                 if (menuContent && this.roomId) {
                     const title = `Room: ${this.roomId}`;
@@ -1139,6 +1149,9 @@
             }
             
             initializeBasicGameState() {
+                // Preserve existing audio settings
+                const audioSettings = this.gameState.audio;
+                
                 this.gameState = {
                     ships: [],
                     cannonballs: [],
@@ -1146,14 +1159,7 @@
                     scores: { team1: 0, team2: 0 },
                     gameStarted: true,
                     gameStartTime: Date.now(),
-                    audio: {
-                        musicEnabled: true,
-                        musicVolume: 0.5,
-                        musicStarted: false,
-                        soundEnabled: true,
-                        soundVolume: 0.7,
-                        cannonSounds: []
-                    }
+                    audio: audioSettings // Use preserved settings
                 };
                 console.log('🎯 Basic game state initialized');
             }
