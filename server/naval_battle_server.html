@@ -602,8 +602,20 @@
             playBackgroundMusic() {
                 if (this.backgroundMusic && this.gameState.audio.musicEnabled) {
                     this.backgroundMusic.volume = this.gameState.audio.musicVolume;
-                    this.backgroundMusic.play().catch(error => {
+                    this.backgroundMusic.play().then(() => {
+                        console.log('Background music started successfully');
+                        this.gameState.audio.musicStarted = true;
+                    }).catch(error => {
                         console.log("Audio play failed:", error);
+                        // Retry once after user interaction
+                        if (!this.gameState.audio.musicStarted) {
+                            console.log('Retrying audio playback...');
+                            setTimeout(() => {
+                                this.backgroundMusic.play().catch(e => {
+                                    console.log('Audio retry also failed:', e);
+                                });
+                            }, 1000);
+                        }
                     });
                 }
             }
@@ -742,7 +754,10 @@
                     console.log('✅ Game menu hidden, gameplay should begin');
                     
                     // Start background music when game starts
-                    this.playBackgroundMusic();
+                    // Add a small delay to ensure audio context is ready
+                    setTimeout(() => {
+                        this.playBackgroundMusic();
+                    }, 100);
                     
                     // Prevent browser scrolling and focus canvas for keyboard input
                     document.body.classList.add('game-active');
@@ -1045,6 +1060,12 @@
                 
                 console.log('Room ID:', roomId);
                 console.log('Socket connected:', !!this.socket?.connected);
+                
+                // Initialize audio context on user interaction
+                if (this.backgroundMusic) {
+                    this.backgroundMusic.load();
+                    console.log('Audio context initialized');
+                }
                 
                 if (!roomId) {
                     console.error('❌ No room ID provided');

@@ -558,8 +558,20 @@
             playBackgroundMusic() {
                 if (this.backgroundMusic && this.gameState.audio.musicEnabled) {
                     this.backgroundMusic.volume = this.gameState.audio.musicVolume;
-                    this.backgroundMusic.play().catch(error => {
+                    this.backgroundMusic.play().then(() => {
+                        console.log('Background music started successfully');
+                        this.gameState.audio.musicStarted = true;
+                    }).catch(error => {
                         console.log('Background music play failed:', error);
+                        // Retry once after user interaction
+                        if (!this.gameState.audio.musicStarted) {
+                            console.log('Retrying audio playback...');
+                            setTimeout(() => {
+                                this.backgroundMusic.play().catch(e => {
+                                    console.log('Audio retry also failed:', e);
+                                });
+                            }, 1000);
+                        }
                     });
                 }
             }
