@@ -540,21 +540,20 @@
 
                 // Initialize controls with current state
                 if (musicToggle) {
-                    musicToggle.textContent = this.gameState?.audio?.musicEnabled ? 'On' : 'Off';
-                    musicVolumeSlider.value = (this.gameState?.audio?.musicVolume || 0.5) * 100;
-                    musicVolumeValue.textContent = Math.round((this.gameState?.audio?.musicVolume || 0.5) * 100) + '%';
+                    musicToggle.textContent = this.gameState.audio.musicEnabled ? 'On' : 'Off';
+                    musicVolumeSlider.value = this.gameState.audio.musicVolume * 100;
+                    musicVolumeValue.textContent = Math.round(this.gameState.audio.musicVolume * 100) + '%';
                 }
                 
                 if (soundToggle) {
-                    soundToggle.textContent = this.gameState?.audio?.soundEnabled ? 'On' : 'Off';
-                    soundVolumeSlider.value = (this.gameState?.audio?.soundVolume || 0.7) * 100;
-                    soundVolumeValue.textContent = Math.round((this.gameState?.audio?.soundVolume || 0.7) * 100) + '%';
+                    soundToggle.textContent = this.gameState.audio.soundEnabled ? 'On' : 'Off';
+                    soundVolumeSlider.value = this.gameState.audio.soundVolume * 100;
+                    soundVolumeValue.textContent = Math.round(this.gameState.audio.soundVolume * 100) + '%';
                 }
 
                 // Music toggle
                 if (musicToggle) {
                     musicToggle.addEventListener('click', () => {
-                        if (!this.gameState) this.initializeBasicGameState();
                         this.gameState.audio.musicEnabled = !this.gameState.audio.musicEnabled;
                         musicToggle.textContent = this.gameState.audio.musicEnabled ? 'On' : 'Off';
                         
@@ -571,7 +570,6 @@
                 // Music volume slider
                 if (musicVolumeSlider) {
                     musicVolumeSlider.addEventListener('input', (e) => {
-                        if (!this.gameState) this.initializeBasicGameState();
                         const volume = parseInt(e.target.value) / 100;
                         this.gameState.audio.musicVolume = volume;
                         musicVolumeValue.textContent = e.target.value + '%';
@@ -585,7 +583,6 @@
                 // Sound effects toggle
                 if (soundToggle) {
                     soundToggle.addEventListener('click', () => {
-                        if (!this.gameState) this.initializeBasicGameState();
                         this.gameState.audio.soundEnabled = !this.gameState.audio.soundEnabled;
                         soundToggle.textContent = this.gameState.audio.soundEnabled ? 'On' : 'Off';
                     });
@@ -594,7 +591,6 @@
                 // Sound effects volume slider
                 if (soundVolumeSlider) {
                     soundVolumeSlider.addEventListener('input', (e) => {
-                        if (!this.gameState) this.initializeBasicGameState();
                         const volume = parseInt(e.target.value) / 100;
                         this.gameState.audio.soundVolume = volume;
                         soundVolumeValue.textContent = e.target.value + '%';
@@ -604,10 +600,10 @@
             }
 
             playBackgroundMusic() {
-                if (this.backgroundMusic && this.gameState?.audio?.musicEnabled) {
+                if (this.backgroundMusic && this.gameState.audio.musicEnabled) {
                     this.backgroundMusic.volume = this.gameState.audio.musicVolume;
                     this.backgroundMusic.play().catch(error => {
-                        console.log('Audio play failed:', error);
+                        console.log("Audio play failed:", error);
                     });
                 }
             }
@@ -620,7 +616,6 @@
 
             setupCannonSounds() {
                 // Store cannon sound elements in the game state
-                if (!this.gameState) this.initializeBasicGameState();
                 this.gameState.audio.cannonSounds = [
                     this.cannonSound1,
                     this.cannonSound2,
@@ -633,7 +628,6 @@
             }
 
             updateCannonSoundVolumes() {
-                if (!this.gameState) return;
                 const volume = this.gameState.audio.soundVolume;
                 for (let sound of this.gameState.audio.cannonSounds) {
                     if (sound) {
@@ -643,7 +637,7 @@
             }
 
             playRandomCannonSound() {
-                if (!this.gameState?.audio?.soundEnabled || !this.gameState.audio.cannonSounds.length) {
+                if (!this.gameState.audio.soundEnabled || this.gameState.audio.cannonSounds.length === 0) {
                     return;
                 }
 
@@ -655,7 +649,7 @@
                     // Reset the sound to the beginning and play
                     sound.currentTime = 0;
                     sound.play().catch(error => {
-                        console.log('Cannon sound play failed:', error);
+                        console.log("Cannon sound play failed:", error);
                     });
                 }
             }
