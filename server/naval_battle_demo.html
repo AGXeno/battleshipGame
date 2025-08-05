@@ -151,7 +151,7 @@
         
         #controlsToggle {
             position: absolute;
-            bottom: 10px;
+            bottom: 120px;
             left: 10px;
             z-index: 100;
             padding: 10px 20px;
@@ -160,6 +160,26 @@
             background: #16213e;
             color: white;
             cursor: pointer;
+        }
+        
+        #speedBtn {
+            position: absolute;
+            top: 750px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 100;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #ff8c00;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        
+        #speedBtn:hover {
+            background: #ff7700;
         }
         
         #controlsPanel {
@@ -305,11 +325,12 @@
         </div>
         
         <button id="controlsToggle">About This Demo</button>
+        <button id="speedBtn">Speed: 1x</button>
         
         <div id="controlsPanel" class="hidden">
             <div><strong>AI Battle Demo:</strong></div>
-            <div>• Blue AI: Aggressive strategy</div>
-            <div>• Red AI: Defensive strategy</div>
+            <div>• Blue AI: Aggressive strategy (Hard)</div>
+            <div>• Red AI: Defensive strategy (Hard)</div>
             <div>• Advanced obstacle avoidance</div>
             <div>• Predictive aiming</div>
             <div>• Strategic positioning</div>
@@ -317,11 +338,18 @@
             <div>• First team to 15 points wins</div>
             <div>• Ramming damage enabled</div>
             <div>• Drifting icebergs</div>
+            <div>• White neutral ships with power-ups</div>
+            <div>• Ship upgrade system with stars</div>
             <br>
             <div><strong>AI Behaviors:</strong></div>
             <div>• Attack: Maintain optimal range</div>
             <div>• Evade: Zigzag patterns</div>
             <div>• Patrol: Figure-8 movement</div>
+            <br>
+            <div><strong>New Features:</strong></div>
+            <div>• Neutral ships target highest tier ships</div>
+            <div>• Power-ups: Health (+), Damage (⚡), Rate (⟲), Speed (→)</div>
+            <div>• Ship tiers shown as gold stars</div>
             
             <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #333;">
                 <div style="font-weight: bold; margin-bottom: 8px;">Sound Controls:</div>
@@ -393,6 +421,28 @@
             AI_AVOIDANCE_RANGE: 30,
             AI_PREDICTIVE_AVOIDANCE_RANGE: 30,
             
+            // AI Difficulty Settings
+            AI_DIFFICULTY: {
+                EASY: {
+                    powerUpAwareness: 0.1,      // 10% chance to go for power-ups
+                    aggressionLevel: 0.6,       // Less aggressive
+                    reactionTime: 2000,         // Slower reactions
+                    aimAccuracy: 0.7            // Less accurate
+                },
+                MEDIUM: {
+                    powerUpAwareness: 0.4,      // 40% chance to go for power-ups
+                    aggressionLevel: 0.8,       // Standard aggression
+                    reactionTime: 1500,         // Standard reactions
+                    aimAccuracy: 0.85           // Good accuracy
+                },
+                HARD: {
+                    powerUpAwareness: 0.8,      // 80% chance to go for power-ups
+                    aggressionLevel: 1.0,       // Maximum aggression
+                    reactionTime: 1000,         // Fast reactions
+                    aimAccuracy: 0.95           // High accuracy
+                }
+            },
+            
             // UI and Rendering
             CANVAS_WIDTH: 1000,
             CANVAS_HEIGHT: 700,
@@ -405,6 +455,10 @@
             ICEBERG_DRIFT_MIN_SPEED: 3.5,
             ICEBERG_DRIFT_MAX_SPEED: 7.5,
             
+            // Map boundaries (larger than canvas for off-screen spawning)
+            MAP_WIDTH: 1200,  // 200px beyond canvas on each side
+            MAP_HEIGHT: 900,  // 100px beyond canvas on each side
+            
             // Audio
             AUDIO_DEFAULT_MUSIC_VOLUME: 0.5,
             AUDIO_DEFAULT_SOUND_VOLUME: 0.7,
@@ -415,8 +469,10 @@
             TARGET_FPS: 60,
             
             // Neutral Ships and Upgrades
-            NEUTRAL_SHIP_SPAWN_CHANCE: 0.4,
-            NEUTRAL_SHIP_SPAWN_INTERVAL: 12000, // 12 seconds (faster for demo)
+            NEUTRAL_SHIP_SPAWN_CHANCE: 0.9,
+            NEUTRAL_SHIP_SPAWN_INTERVAL: 15000, // 15 seconds (less frequent)
+            NEUTRAL_SHIP_SPEED: 25,
+            NEUTRAL_SHIP_MAX_HEALTH: 3,
             MAX_SHIP_TIER: 3,
             UPGRADE_HEALTH_BONUS: 1,
             UPGRADE_DAMAGE_MULTIPLIER: 1.5,
@@ -455,8 +511,8 @@
                     cannonballs: [],
                     obstacles: [],
                     players: {
-                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'aggressive' },
-                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'defensive' }
+                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
+                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
                     },
                     selectedObject: null,
                     selectedObjectType: null,
@@ -487,6 +543,7 @@
                 this.icebergSpawnCooldown = 10000;
                 this.spawnTimeouts = [];
                 this.cameraFollowShip = null;
+                this.speedMultiplier = 1; // Speed control for development
                 
                 // AI Demo tracking variables - track both teams separately
                 this.blueSelectedShip = null;
@@ -534,6 +591,7 @@
             setupControls() {
                 document.getElementById('startBtn').addEventListener('click', () => this.startGame());
                 document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
+                document.getElementById('speedBtn').addEventListener('click', () => this.toggleSpeed());
                 
                 document.getElementById('controlsToggle').addEventListener('click', () => {
                     const panel = document.getElementById('controlsPanel');
@@ -753,12 +811,31 @@
             generateObstacles() {
                 this.gameState.obstacles = [];
                 
-                // Generate islands (static)
+                // Generate islands (static) - avoid spawning near team bases
                 for (let i = 0; i < 2; i++) {
+                    let x, y, attempts = 0;
+                    const blueBase = { x: 100, y: 620 };
+                    const redBase = { x: 900, y: 80 };
+                    const minBaseDistance = 150; // Minimum distance from bases
+                    
+                    do {
+                        x = 200 + Math.random() * 600; // Center area of map
+                        y = 150 + Math.random() * 400;
+                        attempts++;
+                        
+                        // Check distance from both bases
+                        const distToBlue = Math.sqrt((x - blueBase.x) ** 2 + (y - blueBase.y) ** 2);
+                        const distToRed = Math.sqrt((x - redBase.x) ** 2 + (y - redBase.y) ** 2);
+                        
+                        if (distToBlue >= minBaseDistance && distToRed >= minBaseDistance) {
+                            break; // Good position found
+                        }
+                    } while (attempts < 20);
+                    
                     this.gameState.obstacles.push({
                         type: 'island',
-                        x: 250 + Math.random() * 500,
-                        y: 150 + Math.random() * 400,
+                        x: x,
+                        y: y,
                         radius: 30 + Math.random() * 20,
                         destructible: false
                     });
@@ -888,6 +965,10 @@
                 this.blueAISelectedShipIndex = 0;
                 this.redAISelectedShipIndex = 0;
                 this.lastIcebergSpawn = Date.now();
+                this.lastNeutralSpawn = Date.now(); // Initialize neutral ship spawning
+                
+                // Try to start background music immediately on user click
+                this.playBackgroundMusic();
                 
                 this.showCountdown();
             }
@@ -1013,12 +1094,333 @@
                     aiLastDecision: 0,
                     aiDecisionCooldown: 1000,
                     aiState: 'patrol',
-                    aiType: this.gameState.players[playerId].aiType
+                    aiType: this.gameState.players[playerId].aiType,
+                    upgrades: { health: 0, damage: 0, rateOfFire: 0, speed: 0 },
+                    killTierProgress: 0,
+                    tier: 1
                 };
                 
                 this.gameState.ships.push(ship);
                 this.gameState.players[playerId].shipCount++;
                 return ship;
+            }
+            
+            spawnNeutralShip() {
+                if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
+                
+                // Initialize neutralShips array if it doesn't exist
+                if (!this.gameState.neutralShips) {
+                    this.gameState.neutralShips = [];
+                }
+                
+                // Limit to maximum 2 neutral ships
+                if (this.gameState.neutralShips.length >= 2) {
+                    return;
+                }
+                
+                const currentTime = Date.now();
+                if (currentTime - this.lastNeutralSpawn < GAME_CONFIG.NEUTRAL_SHIP_SPAWN_INTERVAL) {
+                    return; // No console spam
+                }
+                
+                if (Math.random() > GAME_CONFIG.NEUTRAL_SHIP_SPAWN_CHANCE) {
+                    this.lastNeutralSpawn = currentTime; // Reset timer even if chance fails
+                    return;
+                }
+                
+                // Spawn near a random island
+                const islands = this.gameState.obstacles.filter(obs => obs.type === 'island');
+                if (islands.length === 0) return; // No islands to spawn from
+                
+                const randomIsland = islands[Math.floor(Math.random() * islands.length)];
+                
+                // Spawn at a random angle around the island, outside its radius
+                const spawnAngle = Math.random() * Math.PI * 2;
+                const spawnDistance = randomIsland.radius + 40 + Math.random() * 20; // 40-60 pixels from island edge
+                
+                const x = randomIsland.x + Math.cos(spawnAngle) * spawnDistance;
+                const y = randomIsland.y + Math.sin(spawnAngle) * spawnDistance;
+                
+                // Point toward the center of the map for initial direction
+                const centerX = 400;
+                const centerY = 350;
+                const angle = Math.atan2(centerY - y, centerX - x);
+                
+                const neutralShip = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    shipNumber: this.gameState.neutralShips.length + 1, // Give them numbers
+                    x: x,
+                    y: y,
+                    angle: angle,
+                    speed: GAME_CONFIG.NEUTRAL_SHIP_SPEED,
+                    health: GAME_CONFIG.NEUTRAL_SHIP_MAX_HEALTH,
+                    maxHealth: GAME_CONFIG.NEUTRAL_SHIP_MAX_HEALTH,
+                    lastShot: currentTime,
+                    shotCooldown: 8000, // Much slower firing - every 8 seconds
+                    aiTarget: null,
+                    timeInCombat: 0,
+                    spawnTime: currentTime,
+                    upgrades: { health: 0, damage: 0, rateOfFire: 0, speed: 0 },
+                    killTierProgress: 0,
+                    tier: 1
+                };
+                
+                this.gameState.neutralShips.push(neutralShip);
+                this.lastNeutralSpawn = currentTime;
+            }
+            
+            updateNeutralShips(deltaTime) {
+                if (!this.gameState.neutralShips) {
+                    this.gameState.neutralShips = [];
+                }
+                
+                for (let neutralShip of this.gameState.neutralShips) {
+                    this.executeNeutralShipAI(neutralShip, deltaTime);
+                    
+                    // Update position with proper delta time scaling (match regular ships)
+                    const deltaX = Math.cos(neutralShip.angle) * neutralShip.speed * deltaTime * 0.001;
+                    const deltaY = Math.sin(neutralShip.angle) * neutralShip.speed * deltaTime * 0.001;
+                    
+                    // Safety check for NaN values
+                    if (isNaN(deltaX) || isNaN(deltaY) || isNaN(neutralShip.x) || isNaN(neutralShip.y)) {
+                        // Reset to valid position near center of map
+                        neutralShip.x = 400 + (Math.random() - 0.5) * 100;
+                        neutralShip.y = 300 + (Math.random() - 0.5) * 100;
+                        neutralShip.angle = Math.random() * Math.PI * 2;
+                        neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED;
+                        return;
+                    }
+                    
+                    neutralShip.x += deltaX;
+                    neutralShip.y += deltaY;
+                    
+                    // Obstacle collision detection and avoidance
+                    for (let obstacle of this.gameState.obstacles) {
+                        const dx = neutralShip.x - obstacle.x;
+                        const dy = neutralShip.y - obstacle.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        const minDistance = obstacle.radius + GAME_CONFIG.SHIP_RADIUS + 5; // Buffer zone
+                        
+                        if (distance < minDistance) {
+                            // Push ship away from obstacle
+                            const pushStrength = (minDistance - distance) / minDistance;
+                            const pushX = (dx / distance) * pushStrength * 3;
+                            const pushY = (dy / distance) * pushStrength * 3;
+                            
+                            neutralShip.x += pushX;
+                            neutralShip.y += pushY;
+                            
+                            // Deflect movement angle to go around obstacle
+                            const obstacleAngle = Math.atan2(dy, dx);
+                            const deflectionAngle = obstacleAngle + (Math.PI / 2) * (Math.random() > 0.5 ? 1 : -1);
+                            neutralShip.angle = deflectionAngle;
+                            
+                            // Slow down when navigating around obstacles
+                            neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED * 0.5;
+                        }
+                    }
+                    
+                    // Keep ships within screen boundaries
+                    const mapBounds = {
+                        left: 0,
+                        right: GAME_CONFIG.MAP_WIDTH,
+                        top: 0,
+                        bottom: GAME_CONFIG.MAP_HEIGHT
+                    };
+                    
+                    if (neutralShip.x < mapBounds.left || neutralShip.x > mapBounds.right) {
+                        neutralShip.angle = Math.PI - neutralShip.angle;
+                        neutralShip.x = Math.max(mapBounds.left, Math.min(mapBounds.right, neutralShip.x));
+                    }
+                    if (neutralShip.y < mapBounds.top || neutralShip.y > mapBounds.bottom) {
+                        neutralShip.angle = -neutralShip.angle;
+                        neutralShip.y = Math.max(mapBounds.top, Math.min(mapBounds.bottom, neutralShip.y));
+                    }
+                    
+                    // Auto-fire at nearby enemy ships
+                    const currentTime = Date.now();
+                    if (currentTime - neutralShip.lastShot >= neutralShip.shotCooldown) {
+                        if (neutralShip.aiTarget) {
+                            this.fireNeutralCannonball(neutralShip);
+                            neutralShip.lastShot = currentTime;
+                        }
+                    }
+                }
+            }
+            
+            executeNeutralShipAI(neutralShip, deltaTime) {
+                // Pirate AI: Find closest ship and circle around it at optimal combat range
+                let closestShip = null;
+                let closestDistance = Infinity;
+                
+                for (let ship of this.gameState.ships) {
+                    const dx = neutralShip.x - ship.x;
+                    const dy = neutralShip.y - ship.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < closestDistance) {
+                        closestDistance = distance;
+                        closestShip = ship;
+                    }
+                }
+                
+                neutralShip.aiTarget = closestShip;
+                
+                if (closestShip) {
+                    const dx = closestShip.x - neutralShip.x;
+                    const dy = closestShip.y - neutralShip.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    const angleToTarget = Math.atan2(dy, dx);
+                    
+                    // Optimal combat range for circling
+                    const optimalRange = 120;
+                    const tooClose = 80;
+                    const tooFar = 200;
+                    
+                    if (distance < tooClose) {
+                        // Too close - retreat while keeping target in sight
+                        const retreatAngle = angleToTarget + Math.PI; // Opposite direction
+                        neutralShip.angle = retreatAngle;
+                        neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED * 0.8;
+                    } else if (distance > tooFar) {
+                        // Too far - approach target
+                        neutralShip.angle = angleToTarget;
+                        neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED;
+                    } else {
+                        // Optimal range - circle strafe like a pirate
+                        const circleDirection = neutralShip.circleDirection || (Math.random() > 0.5 ? 1 : -1);
+                        neutralShip.circleDirection = circleDirection; // Remember direction
+                        
+                        // Circle around target (perpendicular to target direction)
+                        const circleAngle = angleToTarget + (Math.PI / 2) * circleDirection;
+                        neutralShip.angle = circleAngle;
+                        neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED * 0.7; // Slower when circling
+                        
+                        // Occasionally change circle direction for unpredictability (less frequent)
+                        if (!neutralShip.lastDirectionChange) neutralShip.lastDirectionChange = 0;
+                        if (Date.now() - neutralShip.lastDirectionChange > 3000 && Math.random() < 0.001) {
+                            neutralShip.circleDirection *= -1;
+                            neutralShip.lastDirectionChange = Date.now();
+                        }
+                    }
+                }
+            }
+            
+            fireNeutralCannonball(neutralShip) {
+                if (!neutralShip.aiTarget) return;
+                
+                const dx = neutralShip.aiTarget.x - neutralShip.x;
+                const dy = neutralShip.aiTarget.y - neutralShip.y;
+                const aimAngle = Math.atan2(dy, dx);
+                
+                const cannonball = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    x: neutralShip.x + Math.cos(aimAngle) * 15,
+                    y: neutralShip.y + Math.sin(aimAngle) * 15,
+                    angle: aimAngle,
+                    speed: GAME_CONFIG.CANNONBALL_SPEED,
+                    shooterId: neutralShip.id,
+                    shooterPlayerId: 'neutral', // Fix crash - set proper playerId
+                    shooterType: 'neutral',
+                    dead: false
+                };
+                
+                this.gameState.cannonballs.push(cannonball);
+                this.playRandomCannonSound();
+            }
+            
+            calculateShipTier(ship) {
+                if (!ship.upgrades) return 1;
+                const totalUpgrades = ship.upgrades.health + ship.upgrades.damage + 
+                                    ship.upgrades.rateOfFire + ship.upgrades.speed;
+                // Include kill progress in tier calculation
+                const killProgress = (ship.killTierProgress || 0);
+                const totalProgress = totalUpgrades + killProgress;
+                return Math.min(Math.floor(totalProgress / 2) + 1, GAME_CONFIG.MAX_SHIP_TIER);
+            }
+
+            awardKillTierProgression(killerShipId, killedShip) {
+                // Find the killer ship
+                const killerShip = this.gameState.ships.find(s => s.id === killerShipId);
+                if (!killerShip) return;
+                
+                // Initialize kill progress if it doesn't exist
+                if (!killerShip.killTierProgress) {
+                    killerShip.killTierProgress = 0;
+                }
+                
+                // Award 0.5 tier progress for each kill (2 kills = 1 tier level)
+                killerShip.killTierProgress += 0.5;
+                
+                // Update ship tier
+                killerShip.tier = this.calculateShipTier(killerShip);
+                
+                console.log(`Ship ${killerShip.id} got a kill! Kill progress: ${killerShip.killTierProgress}, New tier: ${killerShip.tier}`);
+            }
+            
+            dropPowerUp(x, y) {
+                // Initialize powerUps array if it doesn't exist
+                if (!this.gameState.powerUps) {
+                    this.gameState.powerUps = [];
+                }
+                
+                const powerUpTypes = ['health', 'damage', 'rateOfFire', 'speed'];
+                const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+                
+                const powerUp = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    type: type,
+                    x: x,
+                    y: y,
+                    spawnTime: Date.now(),
+                    collected: false
+                };
+                
+                this.gameState.powerUps.push(powerUp);
+            }
+            
+            applyPowerUp(ship, powerUp) {
+                if (!ship.upgrades) {
+                    ship.upgrades = { health: 0, damage: 0, rateOfFire: 0, speed: 0 };
+                }
+                
+                ship.upgrades[powerUp.type]++;
+                
+                // Apply immediate effects
+                switch (powerUp.type) {
+                    case 'health':
+                        ship.health = Math.min(ship.health + GAME_CONFIG.UPGRADE_HEALTH_BONUS, 
+                                             ship.maxHealth + ship.upgrades.health);
+                        ship.maxHealth = 3 + ship.upgrades.health;
+                        break;
+                    case 'damage':
+                        // Damage is applied when firing
+                        break;
+                    case 'rateOfFire':
+                        ship.shotCooldown = Math.max(2000, 5000 * Math.pow(GAME_CONFIG.UPGRADE_RATE_OF_FIRE_BONUS, ship.upgrades.rateOfFire));
+                        break;
+                    case 'speed':
+                        ship.defaultSpeed = 25 * Math.pow(GAME_CONFIG.UPGRADE_SPEED_MULTIPLIER, ship.upgrades.speed);
+                        ship.targetSpeed = ship.defaultSpeed;
+                        break;
+                }
+                
+                // Update tier
+                ship.tier = this.calculateShipTier(ship);
+            }
+            
+            updatePowerUps() {
+                if (!this.gameState.powerUps) {
+                    this.gameState.powerUps = [];
+                    return;
+                }
+                
+                const currentTime = Date.now();
+                
+                // Remove expired power-ups (last 30 seconds)
+                this.gameState.powerUps = this.gameState.powerUps.filter(powerUp => 
+                    currentTime - powerUp.spawnTime < 30000 && !powerUp.collected
+                );
             }
             
             updateAI(deltaTime) {
@@ -1067,7 +1469,62 @@
             
             makeAIDecision(ship, enemyTeam) {
                 const enemyShips = this.gameState.ships.filter(s => s.playerId === enemyTeam);
+                const neutralShips = this.gameState.neutralShips || [];
+                const powerUps = this.gameState.powerUps || [];
                 
+                // Get difficulty settings for this ship's team
+                const difficulty = GAME_CONFIG.AI_DIFFICULTY[this.gameState.players[ship.playerId].difficulty];
+                
+                // First check for power-ups based on difficulty
+                if (powerUps.length > 0 && Math.random() < difficulty.powerUpAwareness) {
+                    let closestPowerUp = null;
+                    let closestPUDistance = Infinity;
+                    
+                    for (let powerUp of powerUps) {
+                        if (powerUp.collected) continue;
+                        const dx = ship.x - powerUp.x;
+                        const dy = ship.y - powerUp.y;
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (distance < closestPUDistance && distance < 150) { // Only consider nearby power-ups
+                            closestPUDistance = distance;
+                            closestPowerUp = powerUp;
+                        }
+                    }
+                    
+                    if (closestPowerUp) {
+                        ship.aiTarget = closestPowerUp;
+                        ship.aiTargetType = 'powerup';
+                        ship.aiState = 'seekPowerUp';
+                        return;
+                    }
+                }
+                
+                // Check for neutral ships as priority targets (they drop power-ups!)
+                if (neutralShips.length > 0) {
+                    let closestNeutral = null;
+                    let closestNeutralDistance = Infinity;
+                    
+                    for (let neutralShip of neutralShips) {
+                        const dx = ship.x - neutralShip.x;
+                        const dy = ship.y - neutralShip.y;
+                        const distance = Math.sqrt(dx*dx + dy*dy);
+                        
+                        if (distance < closestNeutralDistance && distance < 200) {
+                            closestNeutralDistance = distance;
+                            closestNeutral = neutralShip;
+                        }
+                    }
+                    
+                    if (closestNeutral) {
+                        ship.aiTarget = closestNeutral;
+                        ship.aiTargetType = 'neutral';
+                        ship.aiState = 'attack';
+                        return;
+                    }
+                }
+                
+                // Default to enemy ships
                 if (enemyShips.length === 0) return;
                 
                 let closestShip = null;
@@ -1085,16 +1542,26 @@
                 }
                 
                 ship.aiTarget = closestShip;
+                ship.aiTargetType = 'enemy';
+                
+                // Apply difficulty-based aggression
+                const aggressionRange = 200 * difficulty.aggressionLevel;
                 
                 // Different AI types have different engagement ranges
                 if (ship.aiType === 'aggressive') {
-                    if (closestDistance < 200) {
+                    if (closestDistance < aggressionRange) {
                         ship.aiState = 'attack';
                     } else {
                         ship.aiState = 'patrol';
                     }
-                } else { // defensive
-                    if (closestDistance < 150) {
+                } else if (ship.aiType === 'defensive') {
+                    if (closestDistance < aggressionRange * 0.75) {
+                        ship.aiState = ship.health <= 1 ? 'evade' : 'attack';
+                    } else {
+                        ship.aiState = 'patrol';
+                    }
+                } else { // balanced
+                    if (closestDistance < aggressionRange * 0.875) { // 87.5% - middle ground
                         ship.aiState = ship.health <= 1 ? 'evade' : 'attack';
                     } else {
                         ship.aiState = 'patrol';
@@ -1110,18 +1577,38 @@
                 const distance = Math.sqrt(dx*dx + dy*dy);
                 const angleToTarget = Math.atan2(dy, dx);
                 
-                // Calculate target's velocity for predictive aiming
-                const targetVelX = Math.cos(ship.aiTarget.angle) * ship.aiTarget.speed;
-                const targetVelY = Math.sin(ship.aiTarget.angle) * ship.aiTarget.speed;
+                // Handle power-up seeking behavior
+                if (ship.aiTargetType === 'powerup') {
+                    // Simple movement towards power-up
+                    ship.cannonAngle = angleToTarget; // Aim forward
+                    ship.targetSpeed = ship.defaultSpeed;
+                    const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
+                    ship.targetRudderAngle = Math.sign(angleDiff) * Math.min(Math.abs(angleDiff) * 0.6, Math.PI/6);
+                    return;
+                }
                 
-                // Predict where target will be (lead the target)
-                const cannonballSpeed = 80;
-                const timeToImpact = distance / cannonballSpeed;
-                const predictedX = ship.aiTarget.x + targetVelX * timeToImpact * 0.05;
-                const predictedY = ship.aiTarget.y + targetVelY * timeToImpact * 0.05;
-                const predictedAngle = Math.atan2(predictedY - ship.y, predictedX - ship.x);
+                // Calculate target's velocity for predictive aiming (only for moving targets)
+                let predictedAngle = angleToTarget;
+                if (ship.aiTarget.angle !== undefined && ship.aiTarget.speed !== undefined) {
+                    const targetVelX = Math.cos(ship.aiTarget.angle) * ship.aiTarget.speed;
+                    const targetVelY = Math.sin(ship.aiTarget.angle) * ship.aiTarget.speed;
+                    
+                    // Predict where target will be (lead the target)
+                    const cannonballSpeed = 80;
+                    const timeToImpact = distance / cannonballSpeed;
+                    const predictedX = ship.aiTarget.x + targetVelX * timeToImpact * 0.05;
+                    const predictedY = ship.aiTarget.y + targetVelY * timeToImpact * 0.05;
+                    predictedAngle = Math.atan2(predictedY - ship.y, predictedX - ship.x);
+                }
                 
                 switch (ship.aiState) {
+                    case 'seekPowerUp':
+                        // Move directly toward power-up
+                        ship.cannonAngle = angleToTarget;
+                        ship.targetSpeed = ship.defaultSpeed;
+                        const powerUpAngleDiff = this.normalizeAngle(angleToTarget - ship.angle);
+                        ship.targetRudderAngle = Math.sign(powerUpAngleDiff) * Math.min(Math.abs(powerUpAngleDiff) * 0.6, Math.PI/6);
+                        break;
                     case 'attack':
                         // Use predictive aiming
                         ship.cannonAngle = predictedAngle;
@@ -1331,10 +1818,16 @@
             update(deltaTime) {
                 if (!this.gameState.gameStarted || this.gameState.gamePaused || this.gameState.countdownActive) return;
                 
-                this.updateAI(deltaTime);
-                this.updateShips(deltaTime);
-                this.updateCannonballs(deltaTime);
-                this.updateIcebergDrift(deltaTime);
+                // Apply speed multiplier for development
+                const adjustedDeltaTime = deltaTime * this.speedMultiplier;
+                
+                this.spawnNeutralShip();
+                this.updateAI(adjustedDeltaTime);
+                this.updateShips(adjustedDeltaTime);
+                this.updateNeutralShips(adjustedDeltaTime);
+                this.updateCannonballs(adjustedDeltaTime);
+                this.updateIcebergDrift(adjustedDeltaTime);
+                this.updatePowerUps();
                 this.updateAIDemoShipSelection(); // Auto-cycle through AI ships
                 this.checkCollisions();
                 this.cleanupDeadObjects();
@@ -1522,6 +2015,44 @@
                     }
                 }
                 
+                // Neutral ship ramming collisions with regular ships
+                if (this.gameState.neutralShips) {
+                    for (let neutralShip of this.gameState.neutralShips) {
+                        for (let ship of this.gameState.ships) {
+                            const dx = ship.x - neutralShip.x;
+                            const dy = ship.y - neutralShip.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 20) {
+                                // Calculate front of neutral ship (like pirates ramming)
+                                const neutralFrontX = neutralShip.x + Math.cos(neutralShip.angle) * 14;
+                                const neutralFrontY = neutralShip.y + Math.sin(neutralShip.angle) * 14;
+                                const neutralFrontToShip = Math.sqrt((neutralFrontX - ship.x) ** 2 + (neutralFrontY - ship.y) ** 2);
+                                
+                                if (neutralFrontToShip < 12) {
+                                    if (!neutralShip.lastRamTime || Date.now() - neutralShip.lastRamTime > 1500) {
+                                        // Neutral ship rams regular ship
+                                        ship.health -= 1;
+                                        neutralShip.lastRamTime = Date.now();
+                                        
+                                        // Push the regular ship away
+                                        const pushX = (dx / distance) * 25;
+                                        const pushY = (dy / distance) * 25;
+                                        ship.x += pushX;
+                                        ship.y += pushY;
+                                        
+                                        // Neutral ship bounces back slightly
+                                        neutralShip.x -= pushX * 0.3;
+                                        neutralShip.y -= pushY * 0.3;
+                                        
+                                        // Ramming collision occurred (no sound effect available)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                
                 // Ship-obstacle collisions
                 for (let ship of this.gameState.ships) {
                     for (let obstacle of this.gameState.obstacles) {
@@ -1581,7 +2112,52 @@
                             ship.health -= 1;
                             
                             if (ship.health <= 0) {
-                                this.gameState.players[cannonball.shooterPlayerId].score++;
+                                // Only award points for player kills, not neutral ship kills
+                                if (cannonball.shooterPlayerId !== 'neutral' && this.gameState.players[cannonball.shooterPlayerId]) {
+                                    this.gameState.players[cannonball.shooterPlayerId].score++;
+                                    
+                                    // Award tier progression to the killer ship
+                                    this.awardKillTierProgression(cannonball.shooterId, ship);
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                // Cannonball-neutral ship collisions
+                if (this.gameState.neutralShips) {
+                    for (let cannonball of this.gameState.cannonballs) {
+                        if (cannonball.shooterType === 'neutral') continue; // Neutral ships don't hit themselves
+                        
+                        for (let neutralShip of this.gameState.neutralShips) {
+                            const dx = cannonball.x - neutralShip.x;
+                            const dy = cannonball.y - neutralShip.y;
+                            const distance = Math.sqrt(dx*dx + dy*dy);
+                            
+                            if (distance < 14) {
+                                cannonball.dead = true;
+                                neutralShip.health -= 1;
+                                
+                                // No score points for killing neutral ships - they're neutral!
+                            }
+                        }
+                    }
+                }
+                
+                // Ship-power up collisions
+                if (this.gameState.powerUps) {
+                    for (let ship of this.gameState.ships) {
+                        for (let powerUp of this.gameState.powerUps) {
+                            if (powerUp.collected) continue;
+                            
+                            const dx = ship.x - powerUp.x;
+                            const dy = ship.y - powerUp.y;
+                            const distance = Math.sqrt(dx * dx + dy * dy);
+                            
+                            if (distance < 20) {
+                                this.applyPowerUp(ship, powerUp);
+                                powerUp.collected = true;
+                                console.log(`✅ Ship ${ship.shipNumber} (${ship.playerId}) collected ${powerUp.type} power-up!`);
                             }
                         }
                     }
@@ -1605,6 +2181,18 @@
                                 this.spawnShip(ship.playerId);
                             }
                         }, 2000);
+                    }
+                }
+                
+                // Clean up dead neutral ships and drop power-ups
+                if (this.gameState.neutralShips) {
+                    for (let i = this.gameState.neutralShips.length - 1; i >= 0; i--) {
+                        const neutralShip = this.gameState.neutralShips[i];
+                        if (neutralShip.health <= 0) {
+                            // Drop power-up when neutral ship dies
+                            this.dropPowerUp(neutralShip.x, neutralShip.y);
+                            this.gameState.neutralShips.splice(i, 1);
+                        }
                     }
                 }
                 
@@ -1826,9 +2414,11 @@
                     ships: [],
                     cannonballs: [],
                     obstacles: [],
+                    neutralShips: [],
+                    powerUps: [],
                     players: {
-                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'aggressive' },
-                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'defensive' }
+                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
+                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
                     },
                     selectedObject: null,
                     selectedObjectType: null,
@@ -1852,6 +2442,7 @@
                 this.blueAISelectedShipIndex = 0;
                 this.redAISelectedShipIndex = 0;
                 this.lastIcebergSpawn = 0;
+                this.lastNeutralSpawn = 0;
                 this.cameraFollowShip = null;
                 this.generateObstacles();
                 document.getElementById('menuTitle').textContent = 'Naval Battle Demo';
@@ -1862,6 +2453,16 @@
                 `;
                 this.setupControls();
                 document.getElementById('gameMenu').classList.remove('hidden');
+            }
+            
+            toggleSpeed() {
+                if (this.speedMultiplier === 1) {
+                    this.speedMultiplier = 2;
+                    document.getElementById('speedBtn').textContent = 'Speed: 2x';
+                } else {
+                    this.speedMultiplier = 1;
+                    document.getElementById('speedBtn').textContent = 'Speed: 1x';
+                }
             }
             
             render() {
@@ -1967,6 +2568,82 @@
                     
                     this.ctx.restore();
                     
+                    // Small stars removed to avoid duplication
+                    
+                    // Tier display removed - now using stars only
+                    
+                    // Large gold stars for tier 2+ ships
+                    if (ship.tier && ship.tier > 1) {
+                        this.ctx.save();
+                        this.ctx.translate(ship.x, ship.y - 65);
+                        
+                        const starCount = Math.min(ship.tier - 1, 3);
+                        const starSize = 10;  // Much larger stars
+                        const spacing = 25;   // More spacing
+                        const startX = -(starCount - 1) * spacing / 2;
+                        
+                        for (let i = 0; i < starCount; i++) {
+                            const x = startX + i * spacing;
+                            
+                            // Draw large filled circle as "star"
+                            this.ctx.fillStyle = '#FFD700';
+                            this.ctx.beginPath();
+                            this.ctx.arc(x, 0, starSize, 0, Math.PI * 2);
+                            this.ctx.fill();
+                            
+                            // Thick black border
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = 3;
+                            this.ctx.stroke();
+                            
+                            // Add inner white dot for visibility
+                            this.ctx.fillStyle = '#FFFFFF';
+                            this.ctx.beginPath();
+                            this.ctx.arc(x, 0, 3, 0, Math.PI * 2);
+                            this.ctx.fill();
+                        }
+                        
+                        this.ctx.restore();
+                    }
+                    
+                    // Large upgrade indicators in a box next to ship
+                    if (ship.upgrades) {
+                        this.ctx.save();
+                        this.ctx.translate(ship.x + 25, ship.y - 15);
+                        
+                        const symbols = [];
+                        if (ship.upgrades.health > 0) symbols.push({text: `♥${ship.upgrades.health}`, color: '#00FF00'});
+                        if (ship.upgrades.damage > 0) symbols.push({text: `⚡${ship.upgrades.damage}`, color: '#FF4444'});
+                        if (ship.upgrades.rateOfFire > 0) symbols.push({text: `⟲${ship.upgrades.rateOfFire}`, color: '#FFFF00'});
+                        if (ship.upgrades.speed > 0) symbols.push({text: `→${ship.upgrades.speed}`, color: '#44AAFF'});
+                        
+                        if (symbols.length > 0) {
+                            // Draw background box
+                            const boxWidth = symbols.length * 20 + 10;
+                            const boxHeight = 20;
+                            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
+                            this.ctx.fillRect(-5, -15, boxWidth, boxHeight);
+                            this.ctx.strokeStyle = '#FFFFFF';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.strokeRect(-5, -15, boxWidth, boxHeight);
+                            
+                            // Draw symbols with colors
+                            this.ctx.font = 'bold 14px Arial';  // Large font
+                            this.ctx.textAlign = 'center';
+                            this.ctx.lineWidth = 2;
+                            
+                            for (let i = 0; i < symbols.length; i++) {
+                                const x = i * 20 + 10;
+                                this.ctx.fillStyle = symbols[i].color;
+                                this.ctx.strokeStyle = '#000';
+                                this.ctx.strokeText(symbols[i].text, x, -2);
+                                this.ctx.fillText(symbols[i].text, x, -2);
+                            }
+                        }
+                        
+                        this.ctx.restore();
+                    }
+                    
                     // Health bar (visible for all ships in demo mode for educational purposes)
                     this.ctx.save();
                     this.ctx.translate(ship.x, ship.y - 20);
@@ -2035,6 +2712,119 @@
                     this.ctx.stroke();
                 }
                 
+                // Render neutral ships
+                if (this.gameState.neutralShips && this.gameState.neutralShips.length > 0) {
+                    for (let neutralShip of this.gameState.neutralShips) {
+                        this.ctx.save();
+                        this.ctx.translate(neutralShip.x, neutralShip.y);
+                        this.ctx.rotate(neutralShip.angle);
+                        
+                        // White neutral ship (same as player ships but white)
+                        this.ctx.fillStyle = '#FFFFFF';
+                        this.ctx.fillRect(-10, -5, 20, 10);
+                        
+                        this.ctx.fillStyle = '#CCCCCC';
+                        this.ctx.fillRect(5, -3, 5, 6);
+                        
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.strokeRect(-10, -5, 20, 10);
+                        
+                        this.ctx.restore();
+                        
+                        // Render cannon direction for neutral ships
+                        if (neutralShip.aiTarget) {
+                            const dx = neutralShip.aiTarget.x - neutralShip.x;
+                            const dy = neutralShip.aiTarget.y - neutralShip.y;
+                            const cannonAngle = Math.atan2(dy, dx);
+                            
+                            this.ctx.strokeStyle = '#FFFFFF';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.beginPath();
+                            this.ctx.moveTo(neutralShip.x, neutralShip.y);
+                            this.ctx.lineTo(
+                                neutralShip.x + Math.cos(cannonAngle) * 40,
+                                neutralShip.y + Math.sin(cannonAngle) * 40
+                            );
+                            this.ctx.stroke();
+                        }
+                        
+                        // Health bar for neutral ships
+                        if (neutralShip.health < neutralShip.maxHealth) {
+                            this.ctx.save();
+                            this.ctx.translate(neutralShip.x, neutralShip.y - 20);
+                            
+                            const healthRatio = neutralShip.health / neutralShip.maxHealth;
+                            
+                            this.ctx.fillStyle = '#333';
+                            this.ctx.fillRect(-10, 0, 20, 4);
+                            
+                            this.ctx.fillStyle = healthRatio > 0.5 ? '#00FF00' : '#FFFF00';
+                            this.ctx.fillRect(-10, 0, healthRatio * 20, 4);
+                            
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = 1;
+                            this.ctx.strokeRect(-10, 0, 20, 4);
+                            
+                            this.ctx.restore();
+                        }
+                    }
+                }
+                
+                // Render neutral ship numbers
+                if (this.gameState.neutralShips) {
+                    for (let neutralShip of this.gameState.neutralShips) {
+                        if (neutralShip.shipNumber) {
+                            const numberX = neutralShip.x - 15;
+                            const numberY = neutralShip.y + 15;
+                            
+                            this.ctx.save();
+                            
+                            this.ctx.fillStyle = '#FFFFFF';
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = 2;
+                            this.ctx.font = 'bold 18px Arial';
+                            this.ctx.textAlign = 'center';
+                            this.ctx.textBaseline = 'middle';
+                            
+                            this.ctx.strokeText(neutralShip.shipNumber.toString(), numberX, numberY);
+                            this.ctx.fillText(neutralShip.shipNumber.toString(), numberX, numberY);
+                            
+                            this.ctx.restore();
+                        }
+                    }
+                }
+                
+                // Render power-ups
+                if (this.gameState.powerUps) {
+                    for (let powerUp of this.gameState.powerUps) {
+                        if (powerUp.collected) continue;
+                        
+                        this.ctx.save();
+                        this.ctx.translate(powerUp.x, powerUp.y);
+                        
+                        // Power-up background
+                        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                        this.ctx.beginPath();
+                        this.ctx.arc(0, 0, 12, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        // Power-up icon
+                        this.ctx.fillStyle = this.getPowerUpColor(powerUp.type);
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 2;
+                        this.ctx.font = 'bold 14px Arial';
+                        this.ctx.textAlign = 'center';
+                        this.ctx.textBaseline = 'middle';
+                        
+                        const icon = this.getPowerUpIcon(powerUp.type);
+                        this.ctx.strokeText(icon, 0, 0);
+                        this.ctx.fillText(icon, 0, 0);
+                        
+                        this.ctx.restore();
+                    }
+                }
+                
                 // Render cannonballs
                 for (let cannonball of this.gameState.cannonballs) {
                     this.ctx.fillStyle = '#1a1a1a';
@@ -2046,6 +2836,51 @@
                     this.ctx.lineWidth = 1;
                     this.ctx.stroke();
                 }
+            }
+            
+            getPowerUpColor(type) {
+                switch (type) {
+                    case 'health': return '#00FF00';
+                    case 'damage': return '#FF4444';
+                    case 'rateOfFire': return '#FFFF00';
+                    case 'speed': return '#44AAFF';
+                    default: return '#FFFFFF';
+                }
+            }
+            
+            getPowerUpIcon(type) {
+                switch (type) {
+                    case 'health': return '+';
+                    case 'damage': return '⚡';
+                    case 'rateOfFire': return '⟲';
+                    case 'speed': return '→';
+                    default: return '?';
+                }
+            }
+            
+            drawStar(ctx, x, y, radius) {
+                const spikes = 5;
+                const outerRadius = radius;
+                const innerRadius = radius * 0.4;
+                
+                ctx.beginPath();
+                
+                for (let i = 0; i < spikes * 2; i++) {
+                    const angle = (i * Math.PI) / spikes;
+                    const r = i % 2 === 0 ? outerRadius : innerRadius;
+                    const px = x + Math.cos(angle) * r;
+                    const py = y + Math.sin(angle) * r;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(px, py);
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+                ctx.stroke();
             }
             
             gameLoop() {

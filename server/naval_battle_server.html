@@ -1180,6 +1180,9 @@
                 console.log('Room ID:', this.roomId);
                 console.log('Is Host:', this.isHost);
                 
+                // Try to start background music immediately on user click
+                this.playBackgroundMusic();
+                
                 if (this.socket && this.roomId && this.isHost) {
                     console.log('✅ Emitting start-game event to server');
                     this.socket.emit('start-game', this.roomId);
@@ -1747,6 +1750,40 @@
                             
                             this.ctx.strokeText(ship.shipNumber.toString(), numberX, numberY);
                             this.ctx.fillText(ship.shipNumber.toString(), numberX, numberY);
+                            
+                            this.ctx.restore();
+                        }
+                        
+                        // Render tier stars (T2+ only)
+                        if (ship.tier && ship.tier > 1) {
+                            this.ctx.save();
+                            this.ctx.translate(ship.x, ship.y - 35);
+                            
+                            const starCount = Math.min(ship.tier - 1, 3); // T2=1 star, T3=2 stars, T4=3 stars
+                            const starSize = 8;
+                            const spacing = 16;
+                            const startX = -(starCount - 1) * spacing / 2;
+                            
+                            for (let i = 0; i < starCount; i++) {
+                                const x = startX + i * spacing;
+                                
+                                // Draw large filled circle as "star"
+                                this.ctx.fillStyle = '#FFD700'; // Gold
+                                this.ctx.beginPath();
+                                this.ctx.arc(x, 0, starSize, 0, Math.PI * 2);
+                                this.ctx.fill();
+                                
+                                // Black border
+                                this.ctx.strokeStyle = '#000';
+                                this.ctx.lineWidth = 2;
+                                this.ctx.stroke();
+                                
+                                // White center dot
+                                this.ctx.fillStyle = '#FFFFFF';
+                                this.ctx.beginPath();
+                                this.ctx.arc(x, 0, 3, 0, Math.PI * 2);
+                                this.ctx.fill();
+                            }
                             
                             this.ctx.restore();
                         }

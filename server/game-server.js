@@ -17,6 +17,8 @@ class GameRoom {
             ships: [],
             cannonballs: [],
             obstacles: [],
+            neutralShips: [],
+            powerUps: [],
             scores: {
                 team1: 0,
                 team2: 0
@@ -24,7 +26,10 @@ class GameRoom {
             gameStarted: false,
             gameStartTime: null,
             nextShipId: 1,
-            nextCannonballId: 1
+            nextCannonballId: 1,
+            nextNeutralShipId: 1,
+            nextPowerUpId: 1,
+            lastNeutralSpawn: 0
         };
         this.lastUpdate = Date.now();
         this.generateObstacles();
@@ -71,13 +76,32 @@ class GameRoom {
     }
 
     generateObstacles() {
-        // Islands
+        // Islands - avoid spawning near team bases
         for (let i = 0; i < 2; i++) {
+            let x, y, attempts = 0;
+            const team1Base = { x: 100, y: 620 };
+            const team2Base = { x: 900, y: 80 };
+            const minBaseDistance = 150;
+            
+            do {
+                x = 200 + Math.random() * 600; // Center area of map
+                y = 150 + Math.random() * 400;
+                attempts++;
+                
+                // Check distance from both bases
+                const distToTeam1 = Math.sqrt((x - team1Base.x) ** 2 + (y - team1Base.y) ** 2);
+                const distToTeam2 = Math.sqrt((x - team2Base.x) ** 2 + (y - team2Base.y) ** 2);
+                
+                if (distToTeam1 >= minBaseDistance && distToTeam2 >= minBaseDistance) {
+                    break; // Good position found
+                }
+            } while (attempts < 20);
+            
             this.gameState.obstacles.push({
                 id: `island_${i}`,
                 type: 'island',
-                x: 250 + Math.random() * 500,
-                y: 150 + Math.random() * 400,
+                x: x,
+                y: y,
                 radius: 30 + Math.random() * 20,
                 destructible: false
             });
@@ -149,11 +173,43 @@ class GameRoom {
             maxHealth: 3,
             lastShot: Date.now(),
             shotCooldown: 5000,
-            spawnTime: Date.now()
+            spawnTime: Date.now(),
+            upgrades: { health: 0, damage: 0, rateOfFire: 0, speed: 0 },
+            killTierProgress: 0,
+            tier: 1
         };
         
         this.gameState.ships.push(ship);
         return ship;
+    }
+
+    calculateShipTier(ship) {
+        if (!ship.upgrades) return 1;
+        const totalUpgrades = ship.upgrades.health + ship.upgrades.damage + 
+                            ship.upgrades.rateOfFire + ship.upgrades.speed;
+        // Include kill progress in tier calculation
+        const killProgress = (ship.killTierProgress || 0);
+        const totalProgress = totalUpgrades + killProgress;
+        return Math.min(Math.floor(totalProgress / 2) + 1, 5); // Max tier 5
+    }
+
+    awardKillTierProgression(killerShipId, killedShip) {
+        // Find the killer ship
+        const killerShip = this.gameState.ships.find(s => s.id === killerShipId);
+        if (!killerShip) return;
+        
+        // Initialize kill progress if it doesn't exist
+        if (!killerShip.killTierProgress) {
+            killerShip.killTierProgress = 0;
+        }
+        
+        // Award 0.5 tier progress for each kill (2 kills = 1 tier level)
+        killerShip.killTierProgress += 0.5;
+        
+        // Update ship tier
+        killerShip.tier = this.calculateShipTier(killerShip);
+        
+        console.log(`Ship ${killerShip.id} got a kill! Kill progress: ${killerShip.killTierProgress}, New tier: ${killerShip.tier}`);
     }
 
     updateShipControl(playerId, shipId, controlData) {
@@ -290,6 +346,10 @@ class GameRoom {
                     
                     if (ship.health <= 0) {
                         this.gameState.scores[cannonball.shooterTeam]++;
+                        
+                        // Award tier progression to the killer ship
+                        this.awardKillTierProgression(cannonball.shooterId, ship);
+                        
                         // Respawn ship after delay
                         const team = ship.team;
                         const ownerId = ship.ownerId;
