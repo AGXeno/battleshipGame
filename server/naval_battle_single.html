@@ -2325,9 +2325,7 @@
             for (const ship2 of nearbyShips) {
               collisionChecks++;
               if (collisionChecks >= GAME_CONFIG.MAX_COLLISION_CHECKS_PER_FRAME) break;
-              const ship1 = this.gameState.ships[i];
-              const ship2 = this.gameState.ships[j];
-
+              
               if (ship1.playerId === ship2.playerId) continue;
 
               const dx = ship2.x - ship1.x;
