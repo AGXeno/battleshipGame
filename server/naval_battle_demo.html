@@ -361,6 +361,60 @@
     </div>
 
     <script>
+        // Game Constants
+        const GAME_CONFIG = {
+            // Ship Properties
+            SHIP_DEFAULT_SPEED: 25,
+            SHIP_MAX_HEALTH: 3,
+            SHIP_RADIUS: 12,
+            SHIP_CANNON_COOLDOWN: 5000,
+            SHIP_RAM_COOLDOWN: 1000,
+            SHIP_SPEED_CHANGE_RATE: 15,
+            SHIP_BASE_TURN_RATE: 0.8,
+            SHIP_SPAWN_DELAY: 5000,
+            
+            // Cannonball Properties
+            CANNONBALL_SPEED: 80,  // Demo uses slower cannonballs
+            CANNONBALL_RADIUS: 3,
+            CANNONBALL_RANGE: 1000,
+            
+            // Obstacle Properties
+            OBSTACLE_MIN_RADIUS: 20,
+            OBSTACLE_MAX_RADIUS: 35,
+            OBSTACLE_DAMAGE_RADIUS: 12,
+            OBSTACLE_DAMAGE_AMOUNT: 0.1,
+            OBSTACLE_PUSH_FORCE: 15,
+            OBSTACLE_DESTRUCTIBLE_HEALTH: 10,
+            OBSTACLE_LARGE_MIN_RADIUS: 30,
+            OBSTACLE_LARGE_MAX_RADIUS: 50,
+            
+            // AI Behavior
+            AI_ATTACK_RANGE: 150,
+            AI_AVOIDANCE_RANGE: 30,
+            AI_PREDICTIVE_AVOIDANCE_RANGE: 30,
+            
+            // UI and Rendering
+            CANVAS_WIDTH: 1000,
+            CANVAS_HEIGHT: 700,
+            HEADING_COMPASS_RADIUS: 120,
+            HEALTH_BAR_WIDTH: 24,
+            HEALTH_BAR_HEIGHT: 5,
+            
+            // Physics and Movement
+            DELTA_TIME_MULTIPLIER: 0.001,
+            ICEBERG_DRIFT_MIN_SPEED: 3.5,
+            ICEBERG_DRIFT_MAX_SPEED: 7.5,
+            
+            // Audio
+            AUDIO_DEFAULT_MUSIC_VOLUME: 0.5,
+            AUDIO_DEFAULT_SOUND_VOLUME: 0.7,
+            
+            // Performance Optimization
+            SPATIAL_GRID_SIZE: 100,
+            CANNONBALL_POOL_SIZE: 50,
+            TARGET_FPS: 60
+        };
+
         class NavalBattleDemo {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
@@ -1362,7 +1416,7 @@
                     x: ship.x + Math.cos(ship.cannonAngle) * 15,
                     y: ship.y + Math.sin(ship.cannonAngle) * 15,
                     angle: ship.cannonAngle,
-                    speed: 80,
+                    speed: GAME_CONFIG.CANNONBALL_SPEED,
                     shooterId: ship.id,
                     shooterPlayerId: ship.playerId,
                     dead: false

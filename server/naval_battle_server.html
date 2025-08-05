@@ -347,6 +347,43 @@
 
     <script src="/socket.io/socket.io.js"></script>
     <script>
+        // Game Constants
+        const GAME_CONFIG = {
+            // Ship Properties
+            SHIP_DEFAULT_SPEED: 25,
+            SHIP_MAX_HEALTH: 3,
+            SHIP_RADIUS: 12,
+            SHIP_CANNON_COOLDOWN: 5000,
+            SHIP_RAM_COOLDOWN: 1000,
+            SHIP_SPEED_CHANGE_RATE: 15,
+            SHIP_BASE_TURN_RATE: 0.8,
+            SHIP_SPAWN_DELAY: 5000,
+            
+            // Cannonball Properties
+            CANNONBALL_SPEED: 150,
+            CANNONBALL_RADIUS: 3,
+            CANNONBALL_RANGE: 1000,
+            
+            // UI and Rendering
+            CANVAS_WIDTH: 1000,
+            CANVAS_HEIGHT: 700,
+            HEADING_COMPASS_RADIUS: 120,
+            HEALTH_BAR_WIDTH: 24,
+            HEALTH_BAR_HEIGHT: 5,
+            
+            // Physics and Movement
+            DELTA_TIME_MULTIPLIER: 0.001,
+            
+            // Audio
+            AUDIO_DEFAULT_MUSIC_VOLUME: 0.5,
+            AUDIO_DEFAULT_SOUND_VOLUME: 0.7,
+            
+            // Performance Optimization
+            SPATIAL_GRID_SIZE: 100,
+            CANNONBALL_POOL_SIZE: 50,
+            TARGET_FPS: 60
+        };
+
         class NavalBattleMultiplayer {
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');

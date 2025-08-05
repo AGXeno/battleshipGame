@@ -387,7 +387,14 @@
         
         // Audio
         AUDIO_DEFAULT_MUSIC_VOLUME: 0.5,
-        AUDIO_DEFAULT_SOUND_VOLUME: 0.7
+        AUDIO_DEFAULT_SOUND_VOLUME: 0.7,
+        
+        // Performance Optimization
+        SPATIAL_GRID_SIZE: 100,
+        MAX_COLLISION_CHECKS_PER_FRAME: 50,
+        CANNONBALL_POOL_SIZE: 100,
+        TARGET_FPS: 60,
+        FRAME_TIME_MS: 16.67
       };
 
       class NavalBattleGame {
@@ -463,7 +470,134 @@
           this.setupCannonSounds();
           this.generateObstacles();
           this.selectPlayerDock(); // Start with dock selected
+          this.initializeSpatialGrid();
+          this.initializeObjectPools();
+          this.initializeRenderer();
           this.gameLoop();
+        }
+        
+        initializeSpatialGrid() {
+          this.spatialGrid = new Map();
+          this.gridWidth = Math.ceil(GAME_CONFIG.CANVAS_WIDTH / GAME_CONFIG.SPATIAL_GRID_SIZE);
+          this.gridHeight = Math.ceil(GAME_CONFIG.CANVAS_HEIGHT / GAME_CONFIG.SPATIAL_GRID_SIZE);
+        }
+        
+        getGridKey(x, y) {
+          const gridX = Math.floor(x / GAME_CONFIG.SPATIAL_GRID_SIZE);
+          const gridY = Math.floor(y / GAME_CONFIG.SPATIAL_GRID_SIZE);
+          return `${gridX},${gridY}`;
+        }
+        
+        addToSpatialGrid(object) {
+          const key = this.getGridKey(object.x, object.y);
+          if (!this.spatialGrid.has(key)) {
+            this.spatialGrid.set(key, []);
+          }
+          this.spatialGrid.get(key).push(object);
+        }
+        
+        getNearbyObjects(x, y) {
+          const nearby = [];
+          const gridX = Math.floor(x / GAME_CONFIG.SPATIAL_GRID_SIZE);
+          const gridY = Math.floor(y / GAME_CONFIG.SPATIAL_GRID_SIZE);
+          
+          // Check current and adjacent cells
+          for (let dx = -1; dx <= 1; dx++) {
+            for (let dy = -1; dy <= 1; dy++) {
+              const key = `${gridX + dx},${gridY + dy}`;
+              if (this.spatialGrid.has(key)) {
+                nearby.push(...this.spatialGrid.get(key));
+              }
+            }
+          }
+          return nearby;
+        }
+        
+        initializeObjectPools() {
+          this.cannonballPool = [];
+          this.activeCannonballs = new Set();
+          
+          // Pre-create cannonball pool
+          for (let i = 0; i < GAME_CONFIG.CANNONBALL_POOL_SIZE; i++) {
+            this.cannonballPool.push({
+              id: `pooled_${i}`,
+              x: 0,
+              y: 0,
+              angle: 0,
+              speed: GAME_CONFIG.CANNONBALL_SPEED,
+              shooterId: null,
+              shooterPlayerId: null,
+              dead: false,
+              active: false
+            });
+          }
+        }
+        
+        getPooledCannonball() {
+          for (const cannonball of this.cannonballPool) {
+            if (!cannonball.active) {
+              cannonball.active = true;
+              cannonball.dead = false;
+              this.activeCannonballs.add(cannonball);
+              return cannonball;
+            }
+          }
+          // Pool exhausted, create new one (should be rare)
+          const newCannonball = {
+            id: `overflow_${Date.now()}`,
+            x: 0,
+            y: 0,
+            angle: 0,
+            speed: GAME_CONFIG.CANNONBALL_SPEED,
+            shooterId: null,
+            shooterPlayerId: null,
+            dead: false,
+            active: true
+          };
+          this.activeCannonballs.add(newCannonball);
+          return newCannonball;
+        }
+        
+        releaseCannonball(cannonball) {
+          cannonball.active = false;
+          this.activeCannonballs.delete(cannonball);
+        }
+        
+        initializeRenderer() {
+          this.lastFrameTime = 0;
+          this.frameCount = 0;
+          this.renderDirty = true;
+          this.lastRenderObjects = {
+            ships: [],
+            cannonballs: [],
+            obstacles: []
+          };
+        }
+        
+        markRenderDirty() {
+          this.renderDirty = true;
+        }
+        
+        hasObjectsMoved() {
+          // Quick check if objects have moved significantly
+          if (this.gameState.ships.length !== this.lastRenderObjects.ships.length ||
+              this.gameState.cannonballs.length !== this.lastRenderObjects.cannonballs.length) {
+            return true;
+          }
+          
+          // Check if ships moved more than 1 pixel
+          for (let i = 0; i < this.gameState.ships.length; i++) {
+            const ship = this.gameState.ships[i];
+            const lastShip = this.lastRenderObjects.ships[i];
+            if (!lastShip || 
+                Math.abs(ship.x - lastShip.x) > 1 || 
+                Math.abs(ship.y - lastShip.y) > 1 ||
+                Math.abs(ship.angle - lastShip.angle) > 0.01) {
+              return true;
+            }
+          }
+          
+          return false;
         }
 
         selectPlayerDock() {
@@ -1957,9 +2091,31 @@
         }
 
         checkCollisions() {
-          // Ship-ship ramming collisions
-          for (let i = 0; i < this.gameState.ships.length; i++) {
-            for (let j = i + 1; j < this.gameState.ships.length; j++) {
+          // Clear and rebuild spatial grid
+          this.spatialGrid.clear();
+          
+          // Add all collidable objects to spatial grid
+          for (const ship of this.gameState.ships) {
+            this.addToSpatialGrid(ship);
+          }
+          for (const cannonball of this.gameState.cannonballs) {
+            this.addToSpatialGrid(cannonball);
+          }
+          for (const obstacle of this.gameState.obstacles) {
+            this.addToSpatialGrid(obstacle);
+          }
+          
+          // Optimized ship-ship ramming collisions using spatial grid
+          let collisionChecks = 0;
+          for (let i = 0; i < this.gameState.ships.length && collisionChecks < GAME_CONFIG.MAX_COLLISION_CHECKS_PER_FRAME; i++) {
+            const ship1 = this.gameState.ships[i];
+            const nearbyShips = this.getNearbyObjects(ship1.x, ship1.y).filter(obj => 
+              obj !== ship1 && this.gameState.ships.includes(obj) && obj.playerId !== ship1.playerId
+            );
+            
+            for (const ship2 of nearbyShips) {
+              collisionChecks++;
+              if (collisionChecks >= GAME_CONFIG.MAX_COLLISION_CHECKS_PER_FRAME) break;
               const ship1 = this.gameState.ships[i];
               const ship2 = this.gameState.ships[j];
 
@@ -2136,6 +2292,18 @@
             }
           }
 
+          // Release dead cannonballs back to pool
+          for (let i = this.gameState.cannonballs.length - 1; i >= 0; i--) {
+            const cannonball = this.gameState.cannonballs[i];
+            if (cannonball.dead || 
+                cannonball.x < -100 || cannonball.x > GAME_CONFIG.CANVAS_WIDTH + 100 ||
+                cannonball.y < -100 || cannonball.y > GAME_CONFIG.CANVAS_HEIGHT + 100) {
+              this.releaseCannonball(cannonball);
+              this.gameState.cannonballs.splice(i, 1);
+            }
+          }
+          
+          // Keep old filter as backup for non-pooled cannonballs
           this.gameState.cannonballs = this.gameState.cannonballs.filter(
             (c) => !c.dead
           );
@@ -2155,16 +2323,12 @@
               timeSinceSpawn >= 5000 &&
               timeSinceLastShot >= ship.shotCooldown
             ) {
-              const cannonball = {
-                id: Math.random().toString(36).substr(2, 9),
-                shooterId: ship.id,
-                shooterPlayerId: ship.playerId,
-                x: ship.x + Math.cos(ship.cannonAngle) * 25,
-                y: ship.y + Math.sin(ship.cannonAngle) * 25,
-                angle: ship.cannonAngle,
-                speed: GAME_CONFIG.CANNONBALL_SPEED,
-                dead: false,
-              };
+              const cannonball = this.getPooledCannonball();
+              cannonball.shooterId = ship.id;
+              cannonball.shooterPlayerId = ship.playerId;
+              cannonball.x = ship.x + Math.cos(ship.cannonAngle) * 25;
+              cannonball.y = ship.y + Math.sin(ship.cannonAngle) * 25;
+              cannonball.angle = ship.cannonAngle;
 
               this.gameState.cannonballs.push(cannonball);
               ship.lastShot = currentTime;
