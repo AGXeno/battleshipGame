@@ -1278,34 +1278,32 @@
         spawnNeutralShip() {
           const currentTime = Date.now();
           
-          // Find a random spawn location away from player docks
-          let x, y;
-          let validPosition = false;
-          let attempts = 0;
+          // Spawn from map boundaries
+          let x, y, spawnAngle;
+          const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+          const margin = 50; // Distance outside visible map
           
-          while (!validPosition && attempts < 50) {
-            x = 200 + Math.random() * 600; // Middle area of map
-            y = 200 + Math.random() * 300;
-            
-            const playerDock = this.gameState.players.player.dock;
-            const computerDock = this.gameState.players.computer.dock;
-            const distToPlayer = Math.sqrt((x - playerDock.x) ** 2 + (y - playerDock.y) ** 2);
-            const distToComputer = Math.sqrt((x - computerDock.x) ** 2 + (y - computerDock.y) ** 2);
-            
-            // Check distance from all obstacles (islands and icebergs)
-            let tooCloseToObstacle = false;
-            for (const obstacle of this.gameState.obstacles) {
-              const distToObstacle = Math.sqrt((x - obstacle.x) ** 2 + (y - obstacle.y) ** 2);
-              if (distToObstacle < obstacle.radius + 60) { // Give plenty of clearance
-                tooCloseToObstacle = true;
-                break;
-              }
-            }
-            
-            if (distToPlayer > 100 && distToComputer > 100 && !tooCloseToObstacle) {
-              validPosition = true;
-            }
-            attempts++;
+          switch(side) {
+            case 0: // Top
+              x = Math.random() * GAME_CONFIG.CANVAS_WIDTH;
+              y = -margin;
+              spawnAngle = Math.PI / 2; // Point downward
+              break;
+            case 1: // Right
+              x = GAME_CONFIG.CANVAS_WIDTH + margin;
+              y = Math.random() * GAME_CONFIG.CANVAS_HEIGHT;
+              spawnAngle = Math.PI; // Point left
+              break;
+            case 2: // Bottom
+              x = Math.random() * GAME_CONFIG.CANVAS_WIDTH;
+              y = GAME_CONFIG.CANVAS_HEIGHT + margin;
+              spawnAngle = -Math.PI / 2; // Point upward
+              break;
+            case 3: // Left
+              x = -margin;
+              y = Math.random() * GAME_CONFIG.CANVAS_HEIGHT;
+              spawnAngle = 0; // Point right
+              break;
           }
           
           const neutralShip = {
@@ -1314,10 +1312,10 @@
             shipNumber: null,
             x: x,
             y: y,
-            angle: Math.random() * Math.PI * 2,
+            angle: spawnAngle,
             rudderAngle: 0,
             targetRudderAngle: 0,
-            cannonAngle: Math.random() * Math.PI * 2,
+            cannonAngle: spawnAngle,
             speed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7, // Slower than regular ships
             targetSpeed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7,
             defaultSpeed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7,
@@ -1335,7 +1333,7 @@
             aiTarget: null,
             aiLastDecision: 0,
             aiDecisionCooldown: 1500,
-            aiState: "hunt", // Always hunting for high-tier ships
+            aiState: "enter", // Start by entering the map, then switch to hunt
             isNeutral: true
           };
           
@@ -1407,28 +1405,48 @@
         }
         
         executeNeutralShipAI(neutralShip, deltaTime) {
-          const target = neutralShip.aiTarget;
-          if (!target) return;
-          
-          const dx = target.x - neutralShip.x;
-          const dy = target.y - neutralShip.y;
-          const distance = Math.sqrt(dx * dx + dy * dy);
-          
-          // Set cannon angle to target
-          neutralShip.cannonAngle = Math.atan2(dy, dx);
-          
-          // Move towards target if far away, maintain distance if close
-          if (distance > 120) {
-            // Move towards target
+          if (neutralShip.aiState === "enter") {
+            // Move towards center of map until in combat area
+            const centerX = GAME_CONFIG.CANVAS_WIDTH / 2;
+            const centerY = GAME_CONFIG.CANVAS_HEIGHT / 2;
+            const dx = centerX - neutralShip.x;
+            const dy = centerY - neutralShip.y;
+            const distanceToCenter = Math.sqrt(dx * dx + dy * dy);
+            
+            // Move towards center
             neutralShip.targetRudderAngle = Math.atan2(dy, dx) - neutralShip.angle;
             neutralShip.targetSpeed = neutralShip.defaultSpeed;
-          } else if (distance < 80) {
-            // Move away from target (maintain firing distance)
-            neutralShip.targetRudderAngle = Math.atan2(-dy, -dx) - neutralShip.angle;
-            neutralShip.targetSpeed = neutralShip.defaultSpeed * 0.5;
-          } else {
-            // Maintain position and fire
-            neutralShip.targetSpeed = neutralShip.defaultSpeed * 0.3;
+            
+            // Switch to hunt mode when near center or in bounds
+            if (distanceToCenter < 200 || 
+                (neutralShip.x > 50 && neutralShip.x < GAME_CONFIG.CANVAS_WIDTH - 50 &&
+                 neutralShip.y > 50 && neutralShip.y < GAME_CONFIG.CANVAS_HEIGHT - 50)) {
+              neutralShip.aiState = "hunt";
+            }
+          } else if (neutralShip.aiState === "hunt") {
+            const target = neutralShip.aiTarget;
+            if (!target) return;
+            
+            const dx = target.x - neutralShip.x;
+            const dy = target.y - neutralShip.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // Set cannon angle to target
+            neutralShip.cannonAngle = Math.atan2(dy, dx);
+            
+            // Move towards target if far away, maintain distance if close
+            if (distance > 120) {
+              // Move towards target
+              neutralShip.targetRudderAngle = Math.atan2(dy, dx) - neutralShip.angle;
+              neutralShip.targetSpeed = neutralShip.defaultSpeed;
+            } else if (distance < 80) {
+              // Move away from target (maintain firing distance)
+              neutralShip.targetRudderAngle = Math.atan2(-dy, -dx) - neutralShip.angle;
+              neutralShip.targetSpeed = neutralShip.defaultSpeed * 0.5;
+            } else {
+              // Maintain position and fire
+              neutralShip.targetSpeed = neutralShip.defaultSpeed * 0.3;
+            }
           }
           
           // Normalize rudder angle
