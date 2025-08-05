@@ -394,7 +394,21 @@
         MAX_COLLISION_CHECKS_PER_FRAME: 50,
         CANNONBALL_POOL_SIZE: 100,
         TARGET_FPS: 60,
-        FRAME_TIME_MS: 16.67
+        FRAME_TIME_MS: 16.67,
+        
+        // Neutral Ships and Upgrades
+        NEUTRAL_SHIP_SPAWN_CHANCE: 0.3,
+        NEUTRAL_SHIP_SPAWN_INTERVAL: 15000, // 15 seconds
+        MAX_SHIP_TIER: 3,
+        UPGRADE_HEALTH_BONUS: 1,
+        UPGRADE_DAMAGE_MULTIPLIER: 1.5,
+        UPGRADE_RATE_OF_FIRE_BONUS: 0.7, // Reduces cooldown by 30%
+        UPGRADE_SPEED_MULTIPLIER: 1.3,
+        
+        // AI Difficulty
+        AI_DIFFICULTY_EASY: 0.5,
+        AI_DIFFICULTY_NORMAL: 1.0,
+        AI_DIFFICULTY_HARD: 1.5
       };
 
       class NavalBattleGame {
@@ -414,6 +428,9 @@
             ships: [],
             cannonballs: [],
             obstacles: [],
+            neutralShips: [],
+            lastNeutralSpawn: 0,
+            aiDifficulty: GAME_CONFIG.AI_DIFFICULTY_NORMAL,
             players: {
               player: {
                 score: 0,
@@ -423,6 +440,10 @@
               computer: {
                 score: 0,
                 dock: { x: 900, y: 80, spawnAngle: (135 * Math.PI) / 180 },
+                shipCount: 0,
+              },
+              neutral: {
+                score: 0,
                 shipCount: 0,
               },
             },
@@ -1234,6 +1255,14 @@
             shotCooldown: GAME_CONFIG.SHIP_CANNON_COOLDOWN,
             spawnTime: currentTime,
             lastRamTime: 0,
+            // Upgrade system
+            tier: 1,
+            upgrades: {
+              health: 0,
+              damage: 0,
+              rateOfFire: 0,
+              speed: 0
+            },
             aiTarget: null,
             aiLastDecision: 0,
             aiDecisionCooldown: 1000,
@@ -1243,6 +1272,157 @@
           this.gameState.ships.push(ship);
           this.gameState.players[playerId].shipCount++;
           return ship;
+        }
+        
+        spawnNeutralShip() {
+          const currentTime = Date.now();
+          
+          // Find a random spawn location away from player docks
+          let x, y;
+          let validPosition = false;
+          let attempts = 0;
+          
+          while (!validPosition && attempts < 50) {
+            x = 200 + Math.random() * 600; // Middle area of map
+            y = 200 + Math.random() * 300;
+            
+            const playerDock = this.gameState.players.player.dock;
+            const computerDock = this.gameState.players.computer.dock;
+            const distToPlayer = Math.sqrt((x - playerDock.x) ** 2 + (y - playerDock.y) ** 2);
+            const distToComputer = Math.sqrt((x - computerDock.x) ** 2 + (y - computerDock.y) ** 2);
+            
+            if (distToPlayer > 100 && distToComputer > 100) {
+              validPosition = true;
+            }
+            attempts++;
+          }
+          
+          const neutralShip = {
+            id: Math.random().toString(36).substr(2, 9),
+            playerId: "neutral",
+            shipNumber: null,
+            x: x,
+            y: y,
+            angle: Math.random() * Math.PI * 2,
+            rudderAngle: 0,
+            targetRudderAngle: 0,
+            cannonAngle: Math.random() * Math.PI * 2,
+            speed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7, // Slower than regular ships
+            targetSpeed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7,
+            defaultSpeed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7,
+            health: GAME_CONFIG.SHIP_MAX_HEALTH + 1, // Slightly more health
+            maxHealth: GAME_CONFIG.SHIP_MAX_HEALTH + 1,
+            lastShot: currentTime,
+            shotCooldown: GAME_CONFIG.SHIP_CANNON_COOLDOWN * 0.8, // Faster firing
+            spawnTime: currentTime,
+            lastRamTime: 0,
+            // Neutral ships don't have upgrades but carry power-ups
+            tier: 1,
+            upgrades: { health: 0, damage: 0, rateOfFire: 0, speed: 0 },
+            powerUpType: this.getRandomPowerUpType(),
+            // AI for neutral ships - targets highest tier ships
+            aiTarget: null,
+            aiLastDecision: 0,
+            aiDecisionCooldown: 1500,
+            aiState: "hunt", // Always hunting for high-tier ships
+            isNeutral: true
+          };
+          
+          this.gameState.ships.push(neutralShip);
+          this.gameState.players.neutral.shipCount++;
+          console.log(`Spawned neutral ship with ${neutralShip.powerUpType} power-up`);
+        }
+        
+        getRandomPowerUpType() {
+          const powerUps = ['health', 'damage', 'rateOfFire', 'speed'];
+          return powerUps[Math.floor(Math.random() * powerUps.length)];
+        }
+        
+        updateNeutralShipSpawning() {
+          if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
+          
+          const currentTime = Date.now();
+          const timeSinceLastSpawn = currentTime - this.gameState.lastNeutralSpawn;
+          
+          // Spawn neutral ships periodically
+          if (timeSinceLastSpawn > GAME_CONFIG.NEUTRAL_SHIP_SPAWN_INTERVAL) {
+            if (Math.random() < GAME_CONFIG.NEUTRAL_SHIP_SPAWN_CHANCE) {
+              // Limit to 2 neutral ships at once
+              const neutralCount = this.gameState.ships.filter(s => s.playerId === "neutral").length;
+              if (neutralCount < 2) {
+                this.spawnNeutralShip();
+                this.gameState.lastNeutralSpawn = currentTime;
+              }
+            } else {
+              // Reset timer even if we don't spawn
+              this.gameState.lastNeutralSpawn = currentTime;
+            }
+          }
+        }
+        
+        applyPowerUp(ship, powerUpType) {
+          console.log(`Applying ${powerUpType} power-up to ${ship.playerId} ship`);
+          
+          switch (powerUpType) {
+            case 'health':
+              ship.upgrades.health++;
+              ship.maxHealth += GAME_CONFIG.UPGRADE_HEALTH_BONUS;
+              ship.health += GAME_CONFIG.UPGRADE_HEALTH_BONUS; // Heal immediately
+              break;
+              
+            case 'damage':
+              ship.upgrades.damage++;
+              // Damage multiplier applied when creating cannonballs
+              break;
+              
+            case 'rateOfFire':
+              ship.upgrades.rateOfFire++;
+              ship.shotCooldown *= GAME_CONFIG.UPGRADE_RATE_OF_FIRE_BONUS;
+              break;
+              
+            case 'speed':
+              ship.upgrades.speed++;
+              ship.defaultSpeed *= GAME_CONFIG.UPGRADE_SPEED_MULTIPLIER;
+              ship.targetSpeed = ship.defaultSpeed;
+              break;
+          }
+          
+          // Update ship tier based on total upgrades
+          const totalUpgrades = ship.upgrades.health + ship.upgrades.damage + 
+                               ship.upgrades.rateOfFire + ship.upgrades.speed;
+          ship.tier = Math.min(Math.floor(totalUpgrades / 2) + 1, GAME_CONFIG.MAX_SHIP_TIER);
+          
+          console.log(`Ship now has tier ${ship.tier} with upgrades:`, ship.upgrades);
+        }
+        
+        executeNeutralShipAI(neutralShip, deltaTime) {
+          const target = neutralShip.aiTarget;
+          if (!target) return;
+          
+          const dx = target.x - neutralShip.x;
+          const dy = target.y - neutralShip.y;
+          const distance = Math.sqrt(dx * dx + dy * dy);
+          
+          // Set cannon angle to target
+          neutralShip.cannonAngle = Math.atan2(dy, dx);
+          
+          // Move towards target if far away, maintain distance if close
+          if (distance > 120) {
+            // Move towards target
+            neutralShip.targetRudderAngle = Math.atan2(dy, dx) - neutralShip.angle;
+            neutralShip.targetSpeed = neutralShip.defaultSpeed;
+          } else if (distance < 80) {
+            // Move away from target (maintain firing distance)
+            neutralShip.targetRudderAngle = Math.atan2(-dy, -dx) - neutralShip.angle;
+            neutralShip.targetSpeed = neutralShip.defaultSpeed * 0.5;
+          } else {
+            // Maintain position and fire
+            neutralShip.targetSpeed = neutralShip.defaultSpeed * 0.3;
+          }
+          
+          // Normalize rudder angle
+          while (neutralShip.targetRudderAngle > Math.PI) neutralShip.targetRudderAngle -= 2 * Math.PI;
+          while (neutralShip.targetRudderAngle < -Math.PI) neutralShip.targetRudderAngle += 2 * Math.PI;
         }
 
         generateObstacles() {
@@ -1730,6 +1910,34 @@
 
         updateAI(deltaTime) {
           const currentTime = Date.now();
+          
+          // Update neutral ships AI - target highest tier ships
+          const neutralShips = this.gameState.ships.filter(s => s.playerId === "neutral");
+          const allEnemyShips = this.gameState.ships.filter(s => s.playerId === "player" || s.playerId === "computer");
+          
+          for (const neutralShip of neutralShips) {
+            if (currentTime - neutralShip.aiLastDecision > neutralShip.aiDecisionCooldown) {
+              // Find highest tier enemy ship
+              let highestTierShip = null;
+              let highestTier = 0;
+              
+              for (const enemyShip of allEnemyShips) {
+                if (enemyShip.tier > highestTier) {
+                  highestTier = enemyShip.tier;
+                  highestTierShip = enemyShip;
+                }
+              }
+              
+              neutralShip.aiTarget = highestTierShip;
+              neutralShip.aiLastDecision = currentTime;
+            }
+            
+            // Execute neutral ship AI behavior
+            if (neutralShip.aiTarget && neutralShip.aiTarget.health > 0) {
+              this.executeNeutralShipAI(neutralShip, deltaTime);
+            }
+          }
+          
           const computerShips = this.gameState.ships.filter(
             (s) => s.playerId === "computer"
           );
@@ -2004,6 +2212,7 @@
 
           this.updatePlayerControls();
           this.updateAI(deltaTime);
+          this.updateNeutralShipSpawning();
           this.updateShips(deltaTime);
           this.updateCannonballs(deltaTime);
           this.updateIcebergDrift(deltaTime);
@@ -2264,8 +2473,18 @@
                 cannonball.dead = true;
                 ship.health -= 1;
 
-                if (ship.health <= 0 && cannonball.shooterPlayerId) {
-                  this.gameState.players[cannonball.shooterPlayerId].score++;
+                if (ship.health <= 0) {
+                  if (cannonball.shooterPlayerId) {
+                    this.gameState.players[cannonball.shooterPlayerId].score++;
+                    
+                    // If a neutral ship was destroyed, give power-up to the shooter
+                    if (ship.playerId === "neutral" && ship.powerUpType) {
+                      const shooterShip = this.gameState.ships.find(s => s.id === cannonball.shooterId);
+                      if (shooterShip) {
+                        this.applyPowerUp(shooterShip, ship.powerUpType);
+                      }
+                    }
+                  }
                 }
               }
             }
@@ -2665,13 +2884,23 @@
             this.ctx.rotate(ship.angle);
 
             // Main ship body
-            this.ctx.fillStyle =
-              ship.playerId === "player" ? "#4169E1" : "#DC143C";
+            if (ship.playerId === "player") {
+              this.ctx.fillStyle = "#4169E1";
+            } else if (ship.playerId === "computer") {
+              this.ctx.fillStyle = "#DC143C";
+            } else {
+              this.ctx.fillStyle = "#FFFFFF"; // White for neutral ships
+            }
             this.ctx.fillRect(-10, -5, 20, 10);
 
             // Rear section (darker color)
-            this.ctx.fillStyle =
-              ship.playerId === "player" ? "#00008B" : "#8B0000";
+            if (ship.playerId === "player") {
+              this.ctx.fillStyle = "#00008B";
+            } else if (ship.playerId === "computer") {
+              this.ctx.fillStyle = "#8B0000";
+            } else {
+              this.ctx.fillStyle = "#CCCCCC"; // Light gray for neutral ships
+            }
             this.ctx.fillRect(5, -3, 5, 6);
 
             // Ship outline
@@ -2725,6 +2954,18 @@
               this.ctx.strokeStyle = "#000";
               this.ctx.lineWidth = 1;
               this.ctx.strokeRect(-12, 0, 24, 5);
+              
+              // Upgrade stars (tier indicators)
+              if (ship.tier > 1) {
+                this.ctx.fillStyle = "#FFD700"; // Gold stars
+                this.ctx.font = "12px Arial";
+                this.ctx.textAlign = "center";
+                let stars = "";
+                for (let i = 1; i < ship.tier; i++) {
+                  stars += "★";
+                }
+                this.ctx.fillText(stars, 0, -8);
+              }
 
               this.ctx.restore();
             }
