@@ -352,7 +352,7 @@
             // Ship Properties
             SHIP_DEFAULT_SPEED: 25,
             SHIP_MAX_HEALTH: 3,
-            SHIP_RADIUS: 12,
+            SHIP_RADIUS: 24,
             SHIP_CANNON_COOLDOWN: 5000,
             SHIP_RAM_COOLDOWN: 1000,
             SHIP_SPEED_CHANGE_RATE: 15,
@@ -423,11 +423,112 @@
                 this.lastEPressed = false;
                 this.pendingRoomJoin = null;
                 this.lastCannonUpdate = 0;
+                this.animationFrame = 0; // Current animation frame (0-3)
+                this.lastAnimationUpdate = 0; // Last time animation frame was updated
                 
                 this.init();
             }
+
+            // Image loading and management methods
+            loadImages() {
+                this.islandImages = [];
+                this.icebergImages = [];
+                this.shipImages = {
+                    red: {},
+                    blue: {},
+                    white: {}
+                };
+                
+                          // Load island images (6 total: 0-5)
+          for (let i = 0; i < 6; i++) {
+            const img = new Image();
+            img.src = `Assets/Visuals/Islands/Island ${i}.png`;
+            this.islandImages.push(img);
+          }
+          
+          // Load iceberg images (12 total: 0-11)
+          for (let i = 0; i < 12; i++) {
+            const img = new Image();
+            img.src = `Assets/Visuals/Icebergs/Iceberg ${i}.png`;
+            this.icebergImages.push(img);
+          }
+                
+                          // Load ship images for each color and direction (4 animation frames each)
+          const shipColors = ['Red', 'Blue', 'White'];
+          const shipDirections = ['East', 'NorthEast', 'North', 'NorthWest', 'West', 'SouthWest', 'South', 'SouthEast'];
+          
+          shipColors.forEach(color => {
+            shipDirections.forEach(direction => {
+              if (!this.shipImages[color.toLowerCase()]) {
+                this.shipImages[color.toLowerCase()] = {};
+              }
+              if (!this.shipImages[color.toLowerCase()][direction]) {
+                this.shipImages[color.toLowerCase()][direction] = [];
+              }
+              
+              // Load all 4 animation frames (0, 1, 2, 3)
+              for (let frame = 0; frame < 4; frame++) {
+                const img = new Image();
+                img.src = `Assets/Visuals/${color}Ship/${color}_Ship_${direction}/${color}_Ship_${direction}_${frame}.png`;
+                this.shipImages[color.toLowerCase()][direction].push(img);
+              }
+            });
+          });
+            }
+
+                getIslandImage(index) {
+                    return this.islandImages[index] || this.islandImages[0];
+                }
+
+                getIcebergImage(index) {
+                    return this.icebergImages[index] || this.icebergImages[0];
+                }
+                
+                getShipImage(team, angle) {
+                    // Convert angle to degrees and normalize to 0-360
+                    let degrees = (angle * 180 / Math.PI) % 360;
+                    if (degrees < 0) degrees += 360;
+                    
+                    // Corrected direction mapping
+                    let direction;
+                    if (degrees >= 337.5 || degrees < 22.5) {
+                        direction = 'East';
+                    } else if (degrees >= 22.5 && degrees < 67.5) {
+                        direction = 'SouthEast';
+                    } else if (degrees >= 67.5 && degrees < 112.5) {
+                        direction = 'South';
+                    } else if (degrees >= 112.5 && degrees < 157.5) {
+                        direction = 'SouthWest';
+                    } else if (degrees >= 157.5 && degrees < 202.5) {
+                        direction = 'West';
+                    } else if (degrees >= 202.5 && degrees < 247.5) {
+                        direction = 'NorthWest';
+                    } else if (degrees >= 247.5 && degrees < 292.5) {
+                        direction = 'North';
+                    } else if (degrees >= 292.5 && degrees < 337.5) {
+                        direction = 'NorthEast';
+                    }
+                    
+                    // Determine ship color based on team
+                    let color;
+                    if (team === 'team1') {
+                        color = 'blue';
+                    } else if (team === 'team2') {
+                        color = 'red';
+                    } else {
+                        color = 'white'; // Treat all other cases as neutral
+                    }
+                    
+                    // Return the current animation frame
+                    const shipImageArray = this.shipImages[color]?.[direction];
+                    if (shipImageArray && shipImageArray.length > 0) {
+                        return shipImageArray[this.animationFrame] || shipImageArray[0];
+                    }
+                    return null;
+                }
             
             init() {
+                this.loadImages();
                 this.setupCanvas();
                 this.setupControls();
                 this.setupInitialMenu();
@@ -1180,6 +1281,9 @@
                 console.log('Room ID:', this.roomId);
                 console.log('Is Host:', this.isHost);
                 
+                // Try to start background music immediately on user click
+                this.playBackgroundMusic();
+                
                 if (this.socket && this.roomId && this.isHost) {
                     console.log('✅ Emitting start-game event to server');
                     this.socket.emit('start-game', this.roomId);
@@ -1602,25 +1706,19 @@
                         this.ctx.translate(obstacle.x, obstacle.y);
                         
                         if (obstacle.type === 'island') {
-                            this.ctx.fillStyle = '#8B4513';
-                            this.ctx.beginPath();
-                            this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
-                            this.ctx.fill();
-                            
-                            this.ctx.fillStyle = '#654321';
-                            this.ctx.beginPath();
-                            this.ctx.arc(-obstacle.radius * 0.3, -obstacle.radius * 0.3, obstacle.radius * 0.6, 0, Math.PI * 2);
-                            this.ctx.fill();
+                            // Draw island image
+                            const islandImg = this.getIslandImage(obstacle.imageIndex);
+                            if (islandImg) {
+                                const size = obstacle.radius * 2;
+                                this.ctx.drawImage(islandImg, -size/2, -size/2, size, size);
+                            }
                         } else if (obstacle.type === 'iceberg') {
-                            this.ctx.fillStyle = '#E0FFFF';
-                            this.ctx.beginPath();
-                            this.ctx.arc(0, 0, obstacle.radius, 0, Math.PI * 2);
-                            this.ctx.fill();
-                            
-                            this.ctx.fillStyle = '#B0E0E6';
-                            this.ctx.beginPath();
-                            this.ctx.arc(-5, -5, obstacle.radius * 0.6, 0, Math.PI * 2);
-                            this.ctx.fill();
+                            // Draw iceberg image
+                            const icebergImg = this.getIcebergImage(obstacle.imageIndex);
+                            if (icebergImg) {
+                                const size = obstacle.radius * 2;
+                                this.ctx.drawImage(icebergImg, -size/2, -size/2, size, size);
+                            }
                         }
                         
                         this.ctx.restore();
@@ -1661,24 +1759,45 @@
                     for (let ship of this.gameState.ships) {
                         this.ctx.save();
                         this.ctx.translate(ship.x, ship.y);
-                        this.ctx.rotate(ship.angle);
                         
-                        this.ctx.fillStyle = ship.team === 'team1' ? '#4169E1' : '#DC143C';
-                        this.ctx.fillRect(-10, -5, 20, 10);
-                        
-                        this.ctx.fillStyle = ship.team === 'team1' ? '#00008B' : '#8B0000';
-                        this.ctx.fillRect(5, -3, 5, 6);
-                        
-                        this.ctx.strokeStyle = '#000';
-                        this.ctx.lineWidth = 1;
-                        this.ctx.strokeRect(-10, -5, 20, 10);
+                        // Draw ship image based on team and angle
+                        const shipImg = this.getShipImage(ship.team, ship.angle);
+                        if (shipImg) {
+                            // Draw ship image centered at origin
+                            const shipSize = 48; // Size of ship image
+                            this.ctx.drawImage(shipImg, -shipSize/2, -shipSize/2, shipSize, shipSize);
+                        } else {
+                            // Fallback to colored rectangles if image not loaded
+                            let fillColor, darkColor;
+                            if (ship.team === 'team1') {
+                                fillColor = '#4169E1';
+                                darkColor = '#00008B';
+                            } else if (ship.team === 'team2') {
+                                fillColor = '#DC143C';
+                                darkColor = '#8B0000';
+                            } else {
+                                // Neutral ships - use white/gray
+                                fillColor = '#FFFFFF';
+                                darkColor = '#CCCCCC';
+                            }
+                            
+                            this.ctx.fillStyle = fillColor;
+                            this.ctx.fillRect(-24, -24, 48, 48);
+                            
+                            this.ctx.fillStyle = darkColor;
+                            this.ctx.fillRect(12, -12, 12, 24);
+                            
+                            this.ctx.strokeStyle = '#000';
+                            this.ctx.lineWidth = 1;
+                            this.ctx.strokeRect(-24, -24, 48, 48);
+                        }
                         
                         // Selection highlighting (drawn first, in ship coordinate space)
                         if (ship.id === this.selectedShipId) {
                             // Enhanced selection highlighting
                             this.ctx.strokeStyle = '#FFFF00';
                             this.ctx.lineWidth = 4;
-                            this.ctx.strokeRect(-15, -10, 30, 20);
+                            this.ctx.strokeRect(-24, -24, 48, 48);
                             
                             // Add a pulsing outer glow effect
                             const time = Date.now() / 500;
@@ -1688,7 +1807,7 @@
                             this.ctx.globalAlpha = alpha;
                             this.ctx.strokeStyle = '#FFFFFF';
                             this.ctx.lineWidth = 2;
-                            this.ctx.strokeRect(-18, -12, 36, 24);
+                            this.ctx.strokeRect(-30, -30, 60, 60);
                             this.ctx.shadowBlur = 0;
                             this.ctx.globalAlpha = 1;
                         }
@@ -1747,6 +1866,40 @@
                             
                             this.ctx.strokeText(ship.shipNumber.toString(), numberX, numberY);
                             this.ctx.fillText(ship.shipNumber.toString(), numberX, numberY);
+                            
+                            this.ctx.restore();
+                        }
+                        
+                        // Render tier stars (T2+ only)
+                        if (ship.tier && ship.tier > 1) {
+                            this.ctx.save();
+                            this.ctx.translate(ship.x, ship.y - 35);
+                            
+                            const starCount = Math.min(ship.tier - 1, 3); // T2=1 star, T3=2 stars, T4=3 stars
+                            const starSize = 8;
+                            const spacing = 16;
+                            const startX = -(starCount - 1) * spacing / 2;
+                            
+                            for (let i = 0; i < starCount; i++) {
+                                const x = startX + i * spacing;
+                                
+                                // Draw large filled circle as "star"
+                                this.ctx.fillStyle = '#FFD700'; // Gold
+                                this.ctx.beginPath();
+                                this.ctx.arc(x, 0, starSize, 0, Math.PI * 2);
+                                this.ctx.fill();
+                                
+                                // Black border
+                                this.ctx.strokeStyle = '#000';
+                                this.ctx.lineWidth = 2;
+                                this.ctx.stroke();
+                                
+                                // White center dot
+                                this.ctx.fillStyle = '#FFFFFF';
+                                this.ctx.beginPath();
+                                this.ctx.arc(x, 0, 3, 0, Math.PI * 2);
+                                this.ctx.fill();
+                            }
                             
                             this.ctx.restore();
                         }
@@ -1815,6 +1968,13 @@
                 this.lastTime = currentTime;
                 
                 this.update(deltaTime);
+                
+                                   // Update animation frame every 0.25 seconds (250ms)
+                   if (currentTime - this.lastAnimationUpdate >= 250) {
+                     this.animationFrame = (this.animationFrame + 1) % 4; // Cycle through 0, 1, 2, 3
+                     this.lastAnimationUpdate = currentTime;
+                   }
+                
                 this.render();
                 
                 requestAnimationFrame(() => this.gameLoop());
