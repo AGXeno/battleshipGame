@@ -46,4 +46,6 @@
 2. Open browser and go to `http://localhost:3003`
 3. Click "Multiplayer" → Enter room name → "Join Room"
 4. Have another player do the same with the same room name
-5. Host clicks "Start Game" when both players are ready
+5. Host clicks "Start Game" when both players are ready 
+
+:)
