@@ -14,8 +14,8 @@ class GameRoom {
         this.roomId = roomId;
         this.players = new Map();
         // Game area dimensions - will be communicated to clients
-        this.gameWidth = 1920;  // Standard game area width
-        this.gameHeight = 1080; // Standard game area height
+        this.gameWidth = 1000;  // Standard game area width
+        this.gameHeight = 700;  // Standard game area height
         this.gameState = {
             ships: [],
             cannonballs: [],
