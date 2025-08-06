@@ -260,7 +260,7 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas" width="1000" height="700" tabindex="0"></canvas>
+        <canvas id="gameCanvas" width="1920" height="1080" tabindex="0"></canvas>
         
         <div id="headingDisplay">
             <canvas id="headingCanvas" width="350" height="160"></canvas>
@@ -770,7 +770,7 @@
                 this.canvas.width = width;
                 this.canvas.height = height;
                 
-                // Calculate scaling based on viewport size compared to original 1000x700
+                // Calculate scaling based on viewport size compared to original 1920x1080
                 const scaleX = width / 1000;
                 const scaleY = height / 700;
                 this.SCALE_AVG = (scaleX + scaleY) / 2;
@@ -2392,8 +2392,182 @@
                         this.ctx.stroke();
                     }
                 }
+                
+                // Render dashboard and tiller for selected ship
+                if (this.selectedShipId && this.gameState.ships) {
+                    const selectedShip = this.gameState.ships.find(ship => ship.id === this.selectedShipId);
+                    if (selectedShip && selectedShip.ownerId === this.myPlayerId) {
+                        this.renderDashboard(selectedShip);
+                        this.renderTillerDisplay(selectedShip);
+                    }
+                }
             }
             
+            renderDashboard(ship) {
+                const dashboardX = this.canvas.width - 350;
+                const dashboardY = this.canvas.height - 150;
+                const dashboardWidth = 320;
+                const dashboardHeight = 120;
+                
+                // Dashboard background with transparency 0.1
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.fillRect(dashboardX, dashboardY, dashboardWidth, dashboardHeight);
+                
+                // Dashboard border
+                this.ctx.strokeStyle = '#16213e';
+                this.ctx.lineWidth = 2;
+                this.ctx.strokeRect(dashboardX, dashboardY, dashboardWidth, dashboardHeight);
+                
+                // Dashboard content
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = '16px Arial';
+                this.ctx.textAlign = 'left';
+                
+                // Ship info
+                const shipNumber = ship.shipNumber || 1;
+                const health = ship.health || 3;
+                const maxHealth = ship.maxHealth || 3;
+                const speed = Math.round(ship.speed || 0);
+                const tier = ship.tier || 1;
+                
+                let yOffset = 20;
+                this.ctx.fillText(`Ship ${shipNumber} (T${tier})`, dashboardX + 10, dashboardY + yOffset);
+                yOffset += 25;
+                this.ctx.fillText(`Health: ${health}/${maxHealth}`, dashboardX + 10, dashboardY + yOffset);
+                yOffset += 25;
+                this.ctx.fillText(`Speed: ${speed}`, dashboardX + 10, dashboardY + yOffset);
+                yOffset += 25;
+                
+                // Team indicator
+                const teamColor = ship.team === 'team1' ? '#4169E1' : '#DC143C';
+                const teamName = ship.team === 'team1' ? 'Blue Team' : 'Red Team';
+                this.ctx.fillStyle = teamColor;
+                this.ctx.fillText(teamName, dashboardX + 10, dashboardY + yOffset);
+                
+                // Tier stars
+                if (tier > 1) {
+                    const starCount = Math.min(tier - 1, 3);
+                    for (let i = 0; i < starCount; i++) {
+                        const starX = dashboardX + 200 + i * 20;
+                        const starY = dashboardY + 25;
+                        
+                        this.ctx.fillStyle = '#FFD700';
+                        this.ctx.beginPath();
+                        this.ctx.arc(starX, starY, 8, 0, Math.PI * 2);
+                        this.ctx.fill();
+                        
+                        this.ctx.strokeStyle = '#000';
+                        this.ctx.lineWidth = 1;
+                        this.ctx.stroke();
+                    }
+                }
+            }
+            
+            renderTillerDisplay(ship) {
+                const tillerX = this.canvas.width - 200;
+                const tillerY = this.canvas.height - 300;
+                const tillerRadius = 80;
+                
+                // Tiller background with transparency 0.1
+                this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                this.ctx.beginPath();
+                this.ctx.arc(tillerX, tillerY, tillerRadius + 10, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Tiller border
+                this.ctx.strokeStyle = '#16213e';
+                this.ctx.lineWidth = 2;
+                this.ctx.beginPath();
+                this.ctx.arc(tillerX, tillerY, tillerRadius + 10, 0, Math.PI * 2);
+                this.ctx.stroke();
+                
+                // Tiller semicircle (top half)
+                this.ctx.strokeStyle = '#fff';
+                this.ctx.lineWidth = 3;
+                this.ctx.beginPath();
+                this.ctx.arc(tillerX, tillerY, tillerRadius, Math.PI, 0);
+                this.ctx.stroke();
+                
+                // Degree markings
+                this.ctx.strokeStyle = '#ccc';
+                this.ctx.lineWidth = 1;
+                this.ctx.fillStyle = '#ccc';
+                this.ctx.font = '12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                
+                // Major markings every 15 degrees (-45 to +45)
+                for (let tillerDeg = -45; tillerDeg <= 45; tillerDeg += 15) {
+                    const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
+                    
+                    const x1 = tillerX + Math.cos(protractorAngle) * (tillerRadius - 15);
+                    const y1 = tillerY - Math.sin(protractorAngle) * (tillerRadius - 15);
+                    const x2 = tillerX + Math.cos(protractorAngle) * tillerRadius;
+                    const y2 = tillerY - Math.sin(protractorAngle) * tillerRadius;
+                    
+                    this.ctx.beginPath();
+                    this.ctx.moveTo(x1, y1);
+                    this.ctx.lineTo(x2, y2);
+                    this.ctx.stroke();
+                    
+                    // Labels
+                    const labelX = tillerX + Math.cos(protractorAngle) * (tillerRadius + 15);
+                    const labelY = tillerY - Math.sin(protractorAngle) * (tillerRadius + 15);
+                    
+                    if (tillerDeg === 0) {
+                        this.ctx.fillText('0°', labelX, labelY);
+                    } else {
+                        const sign = tillerDeg > 0 ? '+' : '';
+                        this.ctx.fillText(sign + tillerDeg + '°', labelX, labelY);
+                    }
+                }
+                
+                // Minor markings every 5 degrees
+                for (let tillerDeg = -40; tillerDeg <= 40; tillerDeg += 5) {
+                    if (tillerDeg % 15 !== 0) {
+                        const protractorAngle = Math.PI * (1 - (tillerDeg + 45) / 90);
+                        
+                        const x1 = tillerX + Math.cos(protractorAngle) * (tillerRadius - 8);
+                        const y1 = tillerY - Math.sin(protractorAngle) * (tillerRadius - 8);
+                        const x2 = tillerX + Math.cos(protractorAngle) * tillerRadius;
+                        const y2 = tillerY - Math.sin(protractorAngle) * tillerRadius;
+                        
+                        this.ctx.beginPath();
+                        this.ctx.moveTo(x1, y1);
+                        this.ctx.lineTo(x2, y2);
+                        this.ctx.stroke();
+                    }
+                }
+                
+                // Tiller indicator line
+                const tillerAngle = ship.rudderAngle || 0;
+                const tillerDegrees = (tillerAngle * 180) / Math.PI;
+                const clampedTiller = Math.max(-45, Math.min(45, tillerDegrees));
+                const protractorAngle = Math.PI * (1 - (clampedTiller + 45) / 90);
+                
+                this.ctx.strokeStyle = '#FFFF00';
+                this.ctx.lineWidth = 4;
+                this.ctx.beginPath();
+                this.ctx.moveTo(tillerX, tillerY);
+                this.ctx.lineTo(
+                    tillerX + Math.cos(protractorAngle) * (tillerRadius - 5),
+                    tillerY - Math.sin(protractorAngle) * (tillerRadius - 5)
+                );
+                this.ctx.stroke();
+                
+                // Center dot
+                this.ctx.fillStyle = '#FFFF00';
+                this.ctx.beginPath();
+                this.ctx.arc(tillerX, tillerY, 4, 0, Math.PI * 2);
+                this.ctx.fill();
+                
+                // Tiller angle text
+                this.ctx.fillStyle = 'white';
+                this.ctx.font = '14px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.fillText(`Tiller: ${Math.round(clampedTiller)}°`, tillerX, tillerY + tillerRadius + 25);
+            }
+
             gameLoop() {
                 const currentTime = performance.now();
                 const deltaTime = currentTime - this.lastTime;

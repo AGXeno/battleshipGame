@@ -13,6 +13,9 @@ class GameRoom {
     constructor(roomId) {
         this.roomId = roomId;
         this.players = new Map();
+        // Game area dimensions - will be communicated to clients
+        this.gameWidth = 1920;  // Standard game area width
+        this.gameHeight = 1080; // Standard game area height
         this.gameState = {
             ships: [],
             cannonballs: [],
@@ -86,8 +89,8 @@ class GameRoom {
             const minBaseDistance = 150;
             
             do {
-                x = 100 + Math.random() * 800; // 10-90% of width (1000px)
-                y = 70 + Math.random() * 560; // 10-90% of height (700px)
+                x = this.gameWidth * 0.1 + Math.random() * this.gameWidth * 0.8; // 10-90% of width
+                y = this.gameHeight * 0.1 + Math.random() * this.gameHeight * 0.8; // 10-90% of height
                 attempts++;
                 
                 // Check distance from both spawn points
@@ -140,8 +143,8 @@ class GameRoom {
             this.gameState.obstacles.push({
                 id: `iceberg_${i}`,
                 type: 'iceberg',
-                x: 150 + Math.random() * 700,
-                y: 100 + Math.random() * 500,
+                x: this.gameWidth * 0.15 + Math.random() * this.gameWidth * 0.7,
+                y: this.gameHeight * 0.15 + Math.random() * this.gameHeight * 0.7,
                 radius: radius,
                 destructible: true,
                 health: 3,
@@ -162,21 +165,45 @@ class GameRoom {
             // Corner opposites (diagonal)
             if (Math.random() < 0.5) {
                 // Top-left vs Bottom-right
-                this.team1SpawnPoint = { x: 50 + Math.random() * 100, y: 50 + Math.random() * 100 };
-                this.team2SpawnPoint = { x: 850 + Math.random() * 100, y: 550 + Math.random() * 100 };
+                this.team1SpawnPoint = { 
+                    x: this.gameWidth * 0.05 + Math.random() * this.gameWidth * 0.1, 
+                    y: this.gameHeight * 0.05 + Math.random() * this.gameHeight * 0.1 
+                };
+                this.team2SpawnPoint = { 
+                    x: this.gameWidth * 0.85 + Math.random() * this.gameWidth * 0.1, 
+                    y: this.gameHeight * 0.85 + Math.random() * this.gameHeight * 0.1 
+                };
             } else {
                 // Top-right vs Bottom-left
-                this.team1SpawnPoint = { x: 850 + Math.random() * 100, y: 50 + Math.random() * 100 };
-                this.team2SpawnPoint = { x: 50 + Math.random() * 100, y: 550 + Math.random() * 100 };
+                this.team1SpawnPoint = { 
+                    x: this.gameWidth * 0.85 + Math.random() * this.gameWidth * 0.1, 
+                    y: this.gameHeight * 0.05 + Math.random() * this.gameHeight * 0.1 
+                };
+                this.team2SpawnPoint = { 
+                    x: this.gameWidth * 0.05 + Math.random() * this.gameWidth * 0.1, 
+                    y: this.gameHeight * 0.85 + Math.random() * this.gameHeight * 0.1 
+                };
             }
         } else if (spawnType === 1) {
             // Left vs Right sides
-            this.team1SpawnPoint = { x: 50 + Math.random() * 100, y: 150 + Math.random() * 400 };
-            this.team2SpawnPoint = { x: 850 + Math.random() * 100, y: 150 + Math.random() * 400 };
+            this.team1SpawnPoint = { 
+                x: this.gameWidth * 0.05 + Math.random() * this.gameWidth * 0.1, 
+                y: this.gameHeight * 0.2 + Math.random() * this.gameHeight * 0.6 
+            };
+            this.team2SpawnPoint = { 
+                x: this.gameWidth * 0.85 + Math.random() * this.gameWidth * 0.1, 
+                y: this.gameHeight * 0.2 + Math.random() * this.gameHeight * 0.6 
+            };
         } else {
             // Top vs Bottom sides
-            this.team1SpawnPoint = { x: 200 + Math.random() * 600, y: 50 + Math.random() * 100 };
-            this.team2SpawnPoint = { x: 200 + Math.random() * 600, y: 550 + Math.random() * 100 };
+            this.team1SpawnPoint = { 
+                x: this.gameWidth * 0.2 + Math.random() * this.gameWidth * 0.6, 
+                y: this.gameHeight * 0.05 + Math.random() * this.gameHeight * 0.1 
+            };
+            this.team2SpawnPoint = { 
+                x: this.gameWidth * 0.2 + Math.random() * this.gameWidth * 0.6, 
+                y: this.gameHeight * 0.85 + Math.random() * this.gameHeight * 0.1 
+            };
         }
         
         console.log(`Generated spawn points: Team1 (${Math.round(this.team1SpawnPoint.x)}, ${Math.round(this.team1SpawnPoint.y)}) vs Team2 (${Math.round(this.team2SpawnPoint.x)}, ${Math.round(this.team2SpawnPoint.y)})`);
@@ -220,8 +247,8 @@ class GameRoom {
                 
                 // Remove icebergs that have drifted too far off the map
                 const margin = 100;
-                if (obstacle.x < -margin || obstacle.x > 1000 + margin || 
-                    obstacle.y < -margin || obstacle.y > 700 + margin) {
+                if (obstacle.x < -margin || obstacle.x > this.gameWidth + margin || 
+                    obstacle.y < -margin || obstacle.y > this.gameHeight + margin) {
                     this.gameState.obstacles.splice(i, 1);
                     console.log(`Iceberg ${obstacle.id} drifted off map and was removed`);
                 }
@@ -359,15 +386,15 @@ class GameRoom {
             ship.y += Math.sin(ship.angle) * ship.speed * deltaTime;
             
             // Boundary collision with bounce
-            if (ship.x < 0 || ship.x > 1000) {
-                ship.x = Math.max(0, Math.min(1000, ship.x));
+            if (ship.x < 0 || ship.x > this.gameWidth) {
+                ship.x = Math.max(0, Math.min(this.gameWidth, ship.x));
                 ship.angle = Math.PI - ship.angle;
                 ship.rudderAngle = 0;
                 ship.targetRudderAngle = 0;
             }
             
-            if (ship.y < 0 || ship.y > 700) {
-                ship.y = Math.max(0, Math.min(700, ship.y));
+            if (ship.y < 0 || ship.y > this.gameHeight) {
+                ship.y = Math.max(0, Math.min(this.gameHeight, ship.y));
                 ship.angle = -ship.angle;
                 ship.rudderAngle = 0;
                 ship.targetRudderAngle = 0;
@@ -388,8 +415,8 @@ class GameRoom {
             cannonball.y += Math.sin(cannonball.angle) * cannonball.speed * deltaTime;
             
             // Remove out of bounds cannonballs
-            if (cannonball.x < -10 || cannonball.x > 1010 || 
-                cannonball.y < -10 || cannonball.y > 710) {
+            if (cannonball.x < -10 || cannonball.x > this.gameWidth + 10 || 
+                cannonball.y < -10 || cannonball.y > this.gameHeight + 10) {
                 cannonball.dead = true;
             }
         }
