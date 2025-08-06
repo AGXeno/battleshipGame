@@ -122,18 +122,33 @@ class GameRoom {
             });
         }
         
-        // Icebergs (2-5 icebergs like demo)
+        // Icebergs (2-5 icebergs like demo) with drift properties
         const numIcebergs = 2 + Math.floor(Math.random() * 4); // 2-5 icebergs
         for (let i = 0; i < numIcebergs; i++) {
+            const radius = 20 + Math.random() * 15;
+            let driftSpeed;
+            
+            // Vary drift speed based on size (larger = slower)
+            if (radius < 25) {
+                driftSpeed = 4 + Math.random() * 3; // Small: 4-7 speed
+            } else if (radius < 30) {
+                driftSpeed = 2.5 + Math.random() * 2.5; // Medium: 2.5-5 speed
+            } else {
+                driftSpeed = 1 + Math.random() * 2; // Large: 1-3 speed
+            }
+            
             this.gameState.obstacles.push({
                 id: `iceberg_${i}`,
                 type: 'iceberg',
                 x: 150 + Math.random() * 700,
                 y: 100 + Math.random() * 500,
-                radius: 20 + Math.random() * 15,
+                radius: radius,
                 destructible: true,
                 health: 3,
-                imageIndex: Math.floor(Math.random() * 12) // 0-11 for 12 iceberg images
+                imageIndex: Math.floor(Math.random() * 12), // 0-11 for 12 iceberg images
+                driftAngle: Math.random() * Math.PI * 2,
+                driftSpeed: driftSpeed,
+                lastPositionUpdate: Date.now()
             });
         }
     }
@@ -165,6 +180,53 @@ class GameRoom {
         }
         
         console.log(`Generated spawn points: Team1 (${Math.round(this.team1SpawnPoint.x)}, ${Math.round(this.team1SpawnPoint.y)}) vs Team2 (${Math.round(this.team2SpawnPoint.x)}, ${Math.round(this.team2SpawnPoint.y)})`);
+    }
+
+    updateIcebergDrift(deltaTime) {
+        // Update existing iceberg positions
+        for (let i = this.gameState.obstacles.length - 1; i >= 0; i--) {
+            const obstacle = this.gameState.obstacles[i];
+            
+            if (obstacle.type === 'iceberg') {
+                // Calculate drift movement
+                const driftX = Math.cos(obstacle.driftAngle) * obstacle.driftSpeed * deltaTime;
+                const driftY = Math.sin(obstacle.driftAngle) * obstacle.driftSpeed * deltaTime;
+                
+                const newX = obstacle.x + driftX;
+                const newY = obstacle.y + driftY;
+                
+                // Check if new position would overlap with islands
+                let canMove = true;
+                for (let otherObstacle of this.gameState.obstacles) {
+                    if (otherObstacle.type === 'island' && otherObstacle !== obstacle) {
+                        const dx = newX - otherObstacle.x;
+                        const dy = newY - otherObstacle.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < obstacle.radius + otherObstacle.radius + 5) {
+                            canMove = false;
+                            // Bounce off island - reverse drift direction
+                            obstacle.driftAngle = obstacle.driftAngle + Math.PI;
+                            if (obstacle.driftAngle > Math.PI * 2) obstacle.driftAngle -= Math.PI * 2;
+                            break;
+                        }
+                    }
+                }
+                
+                if (canMove) {
+                    obstacle.x = newX;
+                    obstacle.y = newY;
+                }
+                
+                // Remove icebergs that have drifted too far off the map
+                const margin = 100;
+                if (obstacle.x < -margin || obstacle.x > 1000 + margin || 
+                    obstacle.y < -margin || obstacle.y > 700 + margin) {
+                    this.gameState.obstacles.splice(i, 1);
+                    console.log(`Iceberg ${obstacle.id} drifted off map and was removed`);
+                }
+            }
+        }
     }
 
     startGame() {
@@ -272,6 +334,9 @@ class GameRoom {
 
     update(deltaTime) {
         if (!this.gameState.gameStarted) return;
+
+        // Update iceberg drift
+        this.updateIcebergDrift(deltaTime);
 
         // Update ships
         for (const ship of this.gameState.ships) {
