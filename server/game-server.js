@@ -79,8 +79,8 @@ class GameRoom {
         // Islands - avoid spawning near team bases
         for (let i = 0; i < 2; i++) {
             let x, y, attempts = 0;
-            const team1Base = { x: 100, y: 620 };
-            const team2Base = { x: 900, y: 80 };
+            const team1Base = { x: 120, y: 750 };
+            const team2Base = { x: 1300, y: 130 };
             const minBaseDistance = 150;
             
             do {
@@ -129,8 +129,8 @@ class GameRoom {
         
         // Spawn initial ships for each team
         const spawnPoints = {
-            team1: { x: 100, y: 620 },
-            team2: { x: 900, y: 80 }
+            team1: { x: 120, y: 750 },
+            team2: { x: 1300, y: 130 }
         };
         
         // Schedule ship spawns
@@ -250,15 +250,15 @@ class GameRoom {
             ship.y += Math.sin(ship.angle) * ship.speed * deltaTime;
             
             // Boundary collision with bounce
-            if (ship.x < 0 || ship.x > 1000) {
-                ship.x = Math.max(0, Math.min(1000, ship.x));
+            if (ship.x < 0 || ship.x > 1920) {
+                ship.x = Math.max(0, Math.min(1920, ship.x));
                 ship.angle = Math.PI - ship.angle;
                 ship.rudderAngle = 0;
                 ship.targetRudderAngle = 0;
             }
             
-            if (ship.y < 0 || ship.y > 700) {
-                ship.y = Math.max(0, Math.min(700, ship.y));
+            if (ship.y < 0 || ship.y > 1080) {
+                ship.y = Math.max(0, Math.min(1080, ship.y));
                 ship.angle = -ship.angle;
                 ship.rudderAngle = 0;
                 ship.targetRudderAngle = 0;
@@ -279,8 +279,8 @@ class GameRoom {
             cannonball.y += Math.sin(cannonball.angle) * cannonball.speed * deltaTime;
             
             // Remove out of bounds cannonballs
-            if (cannonball.x < -10 || cannonball.x > 1010 || 
-                cannonball.y < -10 || cannonball.y > 710) {
+            if (cannonball.x < -10 || cannonball.x > 1930 || 
+                cannonball.y < -10 || cannonball.y > 1090) {
                 cannonball.dead = true;
             }
         }
@@ -307,7 +307,7 @@ class GameRoom {
             x: ship.x + Math.cos(ship.cannonAngle) * 25,
             y: ship.y + Math.sin(ship.cannonAngle) * 25,
             angle: ship.cannonAngle,
-            speed: 150,
+            speed: 80,
             dead: false
         };
         
@@ -355,7 +355,7 @@ class GameRoom {
                         // Respawn ship after delay
                         const team = ship.team;
                         const ownerId = ship.ownerId;
-                        const spawnPoint = team === 'team1' ? { x: 100, y: 620 } : { x: 900, y: 80 };
+                        const spawnPoint = team === 'team1' ? { x: 120, y: 750 } : { x: 1300, y: 130 };
                         setTimeout(() => {
                             if (this.gameState.gameStarted) {
                                 this.spawnShip(ownerId, team, spawnPoint);

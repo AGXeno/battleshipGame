@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Naval Battle - AI vs AI Demo</title>
+    <title>Naval Battle - Easy vs Hard AI Demo</title>
     <style>
         body {
             margin: 0;
@@ -27,35 +27,53 @@
         }
         
         #gameCanvas {
-            border: 2px solid #16213e;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: #0f3460;
             cursor: crosshair;
-            max-width: 95vw;
-            max-height: 60vh;
+            z-index: 1;
         }
         
         #topScore {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
             display: flex;
             justify-content: space-between;
-            width: min(1004px, 95vw);
-            margin-bottom: 5px;
+            padding: 15px 25px;
             font-size: 28px;
             color: white;
+            z-index: 10;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
         }
         
         #dualDashboardContainer {
-            margin-top: 20px;
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             gap: 20px;
             justify-content: center;
             align-items: center;
             flex-wrap: wrap;
+            z-index: 10;
+            transition: opacity 0.3s ease;
+        }
+        
+        #dualDashboardContainer.hidden {
+            opacity: 0;
+            pointer-events: none;
         }
         
         .aiDashboard {
             width: 220px;
             height: 200px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.1);
             border: 2px solid #16213e;
             border-radius: 10px;
             padding: 10px;
@@ -182,6 +200,25 @@
             background: #ff7700;
         }
         
+        #dashboardToggle {
+            position: fixed;
+            top: 120px;
+            right: 20px;
+            padding: 10px 15px;
+            background: #16213e;
+            border: 2px solid #4169E1;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 20;
+        }
+        
+        #dashboardToggle:hover {
+            background: #1e3a5f;
+        }
+        
         #controlsPanel {
             position: absolute;
             left: 10px;
@@ -288,7 +325,7 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <canvas id="gameCanvas"></canvas>
         
         <div id="dualDashboardContainer">
             <div id="blueDashboard" class="aiDashboard">
@@ -311,7 +348,7 @@
         <div id="demoControls">
             <div><strong>🎬 AI Battle Demo</strong></div>
             <div class="demo-info">
-                Watch two AI teams with different strategies battle it out!
+                Blue team: HARD AI vs Red team: HARD AI - Watch advanced tactical combat!
             </div>
         </div>
         
@@ -326,6 +363,7 @@
         
         <button id="controlsToggle">About This Demo</button>
         <button id="speedBtn">Speed: 1x</button>
+        <button id="dashboardToggle">Hide Dashboard</button>
         
         <div id="controlsPanel" class="hidden">
             <div><strong>AI Battle Demo:</strong></div>
@@ -390,65 +428,81 @@
 
     <script>
         // Game Constants
+        // Scaling factors for resolution upgrade
+        const SCALE_X = 1.92; // 1920/1000
+        const SCALE_Y = 1.543; // 1080/700
+        const SCALE_AVG = (SCALE_X + SCALE_Y) / 2; // Average for general scaling
+        
+        // Debug: Log the actual values
+        console.log('SCALE_AVG:', SCALE_AVG);
+        console.log('Ship Radius:', Math.round(24 * SCALE_AVG));
+        console.log('Ship Speed (base):', Math.round(25 * SCALE_AVG));
+
         const GAME_CONFIG = {
-            // Ship Properties
-            SHIP_DEFAULT_SPEED: 25,
+            // Ship Properties (scaled for higher resolution)
+            SHIP_DEFAULT_SPEED: Math.round(25 * SCALE_AVG),
             SHIP_MAX_HEALTH: 3,
-            SHIP_RADIUS: 24,
+            SHIP_RADIUS: Math.round(24 * SCALE_AVG),
             SHIP_CANNON_COOLDOWN: 5000,
             SHIP_RAM_COOLDOWN: 1000,
-            SHIP_SPEED_CHANGE_RATE: 15,
+            SHIP_SPEED_CHANGE_RATE: Math.round(15 * SCALE_AVG),
             SHIP_BASE_TURN_RATE: 0.8,
             SHIP_SPAWN_DELAY: 5000,
             
-            // Cannonball Properties
-            CANNONBALL_SPEED: 80,  // Demo uses slower cannonballs
-            CANNONBALL_RADIUS: 3,
-            CANNONBALL_RANGE: 1000,
+            // Cannonball Properties (scaled)
+            CANNONBALL_SPEED: Math.round(80 * SCALE_AVG),
+            CANNONBALL_RADIUS: Math.round(3 * SCALE_AVG),
+            CANNONBALL_RANGE: Math.round(1000 * SCALE_AVG),
             
-            // Obstacle Properties
-            OBSTACLE_MIN_RADIUS: 20,
-            OBSTACLE_MAX_RADIUS: 35,
-            OBSTACLE_DAMAGE_RADIUS: 12,
+            // Obstacle Properties (scaled)
+            OBSTACLE_MIN_RADIUS: Math.round(20 * SCALE_AVG),
+            OBSTACLE_MAX_RADIUS: Math.round(35 * SCALE_AVG),
+            OBSTACLE_DAMAGE_RADIUS: Math.round(12 * SCALE_AVG),
             OBSTACLE_DAMAGE_AMOUNT: 0.1,
-            OBSTACLE_PUSH_FORCE: 15,
+            OBSTACLE_PUSH_FORCE: Math.round(15 * SCALE_AVG),
             OBSTACLE_DESTRUCTIBLE_HEALTH: 10,
-            OBSTACLE_LARGE_MIN_RADIUS: 30,
-            OBSTACLE_LARGE_MAX_RADIUS: 50,
+            OBSTACLE_LARGE_MIN_RADIUS: Math.round(30 * SCALE_AVG),
+            OBSTACLE_LARGE_MAX_RADIUS: Math.round(50 * SCALE_AVG),
             
-            // AI Behavior
-            AI_ATTACK_RANGE: 150,
-            AI_AVOIDANCE_RANGE: 30,
-            AI_PREDICTIVE_AVOIDANCE_RANGE: 30,
+            // AI Behavior (scaled)
+            AI_ATTACK_RANGE: Math.round(150 * SCALE_AVG),
+            AI_AVOIDANCE_RANGE: Math.round(30 * SCALE_AVG),
+            AI_PREDICTIVE_AVOIDANCE_RANGE: Math.round(30 * SCALE_AVG),
             
             // AI Difficulty Settings
             AI_DIFFICULTY: {
                 EASY: {
-                    powerUpAwareness: 0.1,      // 10% chance to go for power-ups
+                    powerUpAwareness: 0.2,      // 20% chance to go for power-ups
                     aggressionLevel: 0.6,       // Less aggressive
                     reactionTime: 2000,         // Slower reactions
-                    aimAccuracy: 0.7            // Less accurate
+                    aimAccuracy: 0.7,           // Less accurate
+                    strategicThinking: 0.1,     // Poor strategic decisions
+                    neutralShipPriority: 0.3    // Low priority on neutral ships
                 },
                 MEDIUM: {
-                    powerUpAwareness: 0.4,      // 40% chance to go for power-ups
+                    powerUpAwareness: 0.5,      // 50% chance to go for power-ups
                     aggressionLevel: 0.8,       // Standard aggression
                     reactionTime: 1500,         // Standard reactions
-                    aimAccuracy: 0.85           // Good accuracy
+                    aimAccuracy: 0.85,          // Good accuracy
+                    strategicThinking: 0.5,     // Moderate strategic thinking
+                    neutralShipPriority: 0.6    // Moderate priority on neutral ships
                 },
                 HARD: {
-                    powerUpAwareness: 0.8,      // 80% chance to go for power-ups
-                    aggressionLevel: 1.0,       // Maximum aggression
-                    reactionTime: 1000,         // Fast reactions
-                    aimAccuracy: 0.95           // High accuracy
+                    powerUpAwareness: 0.9,      // 90% chance to go for power-ups
+                    aggressionLevel: 1.2,       // Highly aggressive
+                    reactionTime: 800,          // Fast reactions
+                    aimAccuracy: 0.95,          // High accuracy
+                    strategicThinking: 0.9,     // Excellent strategic decisions
+                    neutralShipPriority: 0.9    // High priority on neutral ships
                 }
             },
             
             // UI and Rendering
-            CANVAS_WIDTH: 1000,
-            CANVAS_HEIGHT: 700,
+            CANVAS_WIDTH: 1920,
+            CANVAS_HEIGHT: 1080,
             HEADING_COMPASS_RADIUS: 120,
-            HEALTH_BAR_WIDTH: 24,
-            HEALTH_BAR_HEIGHT: 5,
+            HEALTH_BAR_WIDTH: Math.round(24 * SCALE_AVG),
+            HEALTH_BAR_HEIGHT: Math.round(5 * SCALE_AVG),
             
             // Physics and Movement
             DELTA_TIME_MULTIPLIER: 0.001,
@@ -471,7 +525,7 @@
             // Neutral Ships and Upgrades
             NEUTRAL_SHIP_SPAWN_CHANCE: 0.9,
             NEUTRAL_SHIP_SPAWN_INTERVAL: 15000, // 15 seconds (less frequent)
-            NEUTRAL_SHIP_SPEED: 25,
+            NEUTRAL_SHIP_SPEED: Math.round(25 * SCALE_AVG),
             NEUTRAL_SHIP_MAX_HEALTH: 3,
             MAX_SHIP_TIER: 3,
             UPGRADE_HEALTH_BONUS: 1,
@@ -484,6 +538,15 @@
             constructor() {
                 this.canvas = document.getElementById('gameCanvas');
                 this.ctx = this.canvas.getContext('2d');
+                
+                // Set canvas to full window size
+                this.resizeCanvas();
+                
+                // Listen for window resize
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
+                console.log('Canvas actual size:', this.canvas.width, 'x', this.canvas.height);
+                console.log('Scale factor being used:', this.SCALE_AVG);
                 
                 // Dual dashboard canvases
                 this.blueCanvas = document.getElementById('blueHeadingCanvas');
@@ -511,8 +574,8 @@
                     cannonballs: [],
                     obstacles: [],
                     players: {
-                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
-                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
+                        blue: { score: 0, dock: { x: 120, y: 750, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
+                        red: { score: 0, dock: { x: 1200, y: 130, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
                     },
                     selectedObject: null,
                     selectedObjectType: null,
@@ -657,6 +720,97 @@
                 return null;
             }
             
+            drawShipWake(ship, speed) {
+                const wakeLength = Math.min(speed * 20, 60);
+                const wakeWidth = Math.min(speed * 3, 12);
+                
+                // Calculate wake direction (opposite of ship movement)
+                const wakeAngle = Math.atan2(-ship.vy, -ship.vx);
+                
+                this.ctx.save();
+                this.ctx.globalAlpha = 0.4;
+                
+                // Draw foam trail behind ship
+                for (let i = 0; i < 5; i++) {
+                    const distance = 15 + i * (wakeLength / 5);
+                    const wakeX = ship.x + Math.cos(wakeAngle) * distance;
+                    const wakeY = ship.y + Math.sin(wakeAngle) * distance;
+                    const fadeAlpha = (5 - i) / 5 * 0.3;
+                    const currentWidth = wakeWidth * (5 - i) / 5;
+                    
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${fadeAlpha})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(wakeX, wakeY, currentWidth, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                this.ctx.restore();
+            }
+            
+            drawSeaBirds(time) {
+                // Draw 2-3 birds occasionally
+                for (let i = 0; i < 3; i++) {
+                    const birdCycle = (time * 0.1 + i * 2.5) % 10; // 10 second cycle per bird
+                    if (birdCycle > 8) continue; // Only show birds 80% of the cycle
+                    
+                    // Bird position moving across screen
+                    const progress = birdCycle / 8;
+                    const birdX = -50 + progress * (this.canvas.width + 100);
+                    const birdY = 50 + Math.sin(time * 0.5 + i) * 20 + i * 30;
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = 0.6;
+                    this.ctx.fillStyle = "#2c3e50";
+                    
+                    // Simple bird shape (V shape)
+                    const wingSpread = 8 + Math.sin(time * 3 + i) * 2;
+                    this.ctx.beginPath();
+                    // Left wing
+                    this.ctx.moveTo(birdX - wingSpread, birdY);
+                    this.ctx.lineTo(birdX - 2, birdY - 3);
+                    this.ctx.lineTo(birdX, birdY);
+                    // Right wing  
+                    this.ctx.lineTo(birdX + 2, birdY - 3);
+                    this.ctx.lineTo(birdX + wingSpread, birdY);
+                    this.ctx.fill();
+                    
+                    this.ctx.restore();
+                }
+            }
+            
+            drawFloatingDebris(time) {
+                // Draw small patches of floating seaweed and debris
+                for (let i = 0; i < 6; i++) {
+                    const debrisX = (Math.sin(time * 0.05 + i * 1.2) + 1) * this.canvas.width * 0.4 + this.canvas.width * 0.1;
+                    const debrisY = (Math.cos(time * 0.03 + i * 1.8) + 1) * this.canvas.height * 0.4 + this.canvas.height * 0.1;
+                    const driftX = Math.sin(time * 0.1 + i) * 2;
+                    const driftY = Math.cos(time * 0.08 + i) * 1.5;
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = 0.3;
+                    this.ctx.fillStyle = i % 2 === 0 ? "#1a5f3f" : "#8B4513"; // Seaweed green or driftwood brown
+                    
+                    // Draw small irregular patch
+                    this.ctx.beginPath();
+                    for (let j = 0; j < 8; j++) {
+                        const angle = (j / 8) * Math.PI * 2;
+                        const radius = 3 + Math.sin(time * 0.5 + i + j) * 2;
+                        const x = debrisX + driftX + Math.cos(angle) * radius;
+                        const y = debrisY + driftY + Math.sin(angle) * radius;
+                        
+                        if (j === 0) {
+                            this.ctx.moveTo(x, y);
+                        } else {
+                            this.ctx.lineTo(x, y);
+                        }
+                    }
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                    
+                    this.ctx.restore();
+                }
+            }
+            
             init() {
                 this.loadImages();
                 this.setupCanvas();
@@ -693,6 +847,7 @@
                 document.getElementById('startBtn').addEventListener('click', () => this.startGame());
                 document.getElementById('resetBtn').addEventListener('click', () => this.resetGame());
                 document.getElementById('speedBtn').addEventListener('click', () => this.toggleSpeed());
+                document.getElementById('dashboardToggle').addEventListener('click', () => this.toggleDashboard());
                 
                 document.getElementById('controlsToggle').addEventListener('click', () => {
                     const panel = document.getElementById('controlsPanel');
@@ -912,40 +1067,77 @@
             generateObstacles() {
                 this.gameState.obstacles = [];
                 
-                // Generate islands (static) - avoid spawning near team bases
-                for (let i = 0; i < 2; i++) {
+                // Generate varied islands (static) - avoid spawning near team bases
+                const numIslands = 3 + Math.floor(Math.random() * 3); // 3-5 islands
+                const blueBase = { x: this.canvas.width * 0.1, y: this.canvas.height * 0.85 };
+                const redBase = { x: this.canvas.width * 0.9, y: this.canvas.height * 0.15 };
+                const minBaseDistance = Math.min(this.canvas.width, this.canvas.height) * 0.2; // 20% of smaller dimension
+                
+                for (let i = 0; i < numIslands; i++) {
                     let x, y, attempts = 0;
-                    const blueBase = { x: 100, y: 620 };
-                    const redBase = { x: 900, y: 80 };
-                    const minBaseDistance = 150; // Minimum distance from bases
                     
                     do {
-                        x = 200 + Math.random() * 600; // Center area of map
-                        y = 150 + Math.random() * 400;
+                        x = this.canvas.width * 0.1 + Math.random() * this.canvas.width * 0.8; // 10-90% of width
+                        y = this.canvas.height * 0.1 + Math.random() * this.canvas.height * 0.8; // 10-90% of height
                         attempts++;
                         
                         // Check distance from both bases
                         const distToBlue = Math.sqrt((x - blueBase.x) ** 2 + (y - blueBase.y) ** 2);
                         const distToRed = Math.sqrt((x - redBase.x) ** 2 + (y - redBase.y) ** 2);
                         
-                        if (distToBlue >= minBaseDistance && distToRed >= minBaseDistance) {
+                        // Check distance from existing islands
+                        let tooClose = false;
+                        for (const existingIsland of this.gameState.obstacles) {
+                            if (existingIsland.type === 'island') {
+                                const dist = Math.sqrt((x - existingIsland.x) ** 2 + (y - existingIsland.y) ** 2);
+                                if (dist < existingIsland.radius + 200) { // Minimum spacing
+                                    tooClose = true;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        if (distToBlue >= minBaseDistance && distToRed >= minBaseDistance && !tooClose) {
                             break; // Good position found
                         }
-                    } while (attempts < 20);
+                    } while (attempts < 30);
+                    
+                    // Create varied island sizes (smaller)
+                    let radius, islandType;
+                    const sizeRoll = Math.random();
+                    if (sizeRoll < 0.3) {
+                        // Small islands (30%)
+                        radius = 30 + Math.random() * 20; // 30-50 radius
+                        islandType = 'small';
+                    } else if (sizeRoll < 0.7) {
+                        // Medium islands (40%)
+                        radius = 50 + Math.random() * 25; // 50-75 radius
+                        islandType = 'medium';
+                    } else {
+                        // Large islands (30%)
+                        radius = 75 + Math.random() * 35; // 75-110 radius
+                        islandType = 'large';
+                    }
                     
                     this.gameState.obstacles.push({
                         type: 'island',
                         x: x,
                         y: y,
-                        radius: 30 + Math.random() * 20,
+                        radius: Math.round(radius),
                         destructible: false,
-                        imageIndex: Math.floor(Math.random() * 6) // 0-5 for 6 island images
+                        imageIndex: Math.floor(Math.random() * 6), // 0-5 for 6 island images
+                        islandType: islandType
                     });
+                    
+                    console.log(`Generated ${islandType} island with radius ${Math.round(radius)} at (${Math.round(x)}, ${Math.round(y)})`);
                 }
                 
-                // Generate initial icebergs with drift properties
-                for (let i = 0; i < 3; i++) {
-                    this.createDriftingIceberg(i < 2);
+                // Generate initial icebergs with drift properties - randomized count
+                const numIcebergs = 2 + Math.floor(Math.random() * 4); // 2-5 icebergs
+                console.log(`Generating ${numIcebergs} icebergs`);
+                
+                for (let i = 0; i < numIcebergs; i++) {
+                    this.createDriftingIceberg(i < Math.ceil(numIcebergs * 0.6)); // 60% spawn on screen
                 }
             }
             
@@ -958,8 +1150,8 @@
                     let validPosition = false;
                     
                     while (!validPosition && attempts < 10) {
-                        x = 150 + Math.random() * 700;
-                        y = 100 + Math.random() * 500;
+                        x = Math.round((150 + Math.random() * 700) * SCALE_X);
+                        y = Math.round((100 + Math.random() * 500) * SCALE_Y);
                         
                         // Check dock exclusion zones
                         const blueDock = this.gameState.players.blue.dock;
@@ -1015,17 +1207,40 @@
                     }
                 }
                 
+                // Create varied iceberg sizes
+                let radius, icebergType, driftSpeed;
+                const sizeRoll = Math.random();
+                if (sizeRoll < 0.4) {
+                    // Small icebergs (40%) - faster
+                    radius = 25 + Math.random() * 20; // 25-45 radius
+                    icebergType = 'small';
+                    driftSpeed = 4 + Math.random() * 3; // 4-7 speed
+                } else if (sizeRoll < 0.8) {
+                    // Medium icebergs (40%) - moderate
+                    radius = 45 + Math.random() * 25; // 45-70 radius  
+                    icebergType = 'medium';
+                    driftSpeed = 2.5 + Math.random() * 2.5; // 2.5-5 speed
+                } else {
+                    // Large icebergs (20%) - slower
+                    radius = 70 + Math.random() * 40; // 70-110 radius
+                    icebergType = 'large';
+                    driftSpeed = 1 + Math.random() * 2; // 1-3 speed
+                }
+
                 const iceberg = {
                     type: 'iceberg',
                     x: x,
                     y: y,
-                    radius: 20 + Math.random() * 15,
+                    radius: Math.round(radius),
                     destructible: true,
                     imageIndex: Math.floor(Math.random() * 12), // 0-11 for 12 iceberg images
                     driftAngle: Math.random() * Math.PI * 2,
-                    driftSpeed: 3.5 + Math.random() * 4,
-                    lastPositionUpdate: Date.now()
+                    driftSpeed: driftSpeed,
+                    lastPositionUpdate: Date.now(),
+                    icebergType: icebergType
                 };
+                
+                console.log(`Generated ${icebergType} iceberg with radius ${Math.round(radius)} and speed ${driftSpeed.toFixed(1)}`);
                 
                 this.gameState.obstacles.push(iceberg);
             }
@@ -1589,7 +1804,7 @@
                         const dy = ship.y - powerUp.y;
                         const distance = Math.sqrt(dx*dx + dy*dy);
                         
-                        if (distance < closestPUDistance && distance < 150) { // Only consider nearby power-ups
+                        if (distance < closestPUDistance && distance < Math.round(150 * SCALE_AVG)) { // Only consider nearby power-ups (scaled)
                             closestPUDistance = distance;
                             closestPowerUp = powerUp;
                         }
@@ -1603,8 +1818,8 @@
                     }
                 }
                 
-                // Check for neutral ships as priority targets (they drop power-ups!)
-                if (neutralShips.length > 0) {
+                // Check for neutral ships as priority targets (they drop power-ups!) - but use strategic thinking
+                if (neutralShips.length > 0 && Math.random() < difficulty.neutralShipPriority) {
                     let closestNeutral = null;
                     let closestNeutralDistance = Infinity;
                     
@@ -1613,7 +1828,9 @@
                         const dy = ship.y - neutralShip.y;
                         const distance = Math.sqrt(dx*dx + dy*dy);
                         
-                        if (distance < closestNeutralDistance && distance < 200) {
+                        // Strategic range varies by difficulty
+                        const maxRange = 150 + difficulty.strategicThinking * 100; // 150-250 range
+                        if (distance < closestNeutralDistance && distance < maxRange) {
                             closestNeutralDistance = distance;
                             closestNeutral = neutralShip;
                         }
@@ -1647,8 +1864,9 @@
                 ship.aiTarget = closestShip;
                 ship.aiTargetType = 'enemy';
                 
-                // Apply difficulty-based aggression
+                // Apply difficulty-based aggression and reaction time
                 const aggressionRange = 200 * difficulty.aggressionLevel;
+                ship.aiDecisionCooldown = difficulty.reactionTime + Math.random() * 300;
                 
                 // Different AI types have different engagement ranges
                 if (ship.aiType === 'aggressive') {
@@ -2520,8 +2738,8 @@
                     neutralShips: [],
                     powerUps: [],
                     players: {
-                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
-                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
+                        blue: { score: 0, dock: { x: 120, y: 750, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
+                        red: { score: 0, dock: { x: 1200, y: 130, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
                     },
                     selectedObject: null,
                     selectedObjectType: null,
@@ -2558,26 +2776,128 @@
                 document.getElementById('gameMenu').classList.remove('hidden');
             }
             
+            resizeCanvas() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                
+                this.canvas.width = width;
+                this.canvas.height = height;
+                
+                // Calculate scaling based on viewport size compared to original 1000x700
+                const scaleX = width / 1000;
+                const scaleY = height / 700;
+                this.SCALE_AVG = (scaleX + scaleY) / 2;
+                
+                console.log(`Canvas resized to ${width}x${height}, scale factor: ${this.SCALE_AVG.toFixed(2)}`);
+                
+                // Update game config canvas dimensions
+                GAME_CONFIG.CANVAS_WIDTH = width;
+                GAME_CONFIG.CANVAS_HEIGHT = height;
+            }
+            
             toggleSpeed() {
                 if (this.speedMultiplier === 1) {
                     this.speedMultiplier = 2;
                     document.getElementById('speedBtn').textContent = 'Speed: 2x';
+                } else if (this.speedMultiplier === 2) {
+                    this.speedMultiplier = 3;
+                    document.getElementById('speedBtn').textContent = 'Speed: 3x';
                 } else {
                     this.speedMultiplier = 1;
                     document.getElementById('speedBtn').textContent = 'Speed: 1x';
                 }
             }
             
+            toggleDashboard() {
+                const dashboard = document.getElementById('dualDashboardContainer');
+                const toggleBtn = document.getElementById('dashboardToggle');
+                
+                dashboard.classList.toggle('hidden');
+                
+                if (dashboard.classList.contains('hidden')) {
+                    toggleBtn.textContent = 'Show Dashboard';
+                } else {
+                    toggleBtn.textContent = 'Hide Dashboard';
+                }
+            }
+            
+            renderAnimatedOcean() {
+                const time = Date.now() * 0.001; // Convert to seconds for wave animation
+                
+                // Base ocean color
+                this.ctx.fillStyle = "#0f3460";
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Create animated wave patterns with depth
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                gradient.addColorStop(0, "#1e4a6f");
+                gradient.addColorStop(0.3, "#0f3460");
+                gradient.addColorStop(0.7, "#0a2847");
+                gradient.addColorStop(1, "#051c2f");
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                
+                // Draw animated wave lines
+                this.ctx.strokeStyle = "rgba(32, 178, 170, 0.05)"; // Much more transparent
+                this.ctx.lineWidth = 1;
+                
+                for (let i = 0; i < 8; i++) {
+                    this.ctx.beginPath();
+                    const waveOffset = time * (2 + i * 0.3); // Much slower waves
+                    const amplitude = 8 + i * 2; // Smaller waves
+                    const frequency = 0.003 + i * 0.0005; // Lower frequency
+                    
+                    for (let x = 0; x <= this.canvas.width; x += 5) {
+                        const y = this.canvas.height * (0.2 + i * 0.1) + 
+                                 Math.sin((x * frequency) + waveOffset) * amplitude;
+                        if (x === 0) {
+                            this.ctx.moveTo(x, y);
+                        } else {
+                            this.ctx.lineTo(x, y);
+                        }
+                    }
+                    this.ctx.stroke();
+                }
+                
+                // Draw occasional sea birds
+                this.drawSeaBirds(time);
+                
+                // Draw floating debris and seaweed patches
+                this.drawFloatingDebris(time);
+                
+                // Add subtle floating particles/bubbles
+                this.ctx.fillStyle = "rgba(135, 206, 235, 0.1)";
+                for (let i = 0; i < 15; i++) {
+                    const particleTime = time * (0.1 + i * 0.02); // Much slower particles
+                    const x = (i * 73 + Math.sin(particleTime) * 15) % this.canvas.width; // Smaller movement
+                    const y = (i * 47 + Math.cos(particleTime * 0.7) * 10) % this.canvas.height; // Smaller movement
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 2 + Math.sin(particleTime * 2) * 1, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+            
             render() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
-                this.ctx.fillStyle = '#0f3460';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                // Animated ocean background
+                this.renderAnimatedOcean();
                 
                 // Render obstacles
                 for (let obstacle of this.gameState.obstacles) {
                     this.ctx.save();
                     this.ctx.translate(obstacle.x, obstacle.y);
+                    
+                    // Draw elevation shadow first (proportional to obstacle size)
+                    const shadowOffset = obstacle.radius * 0.25;
+                    const shadowRadius = obstacle.radius * 0.8;
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(shadowOffset, shadowOffset, shadowRadius, shadowRadius * 0.5, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
                     
                     if (obstacle.type === 'island') {
                         // Draw island image
@@ -2606,37 +2926,53 @@
                 this.ctx.save();
                 this.ctx.fillStyle = 'rgba(65, 105, 225, 0.4)';
                 this.ctx.beginPath();
-                this.ctx.arc(blueDock.x, blueDock.y, 35, 0, Math.PI * 2);
+                this.ctx.arc(blueDock.x, blueDock.y, Math.round(35 * this.SCALE_AVG), 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 this.ctx.fillStyle = '#4169E1';
                 this.ctx.beginPath();
-                this.ctx.arc(blueDock.x, blueDock.y, 25, 0, Math.PI * 2);
+                this.ctx.arc(blueDock.x, blueDock.y, Math.round(25 * this.SCALE_AVG), 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 // Red dock
                 this.ctx.fillStyle = 'rgba(220, 20, 60, 0.4)';
                 this.ctx.beginPath();
-                this.ctx.arc(redDock.x, redDock.y, 35, 0, Math.PI * 2);
+                this.ctx.arc(redDock.x, redDock.y, Math.round(35 * this.SCALE_AVG), 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 this.ctx.fillStyle = '#DC143C';
                 this.ctx.beginPath();
-                this.ctx.arc(redDock.x, redDock.y, 25, 0, Math.PI * 2);
+                this.ctx.arc(redDock.x, redDock.y, Math.round(25 * this.SCALE_AVG), 0, Math.PI * 2);
                 this.ctx.fill();
                 
                 this.ctx.restore();
                 
                 // Render ships
                 for (let ship of this.gameState.ships) {
+                    // Draw wake effect behind moving ships
+                    if (ship.vx || ship.vy) {
+                        const speed = Math.sqrt(ship.vx * ship.vx + ship.vy * ship.vy);
+                        if (speed > 0.5) { // Only draw wake for ships moving fast enough
+                            this.drawShipWake(ship, speed);
+                        }
+                    }
+                    
                     this.ctx.save();
                     this.ctx.translate(ship.x, ship.y);
+                    
+                    // Draw ship shadow first
+                    const shadowOffset = 5;
+                    this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                    this.ctx.beginPath();
+                    this.ctx.ellipse(shadowOffset, shadowOffset, 20, 12, 0, 0, Math.PI * 2);
+                    this.ctx.fill();
                     
                     // Draw ship image based on playerId and angle
                     const shipImg = this.getShipImage(ship.playerId, ship.angle);
                     if (shipImg) {
-                        // Draw ship image centered at origin
-                        const shipSize = 48; // Size of ship image
+                        // Draw ship image centered at origin (scaled for higher resolution)
+                        const shipSize = 60; // Reduced to 60px
+                        console.log('Drawing ship with size:', shipSize); // Debug
                         this.ctx.drawImage(shipImg, -shipSize/2, -shipSize/2, shipSize, shipSize);
                     } else {
                         // Fallback to colored rectangles if image not loaded
@@ -2653,15 +2989,19 @@
                             darkColor = '#CCCCCC';
                         }
                         
+                        const scaledHalfSize = 30; // Half of 60px
+                        const scaledSize = 60; // 60px total size
+                        console.log('Drawing rectangle ship with size:', scaledSize); // Debug
+                        
                         this.ctx.fillStyle = fillColor;
-                        this.ctx.fillRect(-24, -24, 48, 48);
+                        this.ctx.fillRect(-scaledHalfSize, -scaledHalfSize, scaledSize, scaledSize);
                         
                         this.ctx.fillStyle = darkColor;
-                        this.ctx.fillRect(12, -12, 12, 24);
+                        this.ctx.fillRect(scaledHalfSize/2, -scaledHalfSize/2, scaledHalfSize/2, scaledHalfSize);
                         
                         this.ctx.strokeStyle = '#000';
-                        this.ctx.lineWidth = 1;
-                        this.ctx.strokeRect(-24, -24, 48, 48);
+                        this.ctx.lineWidth = Math.round(1 * this.SCALE_AVG);
+                        this.ctx.strokeRect(-scaledHalfSize, -scaledHalfSize, scaledSize, scaledSize);
                     }
                     
                     // Show selection for both AI team selected ships (while in ship coordinate space)
@@ -2746,7 +3086,7 @@
                             this.ctx.strokeRect(-5, -15, boxWidth, boxHeight);
                             
                             // Draw symbols with colors
-                            this.ctx.font = 'bold 14px Arial';  // Large font
+                            this.ctx.font = `bold ${Math.round(14 * this.SCALE_AVG)}px Arial`;  // Large font (scaled)
                             this.ctx.textAlign = 'center';
                             this.ctx.lineWidth = 2;
                             
@@ -2769,17 +3109,20 @@
                     const healthRatio = ship.health / ship.maxHealth;
                     
                     // Health bar background (larger and more visible)
+                    const healthBarWidth = GAME_CONFIG.HEALTH_BAR_WIDTH;
+                    const healthBarHeight = GAME_CONFIG.HEALTH_BAR_HEIGHT;
+                    
                     this.ctx.fillStyle = '#333';
-                    this.ctx.fillRect(-12, 0, 24, 5);
+                    this.ctx.fillRect(-healthBarWidth/2, 0, healthBarWidth, healthBarHeight);
                     
                     // Health bar
                     this.ctx.fillStyle = healthRatio > 0.66 ? '#00FF00' : healthRatio > 0.33 ? '#FFFF00' : '#FF0000';
-                    this.ctx.fillRect(-12, 0, healthRatio * 24, 5);
+                    this.ctx.fillRect(-healthBarWidth/2, 0, healthRatio * healthBarWidth, healthBarHeight);
                     
                     // Health bar border
                     this.ctx.strokeStyle = '#000';
-                    this.ctx.lineWidth = 1;
-                    this.ctx.strokeRect(-12, 0, 24, 5);
+                    this.ctx.lineWidth = Math.round(1 * this.SCALE_AVG);
+                    this.ctx.strokeRect(-healthBarWidth/2, 0, healthBarWidth, healthBarHeight);
                     
                     this.ctx.restore();
                 }
@@ -2839,20 +3182,24 @@
                         // Draw neutral ship image based on angle
                         const shipImg = this.getShipImage('neutral', neutralShip.angle);
                         if (shipImg) {
-                            // Draw ship image centered at origin
-                            const shipSize = 48; // Size of ship image
+                            // Draw ship image centered at origin (scaled)
+                            const shipSize = 60; // Reduced to 60px
+                            console.log('Drawing neutral ship with size:', shipSize); // Debug
                             this.ctx.drawImage(shipImg, -shipSize/2, -shipSize/2, shipSize, shipSize);
                         } else {
                             // Fallback to colored rectangles if image not loaded
+                            const scaledHalfSize = 30; // Half of 60px
+                            const scaledSize = 60; // 60px total size
+                            console.log('Drawing neutral rectangle ship with size:', scaledSize); // Debug
                             this.ctx.fillStyle = '#FFFFFF';
-                            this.ctx.fillRect(-24, -24, 48, 48);
+                            this.ctx.fillRect(-scaledHalfSize, -scaledHalfSize, scaledSize, scaledSize);
                             
                             this.ctx.fillStyle = '#CCCCCC';
-                            this.ctx.fillRect(12, -12, 12, 24);
+                            this.ctx.fillRect(scaledHalfSize/2, -scaledHalfSize/2, scaledHalfSize/2, scaledHalfSize);
                             
                             this.ctx.strokeStyle = '#000';
-                            this.ctx.lineWidth = 1;
-                            this.ctx.strokeRect(-24, -24, 48, 48);
+                            this.ctx.lineWidth = Math.round(1 * this.SCALE_AVG);
+                            this.ctx.strokeRect(-scaledHalfSize, -scaledHalfSize, scaledSize, scaledSize);
                         }
                         
                         this.ctx.restore();
@@ -2908,7 +3255,7 @@
                             this.ctx.fillStyle = '#FFFFFF';
                             this.ctx.strokeStyle = '#000';
                             this.ctx.lineWidth = 2;
-                            this.ctx.font = 'bold 18px Arial';
+                            this.ctx.font = `bold ${Math.round(18 * this.SCALE_AVG)}px Arial`;
                             this.ctx.textAlign = 'center';
                             this.ctx.textBaseline = 'middle';
                             
@@ -2938,7 +3285,7 @@
                         this.ctx.fillStyle = this.getPowerUpColor(powerUp.type);
                         this.ctx.strokeStyle = '#000';
                         this.ctx.lineWidth = 2;
-                        this.ctx.font = 'bold 14px Arial';
+                        this.ctx.font = `bold ${Math.round(14 * this.SCALE_AVG)}px Arial`;
                         this.ctx.textAlign = 'center';
                         this.ctx.textBaseline = 'middle';
                         
@@ -2954,11 +3301,11 @@
                 for (let cannonball of this.gameState.cannonballs) {
                     this.ctx.fillStyle = '#1a1a1a';
                     this.ctx.beginPath();
-                    this.ctx.arc(cannonball.x, cannonball.y, 4, 0, Math.PI * 2);
+                    this.ctx.arc(cannonball.x, cannonball.y, Math.round(4 * this.SCALE_AVG), 0, Math.PI * 2);
                     this.ctx.fill();
                     
                     this.ctx.strokeStyle = '#fff';
-                    this.ctx.lineWidth = 1;
+                    this.ctx.lineWidth = Math.round(1 * this.SCALE_AVG);
                     this.ctx.stroke();
                 }
             }

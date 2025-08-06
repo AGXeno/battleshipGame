@@ -27,34 +27,45 @@
       }
 
       #gameCanvas {
-        border: 2px solid #16213e;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
         background: #0f3460;
         cursor: crosshair;
-        max-width: 95vw;
-        max-height: 60vh;
+        z-index: 1;
       }
 
       #topScore {
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
         display: flex;
         justify-content: space-between;
-        width: min(1004px, 95vw);
-        margin-bottom: 5px;
+        padding: 15px 25px;
         font-size: 28px;
         color: white;
+        z-index: 10;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
       }
 
       #headingDisplay {
-        margin-top: 20px;
+        position: fixed;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
         width: min(400px, 95vw);
         height: 200px;
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0.1);
         border: 2px solid #16213e;
         border-radius: 10px;
-        position: relative;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        z-index: 10;
       }
 
       #headingCanvas {
@@ -342,7 +353,7 @@
         </div>
       </div>
 
-      <canvas id="gameCanvas" width="1000" height="700"></canvas>
+      <canvas id="gameCanvas" width="1920" height="1080"></canvas>
 
       <div id="headingDisplay">
         <canvas id="headingCanvas" width="350" height="160"></canvas>
@@ -471,48 +482,90 @@
 
     <script>
       // Game Constants
+      // Use 1.0 scaling for normal game speed
+      const SCALE_X = 1.0;
+      const SCALE_Y = 1.0;
+      const SCALE_AVG = 1.0; // Normal speed scaling
+      
+      // Debug: Log the actual values
+      console.log('SCALE_AVG:', SCALE_AVG);
+      console.log('Ship Radius:', Math.round(24 * SCALE_AVG));
+      console.log('Ship Speed (base):', Math.round(25 * SCALE_AVG));
+
       const GAME_CONFIG = {
-        // Ship Properties
-        SHIP_DEFAULT_SPEED: 25,
+        // Ship Properties (scaled for higher resolution)
+        SHIP_DEFAULT_SPEED: Math.round(25 * SCALE_AVG),
         SHIP_MAX_HEALTH: 3,
-        SHIP_RADIUS: 24,
+        SHIP_RADIUS: Math.round(24 * SCALE_AVG),
         SHIP_CANNON_COOLDOWN: 5000,
         SHIP_RAM_COOLDOWN: 1000,
-        SHIP_SPEED_CHANGE_RATE: 15,
+        SHIP_SPEED_CHANGE_RATE: Math.round(15 * SCALE_AVG),
         SHIP_BASE_TURN_RATE: 0.8,
         SHIP_SPAWN_DELAY: 5000,
         
-        // Cannonball Properties
-        CANNONBALL_SPEED: 150,
-        CANNONBALL_RADIUS: 3,
-        CANNONBALL_RANGE: 1000,
+        // Cannonball Properties (scaled)
+        CANNONBALL_SPEED: Math.round(80 * SCALE_AVG),
+        CANNONBALL_RADIUS: Math.round(3 * SCALE_AVG),
+        CANNONBALL_RANGE: Math.round(1000 * SCALE_AVG),
         
-        // Obstacle Properties
-        OBSTACLE_MIN_RADIUS: 20,
-        OBSTACLE_MAX_RADIUS: 35,
-        OBSTACLE_DAMAGE_RADIUS: 12,
+        // Obstacle Properties (scaled)
+        OBSTACLE_MIN_RADIUS: Math.round(20 * SCALE_AVG),
+        OBSTACLE_MAX_RADIUS: Math.round(35 * SCALE_AVG),
+        OBSTACLE_DAMAGE_RADIUS: Math.round(12 * SCALE_AVG),
         OBSTACLE_DAMAGE_AMOUNT: 0.1,
-        OBSTACLE_PUSH_FORCE: 15,
+        OBSTACLE_PUSH_FORCE: Math.round(15 * SCALE_AVG),
         OBSTACLE_DESTRUCTIBLE_HEALTH: 10,
-        OBSTACLE_LARGE_MIN_RADIUS: 30,
-        OBSTACLE_LARGE_MAX_RADIUS: 50,
+        OBSTACLE_LARGE_MIN_RADIUS: Math.round(30 * SCALE_AVG),
+        OBSTACLE_LARGE_MAX_RADIUS: Math.round(50 * SCALE_AVG),
         
-        // AI Behavior
-        AI_ATTACK_RANGE: 150,
-        AI_AVOIDANCE_RANGE: 30,
-        AI_PREDICTIVE_AVOIDANCE_RANGE: 30,
+        // AI Behavior (scaled)
+        AI_ATTACK_RANGE: Math.round(150 * SCALE_AVG),
+        AI_AVOIDANCE_RANGE: Math.round(30 * SCALE_AVG),
+        AI_PREDICTIVE_AVOIDANCE_RANGE: Math.round(30 * SCALE_AVG),
+        
+        // AI Difficulty Settings
+        AI_DIFFICULTY: {
+            EASY: {
+                powerUpAwareness: 0.2,      // 20% chance to go for power-ups
+                aggressionLevel: 0.6,       // Less aggressive
+                reactionTime: 2000,         // Slower reactions
+                aimAccuracy: 0.7,           // Less accurate
+                strategicThinking: 0.1,     // Poor strategic decisions
+                neutralShipPriority: 0.3    // Low priority on neutral ships
+            },
+            MEDIUM: {
+                powerUpAwareness: 0.5,      // 50% chance to go for power-ups
+                aggressionLevel: 0.8,       // Standard aggression
+                reactionTime: 1500,         // Standard reactions
+                aimAccuracy: 0.85,          // Good accuracy
+                strategicThinking: 0.5,     // Moderate strategic thinking
+                neutralShipPriority: 0.6    // Moderate priority on neutral ships
+            },
+            HARD: {
+                powerUpAwareness: 0.9,      // 90% chance to go for power-ups
+                aggressionLevel: 1.2,       // Highly aggressive
+                reactionTime: 800,          // Fast reactions
+                aimAccuracy: 0.95,          // High accuracy
+                strategicThinking: 0.9,     // Excellent strategic decisions
+                neutralShipPriority: 0.9    // High priority on neutral ships
+            }
+        },
         
         // UI and Rendering
-        CANVAS_WIDTH: 1000,
-        CANVAS_HEIGHT: 700,
+        CANVAS_WIDTH: 1920,
+        CANVAS_HEIGHT: 1080,
         HEADING_COMPASS_RADIUS: 120,
-        HEALTH_BAR_WIDTH: 24,
-        HEALTH_BAR_HEIGHT: 5,
+        HEALTH_BAR_WIDTH: Math.round(24 * SCALE_AVG),
+        HEALTH_BAR_HEIGHT: Math.round(5 * SCALE_AVG),
         
         // Physics and Movement
         DELTA_TIME_MULTIPLIER: 0.001,
         ICEBERG_DRIFT_MIN_SPEED: 3.5,
         ICEBERG_DRIFT_MAX_SPEED: 7.5,
+        
+        // Map boundaries (larger than canvas for off-screen spawning)
+        MAP_WIDTH: 1200,  // 200px beyond canvas on each side
+        MAP_HEIGHT: 900,  // 100px beyond canvas on each side
         
         // Audio
         AUDIO_DEFAULT_MUSIC_VOLUME: 0.5,
@@ -520,41 +573,19 @@
         
         // Performance Optimization
         SPATIAL_GRID_SIZE: 100,
-        MAX_COLLISION_CHECKS_PER_FRAME: 50,
-        CANNONBALL_POOL_SIZE: 100,
+        CANNONBALL_POOL_SIZE: 50,
         TARGET_FPS: 60,
-        FRAME_TIME_MS: 16.67,
         
         // Neutral Ships and Upgrades
-        NEUTRAL_SHIP_SPAWN_CHANCE: 0.3,
-        NEUTRAL_SHIP_SPAWN_INTERVAL: 5000, // 5 seconds for testing
+        NEUTRAL_SHIP_SPAWN_CHANCE: 0.9,
+        NEUTRAL_SHIP_SPAWN_INTERVAL: 15000, // 15 seconds (less frequent)
+        NEUTRAL_SHIP_SPEED: Math.round(25 * SCALE_AVG),
+        NEUTRAL_SHIP_MAX_HEALTH: 3,
         MAX_SHIP_TIER: 3,
         UPGRADE_HEALTH_BONUS: 1,
         UPGRADE_DAMAGE_MULTIPLIER: 1.5,
-        UPGRADE_RATE_OF_FIRE_BONUS: 0.7, // Reduces cooldown by 30%
-        UPGRADE_SPEED_MULTIPLIER: 1.3,
-        
-        // AI Difficulty Settings
-        AI_DIFFICULTY: {
-            EASY: {
-                powerUpAwareness: 0.1,      // 10% chance to go for power-ups
-                aggressionLevel: 0.6,       // Less aggressive
-                reactionTime: 2000,         // Slower reactions
-                aimAccuracy: 0.7            // Less accurate
-            },
-            MEDIUM: {
-                powerUpAwareness: 0.4,      // 40% chance to go for power-ups
-                aggressionLevel: 0.8,       // Standard aggression
-                reactionTime: 1500,         // Standard reactions
-                aimAccuracy: 0.85           // Good accuracy
-            },
-            HARD: {
-                powerUpAwareness: 0.8,      // 80% chance to go for power-ups
-                aggressionLevel: 1.0,       // Maximum aggression
-                reactionTime: 1000,         // Fast reactions
-                aimAccuracy: 0.95           // High accuracy
-            }
-        }
+        UPGRADE_RATE_OF_FIRE_BONUS: 0.7,
+        UPGRADE_SPEED_MULTIPLIER: 1.3
       };
 
       class NavalBattleGame {
@@ -575,18 +606,19 @@
             cannonballs: [],
             obstacles: [],
             neutralShips: [],
+            powerUps: [],
             lastNeutralSpawn: 0,
             aiDifficulty: 'MEDIUM',
             neutralShipsEnabled: true,
             players: {
               player: {
                 score: 0,
-                dock: { x: 100, y: 620, spawnAngle: (-45 * Math.PI) / 180 },
+                dock: { x: 120, y: 750, spawnAngle: (-45 * Math.PI) / 180 },
                 shipCount: 0,
               },
               computer: {
                 score: 0,
-                dock: { x: 900, y: 80, spawnAngle: (135 * Math.PI) / 180 },
+                dock: { x: 1300, y: 130, spawnAngle: (135 * Math.PI) / 180 },
                 shipCount: 0,
               },
               neutral: {
@@ -630,6 +662,9 @@
           this.spawnTimeouts = []; // Store timeout IDs for ship spawning
           this.animationFrame = 0; // Current animation frame (0-3)
           this.lastAnimationUpdate = 0; // Last time animation frame was updated
+          
+          // Fullscreen scaling properties
+          this.SCALE_AVG = 1;
 
           this.init();
         }
@@ -730,6 +765,97 @@
             return shipImageArray[this.animationFrame] || shipImageArray[0];
           }
           return null;
+        }
+        
+        drawSeaBirds(time) {
+          // Draw 2-3 birds occasionally
+          for (let i = 0; i < 3; i++) {
+            const birdCycle = (time * 0.1 + i * 2.5) % 10; // 10 second cycle per bird
+            if (birdCycle > 8) continue; // Only show birds 80% of the cycle
+            
+            // Bird position moving across screen
+            const progress = birdCycle / 8;
+            const birdX = -50 + progress * (this.canvas.width + 100);
+            const birdY = 50 + Math.sin(time * 0.5 + i) * 20 + i * 30;
+            
+            this.ctx.save();
+            this.ctx.globalAlpha = 0.6;
+            this.ctx.fillStyle = "#2c3e50";
+            
+            // Simple bird shape (V shape)
+            const wingSpread = 8 + Math.sin(time * 3 + i) * 2;
+            this.ctx.beginPath();
+            // Left wing
+            this.ctx.moveTo(birdX - wingSpread, birdY);
+            this.ctx.lineTo(birdX - 2, birdY - 3);
+            this.ctx.lineTo(birdX, birdY);
+            // Right wing  
+            this.ctx.lineTo(birdX + 2, birdY - 3);
+            this.ctx.lineTo(birdX + wingSpread, birdY);
+            this.ctx.fill();
+            
+            this.ctx.restore();
+          }
+        }
+        
+        drawFloatingDebris(time) {
+          // Draw small patches of floating seaweed and debris
+          for (let i = 0; i < 6; i++) {
+            const debrisX = (Math.sin(time * 0.05 + i * 1.2) + 1) * this.canvas.width * 0.4 + this.canvas.width * 0.1;
+            const debrisY = (Math.cos(time * 0.03 + i * 1.8) + 1) * this.canvas.height * 0.4 + this.canvas.height * 0.1;
+            const driftX = Math.sin(time * 0.1 + i) * 2;
+            const driftY = Math.cos(time * 0.08 + i) * 1.5;
+            
+            this.ctx.save();
+            this.ctx.globalAlpha = 0.3;
+            this.ctx.fillStyle = i % 2 === 0 ? "#1a5f3f" : "#8B4513"; // Seaweed green or driftwood brown
+            
+            // Draw small irregular patch
+            this.ctx.beginPath();
+            for (let j = 0; j < 8; j++) {
+              const angle = (j / 8) * Math.PI * 2;
+              const radius = 3 + Math.sin(time * 0.5 + i + j) * 2;
+              const x = debrisX + driftX + Math.cos(angle) * radius;
+              const y = debrisY + driftY + Math.sin(angle) * radius;
+              
+              if (j === 0) {
+                this.ctx.moveTo(x, y);
+              } else {
+                this.ctx.lineTo(x, y);
+              }
+            }
+            this.ctx.closePath();
+            this.ctx.fill();
+            
+            this.ctx.restore();
+          }
+        }
+        
+        drawShipWake(ship, speed) {
+          const wakeLength = Math.min(speed * 20, 60);
+          const wakeWidth = Math.min(speed * 3, 12);
+          
+          // Calculate wake direction (opposite of ship movement)
+          const wakeAngle = Math.atan2(-ship.vy, -ship.vx);
+          
+          this.ctx.save();
+          this.ctx.globalAlpha = 0.4;
+          
+          // Draw foam trail behind ship
+          for (let i = 0; i < 5; i++) {
+            const distance = 15 + i * (wakeLength / 5);
+            const wakeX = ship.x + Math.cos(wakeAngle) * distance;
+            const wakeY = ship.y + Math.sin(wakeAngle) * distance;
+            const fadeAlpha = (5 - i) / 5 * 0.3;
+            const currentWidth = wakeWidth * (5 - i) / 5;
+            
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${fadeAlpha})`;
+            this.ctx.beginPath();
+            this.ctx.arc(wakeX, wakeY, currentWidth, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+          
+          this.ctx.restore();
         }
 
         init() {
@@ -894,6 +1020,10 @@
         }
 
         setupCanvas() {
+          // Set up canvas for fullscreen
+          this.resizeCanvas();
+          window.addEventListener('resize', () => this.resizeCanvas());
+          
           this.canvas.addEventListener("click", (e) =>
             this.handleCanvasClick(e)
           );
@@ -934,6 +1064,20 @@
           document.addEventListener("keyup", (e) => {
             this.keys[e.code] = false;
           });
+        }
+        
+        resizeCanvas() {
+          const width = window.innerWidth;
+          const height = window.innerHeight;
+          this.canvas.width = width;
+          this.canvas.height = height;
+          const scaleX = width / 1000;
+          const scaleY = height / 700;
+          this.SCALE_AVG = (scaleX + scaleY) / 2;
+          
+          // Update game config
+          GAME_CONFIG.CANVAS_WIDTH = width;
+          GAME_CONFIG.CANVAS_HEIGHT = height;
         }
 
         setupControls() {
@@ -1464,12 +1608,12 @@
             players: {
               player: {
                 score: 0,
-                dock: { x: 100, y: 620, spawnAngle: (-45 * Math.PI) / 180 },
+                dock: { x: 120, y: 750, spawnAngle: (-45 * Math.PI) / 180 },
                 shipCount: 0,
               },
               computer: {
                 score: 0,
-                dock: { x: 900, y: 80, spawnAngle: (135 * Math.PI) / 180 },
+                dock: { x: 1300, y: 130, spawnAngle: (135 * Math.PI) / 180 },
                 shipCount: 0,
               },
             },
@@ -1572,71 +1716,282 @@
         }
         
         spawnNeutralShip() {
-          const currentTime = Date.now();
+          if (!this.gameState.gameStarted || this.gameState.gamePaused) return;
           
-          // Spawn from map boundaries
-          let x, y, spawnAngle;
-          const side = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
-          const margin = 50; // Distance outside visible map
-          
-          switch(side) {
-            case 0: // Top
-              x = Math.random() * GAME_CONFIG.CANVAS_WIDTH;
-              y = -margin;
-              spawnAngle = Math.PI / 2; // Point downward
-              break;
-            case 1: // Right
-              x = GAME_CONFIG.CANVAS_WIDTH + margin;
-              y = Math.random() * GAME_CONFIG.CANVAS_HEIGHT;
-              spawnAngle = Math.PI; // Point left
-              break;
-            case 2: // Bottom
-              x = Math.random() * GAME_CONFIG.CANVAS_WIDTH;
-              y = GAME_CONFIG.CANVAS_HEIGHT + margin;
-              spawnAngle = -Math.PI / 2; // Point upward
-              break;
-            case 3: // Left
-              x = -margin;
-              y = Math.random() * GAME_CONFIG.CANVAS_HEIGHT;
-              spawnAngle = 0; // Point right
-              break;
+          // Initialize neutralShips array if it doesn't exist
+          if (!this.gameState.neutralShips) {
+              this.gameState.neutralShips = [];
           }
           
+          // Limit to maximum 2 neutral ships
+          if (this.gameState.neutralShips.length >= 2) {
+              return;
+          }
+          
+          const currentTime = Date.now();
+          if (currentTime - this.gameState.lastNeutralSpawn < GAME_CONFIG.NEUTRAL_SHIP_SPAWN_INTERVAL) {
+              return; // No console spam
+          }
+          
+          if (Math.random() > GAME_CONFIG.NEUTRAL_SHIP_SPAWN_CHANCE) {
+              this.gameState.lastNeutralSpawn = currentTime; // Reset timer even if chance fails
+              return;
+          }
+          
+          // Spawn near a random island
+          const islands = this.gameState.obstacles.filter(obs => obs.type === 'island');
+          if (islands.length === 0) return; // No islands to spawn from
+          
+          const randomIsland = islands[Math.floor(Math.random() * islands.length)];
+          
+          // Spawn at a random angle around the island, outside its radius
+          const spawnAngle = Math.random() * Math.PI * 2;
+          const spawnDistance = randomIsland.radius + 40 + Math.random() * 20; // 40-60 pixels from island edge
+          
+          const x = randomIsland.x + Math.cos(spawnAngle) * spawnDistance;
+          const y = randomIsland.y + Math.sin(spawnAngle) * spawnDistance;
+          
+          // Point toward the center of the map for initial direction
+          const centerX = this.canvas.width / 2;
+          const centerY = this.canvas.height / 2;
+          const angle = Math.atan2(centerY - y, centerX - x);
+          
           const neutralShip = {
-            id: Math.random().toString(36).substr(2, 9),
-            playerId: "neutral",
-            shipNumber: null,
-            x: x,
-            y: y,
-            angle: spawnAngle,
-            rudderAngle: 0,
-            targetRudderAngle: 0,
-            cannonAngle: spawnAngle,
-            speed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7, // Slower than regular ships
-            targetSpeed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7,
-            defaultSpeed: GAME_CONFIG.SHIP_DEFAULT_SPEED * 0.7,
-            health: GAME_CONFIG.SHIP_MAX_HEALTH + 1, // Slightly more health
-            maxHealth: GAME_CONFIG.SHIP_MAX_HEALTH + 1,
-            lastShot: currentTime,
-            shotCooldown: GAME_CONFIG.SHIP_CANNON_COOLDOWN * 0.8, // Faster firing
-            spawnTime: currentTime,
-            lastRamTime: 0,
-            // Neutral ships don't have upgrades but carry power-ups
-            tier: 1,
-            upgrades: { health: 0, damage: 0, rateOfFire: 0, speed: 0 },
-            killTierProgress: 0,
-            powerUpType: this.getRandomPowerUpType(),
-            // AI for neutral ships - targets highest tier ships
-            aiTarget: null,
-            aiLastDecision: 0,
-            aiDecisionCooldown: 1500,
-            aiState: "enter", // Start by entering the map, then switch to hunt
-            isNeutral: true
+              id: Math.random().toString(36).substr(2, 9),
+              shipNumber: this.gameState.neutralShips.length + 1, // Give them numbers
+              x: x,
+              y: y,
+              angle: angle,
+              speed: GAME_CONFIG.NEUTRAL_SHIP_SPEED,
+              health: GAME_CONFIG.NEUTRAL_SHIP_MAX_HEALTH,
+              maxHealth: GAME_CONFIG.NEUTRAL_SHIP_MAX_HEALTH,
+              lastShot: currentTime,
+              shotCooldown: 8000, // Much slower firing - every 8 seconds
+              aiTarget: null,
+              timeInCombat: 0,
+              spawnTime: currentTime,
+              upgrades: { health: 0, damage: 0, rateOfFire: 0, speed: 0 },
+              killTierProgress: 0,
+              tier: 1
           };
           
-          this.gameState.ships.push(neutralShip);
-          this.gameState.players.neutral.shipCount++;
-          console.log(`Spawned neutral ship with ${neutralShip.powerUpType} power-up`);
+          this.gameState.neutralShips.push(neutralShip);
+          this.gameState.lastNeutralSpawn = currentTime;
+        }
+        
+        updateNeutralShips(deltaTime) {
+          if (!this.gameState.neutralShips) {
+              this.gameState.neutralShips = [];
+          }
+          
+          for (let neutralShip of this.gameState.neutralShips) {
+              this.executeNeutralShipAI(neutralShip, deltaTime);
+              
+              // Update position with proper delta time scaling (match regular ships)
+              const deltaX = Math.cos(neutralShip.angle) * neutralShip.speed * deltaTime * 0.001;
+              const deltaY = Math.sin(neutralShip.angle) * neutralShip.speed * deltaTime * 0.001;
+              
+              // Safety check for NaN values
+              if (isNaN(deltaX) || isNaN(deltaY) || isNaN(neutralShip.x) || isNaN(neutralShip.y)) {
+                  // Reset to valid position near center of map
+                  neutralShip.x = this.canvas.width / 2 + (Math.random() - 0.5) * 100;
+                  neutralShip.y = this.canvas.height / 2 + (Math.random() - 0.5) * 100;
+                  neutralShip.angle = Math.random() * Math.PI * 2;
+                  neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED;
+                  return;
+              }
+              
+              neutralShip.x += deltaX;
+              neutralShip.y += deltaY;
+              
+              // Obstacle collision detection and avoidance
+              for (let obstacle of this.gameState.obstacles) {
+                  const dx = neutralShip.x - obstacle.x;
+                  const dy = neutralShip.y - obstacle.y;
+                  const distance = Math.sqrt(dx * dx + dy * dy);
+                  const minDistance = obstacle.radius + GAME_CONFIG.SHIP_RADIUS + 5; // Buffer zone
+                  
+                  if (distance < minDistance) {
+                      // Push ship away from obstacle
+                      const pushStrength = (minDistance - distance) / minDistance;
+                      const pushX = (dx / distance) * pushStrength * 3;
+                      const pushY = (dy / distance) * pushStrength * 3;
+                      
+                      neutralShip.x += pushX;
+                      neutralShip.y += pushY;
+                      
+                      // Deflect movement angle to go around obstacle
+                      const obstacleAngle = Math.atan2(dy, dx);
+                      const deflectionAngle = obstacleAngle + (Math.PI / 2) * (Math.random() > 0.5 ? 1 : -1);
+                      neutralShip.angle = deflectionAngle;
+                      
+                      // Slow down when navigating around obstacles
+                      neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED * 0.5;
+                  }
+              }
+              
+              // Keep ships within screen boundaries
+              const mapBounds = {
+                  left: 0,
+                  right: this.canvas.width,
+                  top: 0,
+                  bottom: this.canvas.height
+              };
+              
+              if (neutralShip.x < mapBounds.left || neutralShip.x > mapBounds.right) {
+                  neutralShip.angle = Math.PI - neutralShip.angle;
+                  neutralShip.x = Math.max(mapBounds.left, Math.min(mapBounds.right, neutralShip.x));
+              }
+              if (neutralShip.y < mapBounds.top || neutralShip.y > mapBounds.bottom) {
+                  neutralShip.angle = -neutralShip.angle;
+                  neutralShip.y = Math.max(mapBounds.top, Math.min(mapBounds.bottom, neutralShip.y));
+              }
+              
+              // Auto-fire at nearby enemy ships
+              const currentTime = Date.now();
+              if (currentTime - neutralShip.lastShot >= neutralShip.shotCooldown) {
+                  if (neutralShip.aiTarget) {
+                      this.fireNeutralCannonball(neutralShip);
+                      neutralShip.lastShot = currentTime;
+                  }
+              }
+          }
+        }
+        
+        executeNeutralShipAI(neutralShip, deltaTime) {
+          // Pirate AI: Find closest ship and circle around it at optimal combat range
+          let closestShip = null;
+          let closestDistance = Infinity;
+          
+          for (let ship of this.gameState.ships) {
+              const dx = neutralShip.x - ship.x;
+              const dy = neutralShip.y - ship.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              
+              if (distance < closestDistance) {
+                  closestDistance = distance;
+                  closestShip = ship;
+              }
+          }
+          
+          neutralShip.aiTarget = closestShip;
+          
+          if (closestShip) {
+              const dx = closestShip.x - neutralShip.x;
+              const dy = closestShip.y - neutralShip.y;
+              const distance = Math.sqrt(dx * dx + dy * dy);
+              const angleToTarget = Math.atan2(dy, dx);
+              
+              // Optimal combat range for circling
+              const optimalRange = 120;
+              const tooClose = 80;
+              const tooFar = 200;
+              
+              if (distance < tooClose) {
+                  // Too close - retreat while keeping target in sight
+                  const retreatAngle = angleToTarget + Math.PI; // Opposite direction
+                  neutralShip.angle = retreatAngle;
+                  neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED * 0.8;
+              } else if (distance > tooFar) {
+                  // Too far - approach target
+                  neutralShip.angle = angleToTarget;
+                  neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED;
+              } else {
+                  // Optimal range - circle strafe like a pirate
+                  const circleDirection = neutralShip.circleDirection || (Math.random() > 0.5 ? 1 : -1);
+                  neutralShip.circleDirection = circleDirection; // Remember direction
+                  
+                  // Circle around target (perpendicular to target direction)
+                  const circleAngle = angleToTarget + (Math.PI / 2) * circleDirection;
+                  neutralShip.angle = circleAngle;
+                  neutralShip.speed = GAME_CONFIG.NEUTRAL_SHIP_SPEED * 0.7; // Slower when circling
+                  
+                  // Occasionally change circle direction for unpredictability (less frequent)
+                  if (!neutralShip.lastDirectionChange) neutralShip.lastDirectionChange = 0;
+                  if (Date.now() - neutralShip.lastDirectionChange > 3000 && Math.random() < 0.001) {
+                      neutralShip.circleDirection *= -1;
+                      neutralShip.lastDirectionChange = Date.now();
+                  }
+              }
+          }
+        }
+        
+        fireNeutralCannonball(neutralShip) {
+          if (!neutralShip.aiTarget) return;
+          
+          const dx = neutralShip.aiTarget.x - neutralShip.x;
+          const dy = neutralShip.aiTarget.y - neutralShip.y;
+          const aimAngle = Math.atan2(dy, dx);
+          
+          const cannonball = {
+              id: Math.random().toString(36).substr(2, 9),
+              x: neutralShip.x + Math.cos(aimAngle) * 15,
+              y: neutralShip.y + Math.sin(aimAngle) * 15,
+              angle: aimAngle,
+              speed: GAME_CONFIG.CANNONBALL_SPEED,
+              shooterId: neutralShip.id,
+              shooterPlayerId: 'neutral', // Fix crash - set proper playerId
+              shooterType: 'neutral',
+              dead: false
+          };
+          
+          this.gameState.cannonballs.push(cannonball);
+          this.playRandomCannonSound();
+        }
+        
+        dropPowerUp(x, y) {
+          // Initialize powerUps array if it doesn't exist
+          if (!this.gameState.powerUps) {
+              this.gameState.powerUps = [];
+          }
+          
+          const powerUpTypes = ['health', 'damage', 'rateOfFire', 'speed'];
+          const type = powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)];
+          
+          const powerUp = {
+              id: Math.random().toString(36).substr(2, 9),
+              type: type,
+              x: x,
+              y: y,
+              spawnTime: Date.now(),
+              collected: false
+          };
+          
+          this.gameState.powerUps.push(powerUp);
+        }
+        
+        updatePowerUps() {
+          if (!this.gameState.powerUps) {
+              this.gameState.powerUps = [];
+              return;
+          }
+          
+          const currentTime = Date.now();
+          
+          // Remove expired power-ups (last 30 seconds)
+          this.gameState.powerUps = this.gameState.powerUps.filter(powerUp => 
+              currentTime - powerUp.spawnTime < 30000 && !powerUp.collected
+          );
+        }
+        
+        getPowerUpColor(type) {
+          switch (type) {
+              case 'health': return '#00FF00'; // Green
+              case 'damage': return '#FF0000'; // Red
+              case 'rateOfFire': return '#FFFF00'; // Yellow
+              case 'speed': return '#00FFFF'; // Cyan
+              default: return '#FFFFFF';
+          }
+        }
+        
+        getPowerUpIcon(type) {
+          switch (type) {
+              case 'health': return '♥';
+              case 'damage': return '⚡';
+              case 'rateOfFire': return '⚡';
+              case 'speed': return '→';
+              default: return '?';
+          }
         }
         
         getRandomPowerUpType() {
@@ -1652,7 +2007,8 @@
           
           // Spawn neutral ships periodically (if enabled)
           if (this.gameState.neutralShipsEnabled && timeSinceLastSpawn > GAME_CONFIG.NEUTRAL_SHIP_SPAWN_INTERVAL) {
-            if (Math.random() < GAME_CONFIG.NEUTRAL_SHIP_SPAWN_CHANCE) {
+            const spawnChance = GAME_CONFIG.NEUTRAL_SHIP_SPAWN_CHANCE[this.gameState.aiDifficulty];
+            if (Math.random() < spawnChance) {
               // Limit to 2 neutral ships at once
               const neutralCount = this.gameState.ships.filter(s => s.playerId === "neutral").length;
               if (neutralCount < 2) {
@@ -1669,33 +2025,92 @@
         applyPowerUp(ship, powerUpType) {
           console.log(`Applying ${powerUpType} power-up to ${ship.playerId} ship`);
           
+          let upgradeName = '';
           switch (powerUpType) {
             case 'health':
               ship.upgrades.health++;
               ship.maxHealth += GAME_CONFIG.UPGRADE_HEALTH_BONUS;
               ship.health += GAME_CONFIG.UPGRADE_HEALTH_BONUS; // Heal immediately
+              upgradeName = 'Health Boost';
               break;
               
             case 'damage':
               ship.upgrades.damage++;
+              upgradeName = 'Damage Boost';
               // Damage multiplier applied when creating cannonballs
               break;
               
             case 'rateOfFire':
               ship.upgrades.rateOfFire++;
               ship.shotCooldown *= GAME_CONFIG.UPGRADE_RATE_OF_FIRE_BONUS;
+              upgradeName = 'Rate of Fire Boost';
               break;
               
             case 'speed':
               ship.upgrades.speed++;
               ship.defaultSpeed *= GAME_CONFIG.UPGRADE_SPEED_MULTIPLIER;
               ship.targetSpeed = ship.defaultSpeed;
+              upgradeName = 'Speed Boost';
               break;
+          }
+          
+          // Show upgrade notification only for player ships
+          if (ship.playerId === 'player') {
+            this.showUpgradeNotification(upgradeName);
           }
           
           // Update ship tier based on total upgrades and kill progress
           ship.tier = this.calculateShipTier(ship);
           console.log(`Ship now has tier ${ship.tier} with upgrades:`, ship.upgrades);
+        }
+
+        showUpgradeNotification(upgradeName) {
+          // Create and show upgrade popup
+          const notification = document.createElement('div');
+          notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+          `;
+          notification.textContent = `You got an upgrade: ${upgradeName}!`;
+          
+          // Add slide-in animation
+          if (!document.getElementById('upgradeNotificationStyle')) {
+            const style = document.createElement('style');
+            style.id = 'upgradeNotificationStyle';
+            style.textContent = `
+              @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+              }
+              @keyframes slideOut {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+              }
+            `;
+            document.head.appendChild(style);
+          }
+          
+          document.body.appendChild(notification);
+          
+          // Remove notification after 3 seconds
+          setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease-out';
+            setTimeout(() => {
+              if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+              }
+            }, 300);
+          }, 3000);
         }
 
         calculateShipTier(ship) {
@@ -1779,42 +2194,78 @@
 
         generateObstacles() {
           this.gameState.obstacles = [];
-
-          // Generate islands (static) - avoid spawning near team bases
-          for (let i = 0; i < 2; i++) {
-            let x, y, attempts = 0;
-            const blueBase = { x: 100, y: 620 };
-            const redBase = { x: 900, y: 80 };
-            const minBaseDistance = 150; // Minimum distance from bases
-            
-            do {
-              x = 200 + Math.random() * 600; // Center area of map
-              y = 150 + Math.random() * 400;
-              attempts++;
+          
+          // Generate varied islands (static) - avoid spawning near team bases
+          const numIslands = 3 + Math.floor(Math.random() * 3); // 3-5 islands
+          const blueBase = { x: this.canvas.width * 0.1, y: this.canvas.height * 0.85 };
+          const redBase = { x: this.canvas.width * 0.9, y: this.canvas.height * 0.15 };
+          const minBaseDistance = Math.min(this.canvas.width, this.canvas.height) * 0.2; // 20% of smaller dimension
+          
+          for (let i = 0; i < numIslands; i++) {
+              let x, y, attempts = 0;
               
-              // Check distance from both bases
-              const distToBlue = Math.sqrt((x - blueBase.x) ** 2 + (y - blueBase.y) ** 2);
-              const distToRed = Math.sqrt((x - redBase.x) ** 2 + (y - redBase.y) ** 2);
+              do {
+                  x = this.canvas.width * 0.1 + Math.random() * this.canvas.width * 0.8; // 10-90% of width
+                  y = this.canvas.height * 0.1 + Math.random() * this.canvas.height * 0.8; // 10-90% of height
+                  attempts++;
+                  
+                  // Check distance from both bases
+                  const distToBlue = Math.sqrt((x - blueBase.x) ** 2 + (y - blueBase.y) ** 2);
+                  const distToRed = Math.sqrt((x - redBase.x) ** 2 + (y - redBase.y) ** 2);
+                  
+                  // Check distance from existing islands
+                  let tooClose = false;
+                  for (const existingIsland of this.gameState.obstacles) {
+                      if (existingIsland.type === 'island') {
+                          const dist = Math.sqrt((x - existingIsland.x) ** 2 + (y - existingIsland.y) ** 2);
+                          if (dist < existingIsland.radius + 200) { // Minimum spacing
+                              tooClose = true;
+                              break;
+                          }
+                      }
+                  }
+                  
+                  if (distToBlue >= minBaseDistance && distToRed >= minBaseDistance && !tooClose) {
+                      break; // Good position found
+                  }
+              } while (attempts < 30);
               
-              if (distToBlue >= minBaseDistance && distToRed >= minBaseDistance) {
-                break; // Good position found
+              // Create varied island sizes (smaller)
+              let radius, islandType;
+              const sizeRoll = Math.random();
+              if (sizeRoll < 0.3) {
+                  // Small islands (30%)
+                  radius = 30 + Math.random() * 20; // 30-50 radius
+                  islandType = 'small';
+              } else if (sizeRoll < 0.7) {
+                  // Medium islands (40%)
+                  radius = 50 + Math.random() * 25; // 50-75 radius
+                  islandType = 'medium';
+              } else {
+                  // Large islands (30%)
+                  radius = 75 + Math.random() * 35; // 75-110 radius
+                  islandType = 'large';
               }
-            } while (attempts < 20);
-            
-            this.gameState.obstacles.push({
-              type: "island",
-              x: x,
-              y: y,
-              radius: 30 + Math.random() * 20,
-              destructible: false,
-              imageIndex: Math.floor(Math.random() * 6), // 0-5 for 6 island images
-            });
+              
+              this.gameState.obstacles.push({
+                  type: 'island',
+                  x: x,
+                  y: y,
+                  radius: Math.round(radius),
+                  destructible: false,
+                  imageIndex: Math.floor(Math.random() * 6), // 0-5 for 6 island images
+                  islandType: islandType
+              });
+              
+              console.log(`Generated ${islandType} island with radius ${Math.round(radius)} at (${Math.round(x)}, ${Math.round(y)})`);
           }
-
-          // Generate initial icebergs with drift properties
-          // Some spawn on-map, some spawn off-screen
-          for (let i = 0; i < 3; i++) {
-            this.createDriftingIceberg(i < 2); // First 2 spawn on-map
+          
+          // Generate initial icebergs with drift properties - randomized count
+          const numIcebergs = 2 + Math.floor(Math.random() * 4); // 2-5 icebergs
+          console.log(`Generating ${numIcebergs} icebergs`);
+          
+          for (let i = 0; i < numIcebergs; i++) {
+              this.createDriftingIceberg(i < Math.ceil(numIcebergs * 0.6)); // 60% spawn on screen
           }
         }
 
@@ -2344,38 +2795,74 @@
         }
 
         makeAIDecision(ship) {
-          const playerShips = this.gameState.ships.filter(
-            (s) => s.playerId === "player"
-          );
+          const difficulty = GAME_CONFIG.AI_DIFFICULTY[this.gameState.aiDifficulty];
+          const playerShips = this.gameState.ships.filter(s => s.playerId === "player");
+          const neutralShips = this.gameState.ships.filter(s => s.playerId === "neutral");
 
           if (playerShips.length === 0) return;
 
-          let closestShip = null;
-          let closestDistance = Infinity;
-
+          // Find closest player ship
+          let closestPlayer = null;
+          let closestPlayerDistance = Infinity;
           for (let playerShip of playerShips) {
             const dx = ship.x - playerShip.x;
             const dy = ship.y - playerShip.y;
             const distance = Math.sqrt(dx * dx + dy * dy);
-
-            if (distance < closestDistance) {
-              closestDistance = distance;
-              closestShip = playerShip;
+            if (distance < closestPlayerDistance) {
+              closestPlayerDistance = distance;
+              closestPlayer = playerShip;
             }
           }
 
-          ship.aiTarget = closestShip;
-
-          if (closestDistance < GAME_CONFIG.AI_ATTACK_RANGE) {
-            ship.aiState = ship.health <= 1 ? "evade" : "attack";
-          } else {
-            ship.aiState = "patrol";
+          // Find closest neutral ship (power-up opportunity)
+          let closestNeutral = null;
+          let closestNeutralDistance = Infinity;
+          for (let neutralShip of neutralShips) {
+            const dx = ship.x - neutralShip.x;
+            const dy = ship.y - neutralShip.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < closestNeutralDistance) {
+              closestNeutralDistance = distance;
+              closestNeutral = neutralShip;
+            }
           }
+
+          // Strategic decision making based on difficulty
+          let shouldTargetNeutral = false;
+          
+          if (closestNeutral && Math.random() < difficulty.powerUpAwareness) {
+            // Consider going for neutral ship based on strategic factors
+            const neutralIsSafer = closestNeutralDistance < closestPlayerDistance * 0.7;
+            const needsUpgrade = ship.tier < 2 && Math.random() < difficulty.strategicThinking;
+            const opportunisticGrab = closestNeutralDistance < 150 && Math.random() < difficulty.neutralShipPriority;
+            
+            shouldTargetNeutral = neutralIsSafer || needsUpgrade || opportunisticGrab;
+          }
+
+          // Set target and state based on decision
+          if (shouldTargetNeutral) {
+            ship.aiTarget = closestNeutral;
+            ship.aiState = "hunt_powerup";
+          } else {
+            ship.aiTarget = closestPlayer;
+            // Adjust aggression range based on difficulty
+            const attackRange = GAME_CONFIG.AI_ATTACK_RANGE * difficulty.aggressionLevel;
+            
+            if (closestPlayerDistance < attackRange) {
+              ship.aiState = ship.health <= 1 ? "evade" : "attack";
+            } else {
+              ship.aiState = "patrol";
+            }
+          }
+
+          // Add reaction time delay based on difficulty
+          ship.aiDecisionCooldown = difficulty.reactionTime + Math.random() * 500;
         }
 
         executeAIBehavior(ship) {
           if (!ship.aiTarget) return;
 
+          const difficulty = GAME_CONFIG.AI_DIFFICULTY[this.gameState.aiDifficulty];
           const dx = ship.aiTarget.x - ship.x;
           const dy = ship.aiTarget.y - ship.y;
           const distance = Math.sqrt(dx * dx + dy * dy);
@@ -2392,46 +2879,55 @@
           const timeToImpact = distance / cannonballSpeed;
           const predictedX = ship.aiTarget.x + targetVelX * timeToImpact * 0.05;
           const predictedY = ship.aiTarget.y + targetVelY * timeToImpact * 0.05;
-          const predictedAngle = Math.atan2(
+          let predictedAngle = Math.atan2(
             predictedY - ship.y,
             predictedX - ship.x
           );
 
+          // Apply aim accuracy based on difficulty (add random error)
+          const aimError = (1 - difficulty.aimAccuracy) * (Math.random() - 0.5) * 0.5;
+          predictedAngle += aimError;
+
           switch (ship.aiState) {
+            case "hunt_powerup":
+              // Aggressively pursue neutral ships for power-ups
+              ship.cannonAngle = predictedAngle;
+              ship.targetSpeed = ship.defaultSpeed * 1.1; // Slightly faster when hunting power-ups
+              
+              const huntAngleDiff = this.normalizeAngle(angleToTarget - ship.angle);
+              ship.targetRudderAngle = Math.sign(huntAngleDiff) * 
+                Math.min(Math.abs(huntAngleDiff) * 0.7, Math.PI / 4);
+              break;
+
             case "attack":
-              // Use predictive aiming
+              // Use predictive aiming with difficulty-based accuracy
               ship.cannonAngle = predictedAngle;
 
-              // Optimal combat distance is 100-200 pixels
-              if (distance < 100) {
+              // Difficulty-based combat ranges and aggression
+              const minRange = 80 + (difficulty.aggressionLevel - 0.6) * 40; // 80-120 range
+              const maxRange = 180 + difficulty.aggressionLevel * 60; // 180-252 range
+              const combatSpeed = ship.defaultSpeed * (0.8 + difficulty.aggressionLevel * 0.3);
+
+              if (distance < minRange) {
                 // Too close, back off while maintaining fire angle
-                ship.targetSpeed = ship.defaultSpeed * 0.6;
+                ship.targetSpeed = combatSpeed * 0.7;
                 const retreatAngle = angleToTarget + Math.PI;
-                const retreatDiff = this.normalizeAngle(
-                  retreatAngle - ship.angle
-                );
-                ship.targetRudderAngle =
-                  Math.sign(retreatDiff) *
-                  Math.min(Math.abs(retreatDiff) * 0.4, Math.PI / 6);
-              } else if (distance > 200) {
-                // Chase target
-                ship.targetSpeed = ship.defaultSpeed;
-                const angleDiff = this.normalizeAngle(
-                  angleToTarget - ship.angle
-                );
-                ship.targetRudderAngle =
-                  Math.sign(angleDiff) *
-                  Math.min(Math.abs(angleDiff) * 0.5, Math.PI / 6);
+                const retreatDiff = this.normalizeAngle(retreatAngle - ship.angle);
+                ship.targetRudderAngle = Math.sign(retreatDiff) * 
+                  Math.min(Math.abs(retreatDiff) * (0.4 + difficulty.aggressionLevel * 0.2), Math.PI / 6);
+              } else if (distance > maxRange) {
+                // Chase target with difficulty-based aggression
+                ship.targetSpeed = combatSpeed * (1 + difficulty.aggressionLevel * 0.2);
+                const angleDiff = this.normalizeAngle(angleToTarget - ship.angle);
+                ship.targetRudderAngle = Math.sign(angleDiff) * 
+                  Math.min(Math.abs(angleDiff) * (0.5 + difficulty.aggressionLevel * 0.2), Math.PI / 6);
               } else {
-                // Optimal range - circle strafe
-                ship.targetSpeed = ship.defaultSpeed * 0.8;
-                const strafeAngle = angleToTarget + Math.PI / 2;
-                const strafeDiff = this.normalizeAngle(
-                  strafeAngle - ship.angle
-                );
-                ship.targetRudderAngle =
-                  Math.sign(strafeDiff) *
-                  Math.min(Math.abs(strafeDiff) * 0.4, Math.PI / 6);
+                // Optimal range - difficulty affects strafe aggressiveness
+                ship.targetSpeed = combatSpeed;
+                const strafeAngle = angleToTarget + Math.PI / 2 * (Math.random() > 0.5 ? 1 : -1);
+                const strafeDiff = this.normalizeAngle(strafeAngle - ship.angle);
+                ship.targetRudderAngle = Math.sign(strafeDiff) * 
+                  Math.min(Math.abs(strafeDiff) * (0.4 + difficulty.strategicThinking * 0.3), Math.PI / 6);
               }
               break;
 
@@ -2584,9 +3080,11 @@
           this.updatePlayerControls();
           this.updateAI(deltaTime);
           this.updateNeutralShipSpawning();
+          this.updateNeutralShips(deltaTime);
           this.updateShips(deltaTime);
           this.updateCannonballs(deltaTime);
           this.updateIcebergDrift(deltaTime);
+          this.updatePowerUps();
           this.checkCollisions();
           this.cleanupDeadObjects();
           this.handleShooting();
@@ -3154,16 +3652,82 @@
           ctx.setLineDash([]);
         }
 
+        renderAnimatedOcean() {
+          const time = Date.now() * 0.001; // Convert to seconds for wave animation
+          
+          // Base ocean color
+          this.ctx.fillStyle = "#0f3460";
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          
+          // Create animated wave patterns with depth
+          const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+          gradient.addColorStop(0, "#1e4a6f");
+          gradient.addColorStop(0.3, "#0f3460");
+          gradient.addColorStop(0.7, "#0a2847");
+          gradient.addColorStop(1, "#051c2f");
+          
+          this.ctx.fillStyle = gradient;
+          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          
+          // Draw animated wave lines
+          this.ctx.strokeStyle = "rgba(32, 178, 170, 0.05)"; // Much more transparent
+          this.ctx.lineWidth = 1;
+          
+          for (let i = 0; i < 8; i++) {
+            this.ctx.beginPath();
+            const waveOffset = time * (2 + i * 0.3); // Much slower waves
+            const amplitude = 8 + i * 2; // Smaller waves
+            const frequency = 0.003 + i * 0.0005; // Lower frequency
+            
+            for (let x = 0; x <= this.canvas.width; x += 5) {
+              const y = this.canvas.height * (0.2 + i * 0.1) + 
+                       Math.sin((x * frequency) + waveOffset) * amplitude;
+              if (x === 0) {
+                this.ctx.moveTo(x, y);
+              } else {
+                this.ctx.lineTo(x, y);
+              }
+            }
+            this.ctx.stroke();
+          }
+          
+          // Draw occasional sea birds
+          this.drawSeaBirds(time);
+          
+          // Draw floating debris and seaweed patches
+          this.drawFloatingDebris(time);
+          
+          // Add subtle floating particles/bubbles
+          this.ctx.fillStyle = "rgba(135, 206, 235, 0.1)";
+          for (let i = 0; i < 15; i++) {
+            const particleTime = time * (0.1 + i * 0.02); // Much slower particles
+            const x = (i * 73 + Math.sin(particleTime) * 15) % this.canvas.width; // Smaller movement
+            const y = (i * 47 + Math.cos(particleTime * 0.7) * 10) % this.canvas.height; // Smaller movement
+            
+            this.ctx.beginPath();
+            this.ctx.arc(x, y, 2 + Math.sin(particleTime * 2) * 1, 0, Math.PI * 2);
+            this.ctx.fill();
+          }
+        }
+
         render() {
           this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
 
-          this.ctx.fillStyle = "#0f3460";
-          this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+          // Animated ocean background
+          this.renderAnimatedOcean();
 
           // Render obstacles
           for (let obstacle of this.gameState.obstacles) {
             this.ctx.save();
             this.ctx.translate(obstacle.x, obstacle.y);
+
+            // Draw elevation shadow first (proportional to obstacle size)
+            const shadowOffset = obstacle.radius * 0.25;
+            const shadowRadius = obstacle.radius * 0.8;
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(shadowOffset, shadowOffset, shadowRadius, shadowRadius * 0.5, 0, 0, Math.PI * 2);
+            this.ctx.fill();
 
             if (obstacle.type === "island") {
               // Draw island image
@@ -3247,14 +3811,29 @@
 
           // Render ships
           for (let ship of this.gameState.ships) {
+            // Draw wake effect behind moving ships
+            if (ship.vx || ship.vy) {
+              const speed = Math.sqrt(ship.vx * ship.vx + ship.vy * ship.vy);
+              if (speed > 0.5) { // Only draw wake for ships moving fast enough
+                this.drawShipWake(ship, speed);
+              }
+            }
+            
             this.ctx.save();
             this.ctx.translate(ship.x, ship.y);
+
+            // Draw ship shadow first
+            const shadowOffset = 5;
+            this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+            this.ctx.beginPath();
+            this.ctx.ellipse(shadowOffset, shadowOffset, 20, 12, 0, 0, Math.PI * 2);
+            this.ctx.fill();
 
             // Draw ship image based on playerId and angle
             const shipImg = this.getShipImage(ship.playerId, ship.angle);
                                             if (shipImg) {
                     // Draw ship image centered at origin
-                    const shipSize = 48; // Size of ship image
+                    const shipSize = 60; // Size of ship image
                     this.ctx.drawImage(shipImg, -shipSize/2, -shipSize/2, shipSize, shipSize);
                 } else {
                     // Fallback to colored rectangles if image not loaded
@@ -3265,7 +3844,7 @@
                     } else {
                         this.ctx.fillStyle = "#FFFFFF"; // White for neutral ships
                     }
-                    this.ctx.fillRect(-24, -24, 48, 48);
+                    this.ctx.fillRect(-30, -30, 60, 60);
                     
                     // Rear section (darker color)
                     if (ship.playerId === "player") {
@@ -3419,6 +3998,94 @@
               );
               this.ctx.stroke();
             }
+          }
+
+          // Render neutral ships
+          if (this.gameState.neutralShips && this.gameState.neutralShips.length > 0) {
+              for (let neutralShip of this.gameState.neutralShips) {
+                  this.ctx.save();
+                  this.ctx.translate(neutralShip.x, neutralShip.y);
+                  
+                  // Draw ship shadow first
+                  const shadowOffset = 5;
+                  this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                  this.ctx.beginPath();
+                  this.ctx.ellipse(shadowOffset, shadowOffset, 20, 12, 0, 0, Math.PI * 2);
+                  this.ctx.fill();
+                  
+                  // Draw ship image based on neutral (white) color
+                  const shipImg = this.getShipImage('neutral', neutralShip.angle);
+                  if (shipImg) {
+                      // Draw ship image centered at origin
+                      const shipSize = 60; // Size of ship image
+                      this.ctx.drawImage(shipImg, -shipSize/2, -shipSize/2, shipSize, shipSize);
+                  } else {
+                      // Fallback to colored rectangles if image not loaded
+                      this.ctx.fillStyle = "#FFFFFF"; // White for neutral ships
+                      this.ctx.fillRect(-30, -30, 60, 60);
+                      
+                      // Rear section (darker color)
+                      this.ctx.fillStyle = "#CCCCCC";
+                      this.ctx.fillRect(-30, 15, 60, 15);
+                  }
+                  
+                  this.ctx.restore();
+                  
+                  // Health bar for neutral ships
+                  this.ctx.save();
+                  this.ctx.translate(neutralShip.x, neutralShip.y - 20);
+                  
+                  const healthRatio = neutralShip.health / neutralShip.maxHealth;
+                  
+                  // Health bar background
+                  this.ctx.fillStyle = "#333";
+                  this.ctx.fillRect(-12, 0, 24, 5);
+                  
+                  // Health bar
+                  this.ctx.fillStyle = healthRatio > 0.66 ? "#00FF00" : healthRatio > 0.33 ? "#FFFF00" : "#FF0000";
+                  this.ctx.fillRect(-12, 0, healthRatio * 24, 5);
+                  
+                  // Health bar border
+                  this.ctx.strokeStyle = "#000";
+                  this.ctx.lineWidth = 1;
+                  this.ctx.strokeRect(-12, 0, 24, 5);
+                  
+                  this.ctx.restore();
+              }
+          }
+
+          // Render power-ups
+          if (this.gameState.powerUps) {
+              for (let powerUp of this.gameState.powerUps) {
+                  if (powerUp.collected) continue;
+                  
+                  this.ctx.save();
+                  this.ctx.translate(powerUp.x, powerUp.y);
+                  
+                  // Draw power-up with pulsing effect
+                  const time = Date.now() * 0.005;
+                  const pulse = 0.8 + Math.sin(time) * 0.2;
+                  
+                  // Power-up background glow
+                  this.ctx.shadowColor = this.getPowerUpColor(powerUp.type);
+                  this.ctx.shadowBlur = 15;
+                  
+                  // Power-up circle
+                  this.ctx.fillStyle = this.getPowerUpColor(powerUp.type);
+                  this.ctx.beginPath();
+                  this.ctx.arc(0, 0, 12 * pulse, 0, Math.PI * 2);
+                  this.ctx.fill();
+                  
+                  // Power-up icon (simple text)
+                  this.ctx.shadowBlur = 0;
+                  this.ctx.fillStyle = "#FFFFFF";
+                  this.ctx.font = "12px Arial";
+                  this.ctx.textAlign = "center";
+                  this.ctx.textBaseline = "middle";
+                  this.ctx.fillText(this.getPowerUpIcon(powerUp.type), 0, 0);
+                  
+                  this.ctx.restore();
+              }
           }
 
           // Render cannonballs

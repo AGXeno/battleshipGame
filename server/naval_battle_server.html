@@ -32,28 +32,36 @@
         }
         
         #gameCanvas {
-            border: 2px solid #16213e;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             background: #0f3460;
             cursor: crosshair;
-            max-width: 95vw;
-            max-height: 60vh;
+            z-index: 1;
             outline: none;
         }
         
         #topScore {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
             display: flex;
             justify-content: space-between;
-            width: min(1004px, 95vw);
-            margin-bottom: 5px;
+            padding: 15px 25px;
             font-size: 28px;
             color: white;
+            z-index: 10;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
         }
         
         #headingDisplay {
             margin-top: 20px;
             width: min(400px, 95vw);
             height: 200px;
-            background: rgba(0, 0, 0, 0.3);
+            background: rgba(0, 0, 0, 0.1);
             border: 2px solid #16213e;
             border-radius: 10px;
             position: relative;
@@ -252,7 +260,7 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas" width="1000" height="700" tabindex="0"></canvas>
+        <canvas id="gameCanvas" width="1920" height="1080" tabindex="0"></canvas>
         
         <div id="headingDisplay">
             <canvas id="headingCanvas" width="350" height="160"></canvas>
@@ -360,7 +368,7 @@
             SHIP_SPAWN_DELAY: 5000,
             
             // Cannonball Properties
-            CANNONBALL_SPEED: 150,
+            CANNONBALL_SPEED: 80,
             CANNONBALL_RADIUS: 3,
             CANNONBALL_RANGE: 1000,
             
@@ -378,6 +386,16 @@
             AUDIO_DEFAULT_MUSIC_VOLUME: 0.5,
             AUDIO_DEFAULT_SOUND_VOLUME: 0.7,
             
+            // Obstacles
+            OBSTACLE_MIN_RADIUS: 20,
+            OBSTACLE_MAX_RADIUS: 35,
+            OBSTACLE_DAMAGE_RADIUS: 12,
+            OBSTACLE_DAMAGE_AMOUNT: 0.1,
+            OBSTACLE_PUSH_FORCE: 15,
+            OBSTACLE_DESTRUCTIBLE_HEALTH: 10,
+            OBSTACLE_LARGE_MIN_RADIUS: 30,
+            OBSTACLE_LARGE_MAX_RADIUS: 50,
+            
             // Performance Optimization
             SPATIAL_GRID_SIZE: 100,
             CANNONBALL_POOL_SIZE: 50,
@@ -390,6 +408,11 @@
                 this.ctx = this.canvas.getContext('2d');
                 this.headingCanvas = document.getElementById('headingCanvas');
                 this.headingCtx = this.headingCanvas.getContext('2d');
+                
+                // Calculate scaling factor for fullscreen support
+                const scaleX = window.innerWidth / 1000;
+                const scaleY = window.innerHeight / 700;
+                this.SCALE_AVG = (scaleX + scaleY) / 2;
                 
                 // Audio elements
                 this.backgroundMusic = document.getElementById('backgroundMusic');
@@ -483,6 +506,219 @@
                 getIcebergImage(index) {
                     return this.icebergImages[index] || this.icebergImages[0];
                 }
+
+                generateObstacles() {
+                    if (!this.gameState.obstacles) {
+                        this.gameState.obstacles = [];
+                    }
+                    
+                    // Generate varied islands (static) - avoid spawning near team bases
+                    const numIslands = 3 + Math.floor(Math.random() * 3); // 3-5 islands
+                    const blueBase = { x: this.canvas.width * 0.1, y: this.canvas.height * 0.85 };
+                    const redBase = { x: this.canvas.width * 0.9, y: this.canvas.height * 0.15 };
+                    const minBaseDistance = Math.min(this.canvas.width, this.canvas.height) * 0.2; // 20% of smaller dimension
+                    
+                    for (let i = 0; i < numIslands; i++) {
+                        let x, y, attempts = 0;
+                        
+                        do {
+                            x = this.canvas.width * 0.1 + Math.random() * this.canvas.width * 0.8; // 10-90% of width
+                            y = this.canvas.height * 0.1 + Math.random() * this.canvas.height * 0.8; // 10-90% of height
+                            attempts++;
+                            
+                            // Check distance from both bases
+                            const distToBlue = Math.sqrt((x - blueBase.x) ** 2 + (y - blueBase.y) ** 2);
+                            const distToRed = Math.sqrt((x - redBase.x) ** 2 + (y - redBase.y) ** 2);
+                            
+                            // Check distance from existing islands
+                            let tooClose = false;
+                            for (const existingIsland of this.gameState.obstacles) {
+                                if (existingIsland.type === 'island') {
+                                    const dist = Math.sqrt((x - existingIsland.x) ** 2 + (y - existingIsland.y) ** 2);
+                                    if (dist < existingIsland.radius + 200) { // Minimum spacing
+                                        tooClose = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            
+                            if (distToBlue >= minBaseDistance && distToRed >= minBaseDistance && !tooClose) {
+                                break; // Good position found
+                            }
+                        } while (attempts < 30);
+                        
+                        // Create varied island sizes (smaller)
+                        let radius, islandType;
+                        const sizeRoll = Math.random();
+                        if (sizeRoll < 0.3) {
+                            // Small islands (30%)
+                            radius = 30 + Math.random() * 20; // 30-50 radius
+                            islandType = 'small';
+                        } else if (sizeRoll < 0.7) {
+                            // Medium islands (40%)
+                            radius = 50 + Math.random() * 25; // 50-75 radius
+                            islandType = 'medium';
+                        } else {
+                            // Large islands (30%)
+                            radius = 75 + Math.random() * 35; // 75-110 radius
+                            islandType = 'large';
+                        }
+                        
+                        this.gameState.obstacles.push({
+                            type: 'island',
+                            x: x,
+                            y: y,
+                            radius: Math.round(radius),
+                            destructible: false,
+                            imageIndex: Math.floor(Math.random() * 6), // 0-5 for 6 island images
+                            islandType: islandType
+                        });
+                        
+                        console.log(`Generated ${islandType} island with radius ${Math.round(radius)} at (${Math.round(x)}, ${Math.round(y)})`);
+                    }
+                    
+                    // Generate initial icebergs with drift properties - randomized count
+                    const numIcebergs = 2 + Math.floor(Math.random() * 4); // 2-5 icebergs
+                    console.log(`Generating ${numIcebergs} icebergs`);
+                    
+                    for (let i = 0; i < numIcebergs; i++) {
+                        this.createDriftingIceberg(i < Math.ceil(numIcebergs * 0.6)); // 60% spawn on screen
+                    }
+                }
+
+                createDriftingIceberg(forceOnScreen = false) {
+                    let x, y;
+
+                    if (forceOnScreen) {
+                        // Force spawn on-screen in a safe location
+                        let attempts = 0;
+                        let validPosition = false;
+
+                        while (!validPosition && attempts < 10) {
+                            x = 150 + Math.random() * 700;
+                            y = 100 + Math.random() * 500;
+
+                            // Check distance from islands
+                            let tooCloseToIsland = false;
+                            if (this.gameState.obstacles) {
+                                for (let obstacle of this.gameState.obstacles) {
+                                    if (obstacle.type === "island") {
+                                        const distToIsland = Math.sqrt(
+                                            (x - obstacle.x) ** 2 + (y - obstacle.y) ** 2
+                                        );
+                                        if (distToIsland < obstacle.radius + 50) {
+                                            tooCloseToIsland = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (!tooCloseToIsland) {
+                                validPosition = true;
+                            }
+                            attempts++;
+                        }
+
+                        if (!validPosition) {
+                            // Fall back to off-screen spawn if we can't find a good on-screen spot
+                            forceOnScreen = false;
+                        }
+                    }
+
+                    if (!forceOnScreen) {
+                        // Random spawn position (can be off-screen)
+                        const spawnSide = Math.floor(Math.random() * 4); // 0=top, 1=right, 2=bottom, 3=left
+
+                        switch (spawnSide) {
+                            case 0: // Top
+                                x = Math.random() * this.canvas.width;
+                                y = -50;
+                                break;
+                            case 1: // Right
+                                x = this.canvas.width + 50;
+                                y = Math.random() * this.canvas.height;
+                                break;
+                            case 2: // Bottom
+                                x = Math.random() * this.canvas.width;
+                                y = this.canvas.height + 50;
+                                break;
+                            case 3: // Left
+                                x = -50;
+                                y = Math.random() * this.canvas.height;
+                                break;
+                        }
+                    }
+
+                    const iceberg = {
+                        type: "iceberg",
+                        x: x,
+                        y: y,
+                        radius: 20 + Math.random() * 15,
+                        destructible: true,
+                        imageIndex: Math.floor(Math.random() * 12), // 0-11 for 12 iceberg images
+                        // Drift properties - moderate speed
+                        driftAngle: Math.random() * Math.PI * 2, // Random direction
+                        driftSpeed: 3.5 + Math.random() * 4, // Moderate speed (3.5-7.5 pixels per second)
+                        lastPositionUpdate: Date.now(),
+                    };
+
+                    if (!this.gameState.obstacles) {
+                        this.gameState.obstacles = [];
+                    }
+                    this.gameState.obstacles.push(iceberg);
+                }
+
+                updateIcebergDrift(deltaTime) {
+                    if (!this.gameState.obstacles) return;
+                    
+                    const currentTime = Date.now();
+
+                    // Update existing iceberg positions
+                    for (let i = this.gameState.obstacles.length - 1; i >= 0; i--) {
+                        const obstacle = this.gameState.obstacles[i];
+
+                        if (obstacle.type === "iceberg") {
+                            // Calculate drift movement
+                            const driftX =
+                                Math.cos(obstacle.driftAngle) *
+                                obstacle.driftSpeed *
+                                deltaTime *
+                                0.001;
+                            const driftY =
+                                Math.sin(obstacle.driftAngle) *
+                                obstacle.driftSpeed *
+                                deltaTime *
+                                0.001;
+
+                            const newX = obstacle.x + driftX;
+                            const newY = obstacle.y + driftY;
+
+                            // Update position
+                            obstacle.x = newX;
+                            obstacle.y = newY;
+                            obstacle.lastPositionUpdate = currentTime;
+
+                            // Wrap around screen edges with buffer zone
+                            const buffer = 100;
+                            if (obstacle.x < -buffer) {
+                                obstacle.x = this.canvas.width + buffer;
+                            } else if (obstacle.x > this.canvas.width + buffer) {
+                                obstacle.x = -buffer;
+                            }
+                            if (obstacle.y < -buffer) {
+                                obstacle.y = this.canvas.height + buffer;
+                            } else if (obstacle.y > this.canvas.height + buffer) {
+                                obstacle.y = -buffer;
+                            }
+                        }
+                    }
+
+                    // Remove dead obstacles
+                    this.gameState.obstacles = this.gameState.obstacles.filter(
+                        (o) => !o.dead
+                    );
+                }
                 
                 getShipImage(team, angle) {
                     // Convert angle to degrees and normalize to 0-360
@@ -526,6 +762,21 @@
                     }
                     return null;
                 }
+            
+            resizeCanvas() {
+                const width = window.innerWidth;
+                const height = window.innerHeight;
+                
+                this.canvas.width = width;
+                this.canvas.height = height;
+                
+                // Calculate scaling based on viewport size compared to original 1000x700
+                const scaleX = width / 1000;
+                const scaleY = height / 700;
+                this.SCALE_AVG = (scaleX + scaleY) / 2;
+                
+                console.log(`Canvas resized to ${width}x${height}, scale factor: ${this.SCALE_AVG.toFixed(2)}`);
+            }
             
             init() {
                 this.loadImages();
@@ -601,6 +852,12 @@
             }
             
             setupCanvas() {
+                // Set canvas to full window size
+                this.resizeCanvas();
+                
+                // Listen for window resize
+                window.addEventListener('resize', () => this.resizeCanvas());
+                
                 this.canvas.addEventListener('click', (e) => this.handleCanvasClick(e));
                 this.canvas.addEventListener('contextmenu', (e) => {
                     e.preventDefault();
@@ -924,6 +1181,9 @@
                     document.getElementById('startBtn').style.display = 'none';
                     document.getElementById('gameMenu').classList.add('hidden');
                     console.log('✅ Game menu hidden, gameplay should begin');
+                    
+                    // Generate obstacles when game starts
+                    this.generateObstacles();
                     
                     // Start background music when game starts
                     // Add a small delay to ensure audio context is ready
@@ -1667,6 +1927,7 @@
                 this.updateControls();
                 this.renderHeadingDisplay();
                 this.updateGameStatus();
+                this.updateIcebergDrift(deltaTime);
             }
             
             updateGameStatus() {
@@ -1683,12 +1944,160 @@
                 document.getElementById('team2Score').textContent = this.gameState.scores?.team2 || 0;
             }
             
+            renderAnimatedOcean() {
+                const time = Date.now() * 0.001; // Convert to seconds for wave animation
+                
+                // Base ocean color
+                this.ctx.fillStyle = "#0f3460";
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Create animated wave patterns with depth
+                const gradient = this.ctx.createLinearGradient(0, 0, 0, this.canvas.height);
+                gradient.addColorStop(0, "#1e4a6f");
+                gradient.addColorStop(0.3, "#0f3460");
+                gradient.addColorStop(0.7, "#0a2847");
+                gradient.addColorStop(1, "#051c2f");
+                
+                this.ctx.fillStyle = gradient;
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                
+                // Draw animated wave lines
+                this.ctx.strokeStyle = "rgba(32, 178, 170, 0.05)"; // Much more transparent
+                this.ctx.lineWidth = 1;
+                
+                for (let i = 0; i < 8; i++) {
+                    this.ctx.beginPath();
+                    const waveOffset = time * (2 + i * 0.3); // Much slower waves
+                    const amplitude = 8 + i * 2; // Smaller waves
+                    const frequency = 0.003 + i * 0.0005; // Lower frequency
+                    
+                    for (let x = 0; x <= this.canvas.width; x += 5) {
+                        const y = this.canvas.height * (0.2 + i * 0.1) + 
+                                 Math.sin((x * frequency) + waveOffset) * amplitude;
+                        if (x === 0) {
+                            this.ctx.moveTo(x, y);
+                        } else {
+                            this.ctx.lineTo(x, y);
+                        }
+                    }
+                    this.ctx.stroke();
+                }
+                
+                // Draw occasional sea birds
+                this.drawSeaBirds(time);
+                
+                // Draw floating debris and seaweed patches
+                this.drawFloatingDebris(time);
+                
+                // Add subtle floating particles/bubbles
+                this.ctx.fillStyle = "rgba(135, 206, 235, 0.1)";
+                for (let i = 0; i < 15; i++) {
+                    const particleTime = time * (0.1 + i * 0.02); // Much slower particles
+                    const x = (i * 73 + Math.sin(particleTime) * 15) % this.canvas.width; // Smaller movement
+                    const y = (i * 47 + Math.cos(particleTime * 0.7) * 10) % this.canvas.height; // Smaller movement
+                    
+                    this.ctx.beginPath();
+                    this.ctx.arc(x, y, 2 + Math.sin(particleTime * 2) * 1, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+            }
+            
+            drawSeaBirds(time) {
+                // Draw 2-3 birds occasionally
+                for (let i = 0; i < 3; i++) {
+                    const birdCycle = (time * 0.1 + i * 2.5) % 10; // 10 second cycle per bird
+                    if (birdCycle > 8) continue; // Only show birds 80% of the cycle
+                    
+                    // Bird position moving across screen
+                    const progress = birdCycle / 8;
+                    const birdX = -50 + progress * (this.canvas.width + 100);
+                    const birdY = 50 + Math.sin(time * 0.5 + i) * 20 + i * 30;
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = 0.6;
+                    this.ctx.fillStyle = "#2c3e50";
+                    
+                    // Simple bird shape (V shape)
+                    const wingSpread = 8 + Math.sin(time * 3 + i) * 2;
+                    this.ctx.beginPath();
+                    // Left wing
+                    this.ctx.moveTo(birdX - wingSpread, birdY);
+                    this.ctx.lineTo(birdX - 2, birdY - 3);
+                    this.ctx.lineTo(birdX, birdY);
+                    // Right wing  
+                    this.ctx.lineTo(birdX + 2, birdY - 3);
+                    this.ctx.lineTo(birdX + wingSpread, birdY);
+                    this.ctx.fill();
+                    
+                    this.ctx.restore();
+                }
+            }
+            
+            drawFloatingDebris(time) {
+                // Draw small patches of floating seaweed and debris
+                for (let i = 0; i < 6; i++) {
+                    const debrisX = (Math.sin(time * 0.05 + i * 1.2) + 1) * this.canvas.width * 0.4 + this.canvas.width * 0.1;
+                    const debrisY = (Math.cos(time * 0.03 + i * 1.8) + 1) * this.canvas.height * 0.4 + this.canvas.height * 0.1;
+                    const driftX = Math.sin(time * 0.1 + i) * 2;
+                    const driftY = Math.cos(time * 0.08 + i) * 1.5;
+                    
+                    this.ctx.save();
+                    this.ctx.globalAlpha = 0.3;
+                    this.ctx.fillStyle = i % 2 === 0 ? "#1a5f3f" : "#8B4513"; // Seaweed green or driftwood brown
+                    
+                    // Draw small irregular patch
+                    this.ctx.beginPath();
+                    for (let j = 0; j < 8; j++) {
+                        const angle = (j / 8) * Math.PI * 2;
+                        const radius = 3 + Math.sin(time * 0.5 + i + j) * 2;
+                        const x = debrisX + driftX + Math.cos(angle) * radius;
+                        const y = debrisY + driftY + Math.sin(angle) * radius;
+                        
+                        if (j === 0) {
+                            this.ctx.moveTo(x, y);
+                        } else {
+                            this.ctx.lineTo(x, y);
+                        }
+                    }
+                    this.ctx.closePath();
+                    this.ctx.fill();
+                    
+                    this.ctx.restore();
+                }
+            }
+            
+            drawShipWake(ship, speed) {
+                const wakeLength = Math.min(speed * 20, 60);
+                const wakeWidth = Math.min(speed * 3, 12);
+                
+                // Calculate wake direction (opposite of ship movement)
+                const wakeAngle = Math.atan2(-ship.vy || 0, -ship.vx || 0);
+                
+                this.ctx.save();
+                this.ctx.globalAlpha = 0.4;
+                
+                // Draw foam trail behind ship
+                for (let i = 0; i < 5; i++) {
+                    const distance = 15 + i * (wakeLength / 5);
+                    const wakeX = ship.x + Math.cos(wakeAngle) * distance;
+                    const wakeY = ship.y + Math.sin(wakeAngle) * distance;
+                    const fadeAlpha = (5 - i) / 5 * 0.3;
+                    const currentWidth = wakeWidth * (5 - i) / 5;
+                    
+                    this.ctx.fillStyle = `rgba(255, 255, 255, ${fadeAlpha})`;
+                    this.ctx.beginPath();
+                    this.ctx.arc(wakeX, wakeY, currentWidth, 0, Math.PI * 2);
+                    this.ctx.fill();
+                }
+                
+                this.ctx.restore();
+            }
+            
             render() {
                 this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
                 
                 if (!this.gameState) {
-                    this.ctx.fillStyle = '#0f3460';
-                    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.renderAnimatedOcean();
                     this.ctx.fillStyle = 'white';
                     this.ctx.font = '24px Arial';
                     this.ctx.textAlign = 'center';
@@ -1696,14 +2105,22 @@
                     return;
                 }
                 
-                this.ctx.fillStyle = '#0f3460';
-                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+                // Animated ocean background
+                this.renderAnimatedOcean();
                 
                 // Render obstacles
                 if (this.gameState.obstacles) {
                     for (let obstacle of this.gameState.obstacles) {
                         this.ctx.save();
                         this.ctx.translate(obstacle.x, obstacle.y);
+                        
+                        // Draw elevation shadow first (proportional to obstacle size)
+                        const shadowOffset = obstacle.radius * 0.25;
+                        const shadowRadius = obstacle.radius * 0.8;
+                        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(shadowOffset, shadowOffset, shadowRadius, shadowRadius * 0.5, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
                         
                         if (obstacle.type === 'island') {
                             // Draw island image
@@ -1757,14 +2174,29 @@
                 // Render ships
                 if (this.gameState.ships) {
                     for (let ship of this.gameState.ships) {
+                        // Draw wake effect behind moving ships
+                        if (ship.vx || ship.vy) {
+                            const speed = Math.sqrt((ship.vx || 0) * (ship.vx || 0) + (ship.vy || 0) * (ship.vy || 0));
+                            if (speed > 0.5) { // Only draw wake for ships moving fast enough
+                                this.drawShipWake(ship, speed);
+                            }
+                        }
+                        
                         this.ctx.save();
                         this.ctx.translate(ship.x, ship.y);
+                        
+                        // Draw ship shadow first
+                        const shadowOffset = 5;
+                        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.1)';
+                        this.ctx.beginPath();
+                        this.ctx.ellipse(shadowOffset, shadowOffset, 20, 12, 0, 0, Math.PI * 2);
+                        this.ctx.fill();
                         
                         // Draw ship image based on team and angle
                         const shipImg = this.getShipImage(ship.team, ship.angle);
                         if (shipImg) {
                             // Draw ship image centered at origin
-                            const shipSize = 48; // Size of ship image
+                            const shipSize = 60; // Size of ship image
                             this.ctx.drawImage(shipImg, -shipSize/2, -shipSize/2, shipSize, shipSize);
                         } else {
                             // Fallback to colored rectangles if image not loaded
