@@ -76,23 +76,37 @@ class GameRoom {
     }
 
     generateObstacles() {
-        // Islands - avoid spawning near team bases
-        for (let i = 0; i < 2; i++) {
+        // Generate random spawn points on opposite sides of the map
+        this.generateRandomSpawnPoints();
+        
+        // Islands - avoid spawning near team bases (3-5 islands like demo)
+        const numIslands = 3 + Math.floor(Math.random() * 3); // 3-5 islands
+        for (let i = 0; i < numIslands; i++) {
             let x, y, attempts = 0;
-            const team1Base = { x: 120, y: 750 };
-            const team2Base = { x: 1300, y: 130 };
             const minBaseDistance = 150;
             
             do {
-                x = 200 + Math.random() * 600; // Center area of map
-                y = 150 + Math.random() * 400;
+                x = 100 + Math.random() * 800; // 10-90% of width (1000px)
+                y = 70 + Math.random() * 560; // 10-90% of height (700px)
                 attempts++;
                 
-                // Check distance from both bases
-                const distToTeam1 = Math.sqrt((x - team1Base.x) ** 2 + (y - team1Base.y) ** 2);
-                const distToTeam2 = Math.sqrt((x - team2Base.x) ** 2 + (y - team2Base.y) ** 2);
+                // Check distance from both spawn points
+                const distToTeam1 = Math.sqrt((x - this.team1SpawnPoint.x) ** 2 + (y - this.team1SpawnPoint.y) ** 2);
+                const distToTeam2 = Math.sqrt((x - this.team2SpawnPoint.x) ** 2 + (y - this.team2SpawnPoint.y) ** 2);
                 
-                if (distToTeam1 >= minBaseDistance && distToTeam2 >= minBaseDistance) {
+                // Check distance from existing islands
+                let tooCloseToIsland = false;
+                for (const existingObstacle of this.gameState.obstacles) {
+                    if (existingObstacle.type === 'island') {
+                        const dist = Math.sqrt((x - existingObstacle.x) ** 2 + (y - existingObstacle.y) ** 2);
+                        if (dist < existingObstacle.radius + 200) { // Minimum spacing
+                            tooCloseToIsland = true;
+                            break;
+                        }
+                    }
+                }
+                
+                if (distToTeam1 >= minBaseDistance && distToTeam2 >= minBaseDistance && !tooCloseToIsland) {
                     break; // Good position found
                 }
             } while (attempts < 20);
@@ -108,8 +122,9 @@ class GameRoom {
             });
         }
         
-        // Icebergs
-        for (let i = 0; i < 3; i++) {
+        // Icebergs (2-5 icebergs like demo)
+        const numIcebergs = 2 + Math.floor(Math.random() * 4); // 2-5 icebergs
+        for (let i = 0; i < numIcebergs; i++) {
             this.gameState.obstacles.push({
                 id: `iceberg_${i}`,
                 type: 'iceberg',
@@ -123,14 +138,43 @@ class GameRoom {
         }
     }
 
+    generateRandomSpawnPoints() {
+        // Generate two spawn points on opposite sides of the map
+        // Choose which sides randomly: corners, edges, or diagonal opposites
+        const spawnType = Math.floor(Math.random() * 3);
+        
+        if (spawnType === 0) {
+            // Corner opposites (diagonal)
+            if (Math.random() < 0.5) {
+                // Top-left vs Bottom-right
+                this.team1SpawnPoint = { x: 50 + Math.random() * 100, y: 50 + Math.random() * 100 };
+                this.team2SpawnPoint = { x: 850 + Math.random() * 100, y: 550 + Math.random() * 100 };
+            } else {
+                // Top-right vs Bottom-left
+                this.team1SpawnPoint = { x: 850 + Math.random() * 100, y: 50 + Math.random() * 100 };
+                this.team2SpawnPoint = { x: 50 + Math.random() * 100, y: 550 + Math.random() * 100 };
+            }
+        } else if (spawnType === 1) {
+            // Left vs Right sides
+            this.team1SpawnPoint = { x: 50 + Math.random() * 100, y: 150 + Math.random() * 400 };
+            this.team2SpawnPoint = { x: 850 + Math.random() * 100, y: 150 + Math.random() * 400 };
+        } else {
+            // Top vs Bottom sides
+            this.team1SpawnPoint = { x: 200 + Math.random() * 600, y: 50 + Math.random() * 100 };
+            this.team2SpawnPoint = { x: 200 + Math.random() * 600, y: 550 + Math.random() * 100 };
+        }
+        
+        console.log(`Generated spawn points: Team1 (${Math.round(this.team1SpawnPoint.x)}, ${Math.round(this.team1SpawnPoint.y)}) vs Team2 (${Math.round(this.team2SpawnPoint.x)}, ${Math.round(this.team2SpawnPoint.y)})`);
+    }
+
     startGame() {
         this.gameState.gameStarted = true;
         this.gameState.gameStartTime = Date.now();
         
-        // Spawn initial ships for each team
+        // Spawn initial ships for each team using generated spawn points
         const spawnPoints = {
-            team1: { x: 120, y: 750 },
-            team2: { x: 1300, y: 130 }
+            team1: this.team1SpawnPoint,
+            team2: this.team2SpawnPoint
         };
         
         // Schedule ship spawns
@@ -250,15 +294,15 @@ class GameRoom {
             ship.y += Math.sin(ship.angle) * ship.speed * deltaTime;
             
             // Boundary collision with bounce
-            if (ship.x < 0 || ship.x > 1920) {
-                ship.x = Math.max(0, Math.min(1920, ship.x));
+            if (ship.x < 0 || ship.x > 1000) {
+                ship.x = Math.max(0, Math.min(1000, ship.x));
                 ship.angle = Math.PI - ship.angle;
                 ship.rudderAngle = 0;
                 ship.targetRudderAngle = 0;
             }
             
-            if (ship.y < 0 || ship.y > 1080) {
-                ship.y = Math.max(0, Math.min(1080, ship.y));
+            if (ship.y < 0 || ship.y > 700) {
+                ship.y = Math.max(0, Math.min(700, ship.y));
                 ship.angle = -ship.angle;
                 ship.rudderAngle = 0;
                 ship.targetRudderAngle = 0;
@@ -279,8 +323,8 @@ class GameRoom {
             cannonball.y += Math.sin(cannonball.angle) * cannonball.speed * deltaTime;
             
             // Remove out of bounds cannonballs
-            if (cannonball.x < -10 || cannonball.x > 1930 || 
-                cannonball.y < -10 || cannonball.y > 1090) {
+            if (cannonball.x < -10 || cannonball.x > 1010 || 
+                cannonball.y < -10 || cannonball.y > 710) {
                 cannonball.dead = true;
             }
         }
@@ -342,7 +386,7 @@ class GameRoom {
                 const dy = cannonball.y - ship.y;
                 const distance = Math.sqrt(dx*dx + dy*dy);
                 
-                if (distance < 15) {
+                if (distance < 12) {
                     cannonball.dead = true;
                     ship.health -= 1;
                     
@@ -355,7 +399,7 @@ class GameRoom {
                         // Respawn ship after delay
                         const team = ship.team;
                         const ownerId = ship.ownerId;
-                        const spawnPoint = team === 'team1' ? { x: 120, y: 750 } : { x: 1300, y: 130 };
+                        const spawnPoint = team === 'team1' ? this.team1SpawnPoint : this.team2SpawnPoint;
                         setTimeout(() => {
                             if (this.gameState.gameStarted) {
                                 this.spawnShip(ownerId, team, spawnPoint);
@@ -392,7 +436,11 @@ class GameRoom {
         return {
             ...this.gameState,
             playerCount: this.players.size,
-            players: Array.from(this.players.values())
+            players: Array.from(this.players.values()),
+            spawnPoints: {
+                team1: this.team1SpawnPoint,
+                team2: this.team2SpawnPoint
+            }
         };
     }
 }

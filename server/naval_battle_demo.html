@@ -442,7 +442,7 @@
             // Ship Properties (scaled for higher resolution)
             SHIP_DEFAULT_SPEED: Math.round(25 * SCALE_AVG),
             SHIP_MAX_HEALTH: 3,
-            SHIP_RADIUS: Math.round(24 * SCALE_AVG),
+            SHIP_RADIUS: Math.round(20 * SCALE_AVG),
             SHIP_CANNON_COOLDOWN: 5000,
             SHIP_RAM_COOLDOWN: 1000,
             SHIP_SPEED_CHANGE_RATE: Math.round(15 * SCALE_AVG),
@@ -574,8 +574,8 @@
                     cannonballs: [],
                     obstacles: [],
                     players: {
-                        blue: { score: 0, dock: { x: 120, y: 750, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
-                        red: { score: 0, dock: { x: 1200, y: 130, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
+                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }, // Will be updated by generateRandomSpawnPoints
+                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' } // Will be updated by generateRandomSpawnPoints
                     },
                     selectedObject: null,
                     selectedObjectType: null,
@@ -815,6 +815,7 @@
                 this.loadImages();
                 this.setupCanvas();
                 this.setupControls();
+                this.generateRandomSpawnPoints();
                 this.generateObstacles();
                 this.gameLoop();
             }
@@ -835,7 +836,7 @@
                 for (let ship of this.gameState.ships) {
                     const dx = x - ship.x;
                     const dy = y - ship.y;
-                    if (Math.sqrt(dx*dx + dy*dy) < 20) {
+                    if (Math.sqrt(dx*dx + dy*dy) < 17) {
                         this.cameraFollowShip = ship;
                         this.updateSelectedDisplay();
                         break;
@@ -1064,13 +1065,42 @@
                 this.updateSelectedDisplay();
             }
             
+            generateRandomSpawnPoints() {
+                // Generate two spawn points on opposite sides of the map
+                // Choose which sides randomly: corners, edges, or diagonal opposites
+                const spawnType = Math.floor(Math.random() * 3);
+                
+                if (spawnType === 0) {
+                    // Corner opposites (diagonal)
+                    if (Math.random() < 0.5) {
+                        // Top-left vs Bottom-right
+                        this.gameState.players.blue.dock = { x: 50 + Math.random() * 100, y: 50 + Math.random() * 100, spawnAngle: -45 * Math.PI/180 };
+                        this.gameState.players.red.dock = { x: 850 + Math.random() * 100, y: 550 + Math.random() * 100, spawnAngle: 135 * Math.PI/180 };
+                    } else {
+                        // Top-right vs Bottom-left
+                        this.gameState.players.blue.dock = { x: 850 + Math.random() * 100, y: 50 + Math.random() * 100, spawnAngle: 135 * Math.PI/180 };
+                        this.gameState.players.red.dock = { x: 50 + Math.random() * 100, y: 550 + Math.random() * 100, spawnAngle: -45 * Math.PI/180 };
+                    }
+                } else if (spawnType === 1) {
+                    // Left vs Right sides
+                    this.gameState.players.blue.dock = { x: 50 + Math.random() * 100, y: 150 + Math.random() * 400, spawnAngle: 0 * Math.PI/180 };
+                    this.gameState.players.red.dock = { x: 850 + Math.random() * 100, y: 150 + Math.random() * 400, spawnAngle: 180 * Math.PI/180 };
+                } else {
+                    // Top vs Bottom sides
+                    this.gameState.players.blue.dock = { x: 200 + Math.random() * 600, y: 50 + Math.random() * 100, spawnAngle: 90 * Math.PI/180 };
+                    this.gameState.players.red.dock = { x: 200 + Math.random() * 600, y: 550 + Math.random() * 100, spawnAngle: -90 * Math.PI/180 };
+                }
+                
+                console.log(`Demo - Generated spawn points: Blue (${Math.round(this.gameState.players.blue.dock.x)}, ${Math.round(this.gameState.players.blue.dock.y)}) vs Red (${Math.round(this.gameState.players.red.dock.x)}, ${Math.round(this.gameState.players.red.dock.y)})`);
+            }
+
             generateObstacles() {
                 this.gameState.obstacles = [];
                 
                 // Generate varied islands (static) - avoid spawning near team bases
                 const numIslands = 3 + Math.floor(Math.random() * 3); // 3-5 islands
-                const blueBase = { x: this.canvas.width * 0.1, y: this.canvas.height * 0.85 };
-                const redBase = { x: this.canvas.width * 0.9, y: this.canvas.height * 0.15 };
+                const blueBase = this.gameState.players.blue.dock;
+                const redBase = this.gameState.players.red.dock;
                 const minBaseDistance = Math.min(this.canvas.width, this.canvas.height) * 0.2; // 20% of smaller dimension
                 
                 for (let i = 0; i < numIslands; i++) {
@@ -2264,7 +2294,7 @@
                         const dy = ship2.y - ship1.y;
                         const distance = Math.sqrt(dx * dx + dy * dy);
                         
-                        if (distance < 20) {
+                        if (distance < 17) {
                             const ship1FrontX = ship1.x + Math.cos(ship1.angle) * 14;
                             const ship1FrontY = ship1.y + Math.sin(ship1.angle) * 14;
                             const ship2FrontX = ship2.x + Math.cos(ship2.angle) * 14;
@@ -2344,7 +2374,7 @@
                             const dy = ship.y - neutralShip.y;
                             const distance = Math.sqrt(dx * dx + dy * dy);
                             
-                            if (distance < 20) {
+                            if (distance < 17) {
                                 // Calculate front of neutral ship (like pirates ramming)
                                 const neutralFrontX = neutralShip.x + Math.cos(neutralShip.angle) * 14;
                                 const neutralFrontY = neutralShip.y + Math.sin(neutralShip.angle) * 14;
@@ -2428,7 +2458,7 @@
                         const dy = cannonball.y - ship.y;
                         const distance = Math.sqrt(dx*dx + dy*dy);
                         
-                        if (distance < 14) {
+                        if (distance < 12) {
                             cannonball.dead = true;
                             ship.health -= 1;
                             
@@ -2455,7 +2485,7 @@
                             const dy = cannonball.y - neutralShip.y;
                             const distance = Math.sqrt(dx*dx + dy*dy);
                             
-                            if (distance < 14) {
+                            if (distance < 12) {
                                 cannonball.dead = true;
                                 neutralShip.health -= 1;
                                 
@@ -2475,7 +2505,7 @@
                             const dy = ship.y - powerUp.y;
                             const distance = Math.sqrt(dx * dx + dy * dy);
                             
-                            if (distance < 20) {
+                            if (distance < 17) {
                                 this.applyPowerUp(ship, powerUp);
                                 powerUp.collected = true;
                                 console.log(`✅ Ship ${ship.shipNumber} (${ship.playerId}) collected ${powerUp.type} power-up!`);
@@ -2738,8 +2768,8 @@
                     neutralShips: [],
                     powerUps: [],
                     players: {
-                        blue: { score: 0, dock: { x: 120, y: 750, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' },
-                        red: { score: 0, dock: { x: 1200, y: 130, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }
+                        blue: { score: 0, dock: { x: 100, y: 620, spawnAngle: -45 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' }, // Will be updated by generateRandomSpawnPoints
+                        red: { score: 0, dock: { x: 900, y: 80, spawnAngle: 135 * Math.PI/180 }, shipCount: 0, aiType: 'balanced', difficulty: 'HARD' } // Will be updated by generateRandomSpawnPoints
                     },
                     selectedObject: null,
                     selectedObjectType: null,
@@ -2765,6 +2795,7 @@
                 this.lastIcebergSpawn = 0;
                 this.lastNeutralSpawn = 0;
                 this.cameraFollowShip = null;
+                this.generateRandomSpawnPoints();
                 this.generateObstacles();
                 document.getElementById('menuTitle').textContent = 'Naval Battle Demo';
                 document.getElementById('menuContent').innerHTML = `

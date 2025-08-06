@@ -260,7 +260,7 @@
             </div>
         </div>
         
-        <canvas id="gameCanvas" width="1920" height="1080" tabindex="0"></canvas>
+        <canvas id="gameCanvas" width="1000" height="700" tabindex="0"></canvas>
         
         <div id="headingDisplay">
             <canvas id="headingCanvas" width="350" height="160"></canvas>
@@ -360,7 +360,7 @@
             // Ship Properties
             SHIP_DEFAULT_SPEED: 25,
             SHIP_MAX_HEALTH: 3,
-            SHIP_RADIUS: 24,
+            SHIP_RADIUS: 20,
             SHIP_CANNON_COOLDOWN: 5000,
             SHIP_RAM_COOLDOWN: 1000,
             SHIP_SPEED_CHANGE_RATE: 15,
@@ -2142,9 +2142,9 @@
                     }
                 }
                 
-                // Render docks
-                const team1Dock = { x: 100, y: 620 };
-                const team2Dock = { x: 900, y: 80 };
+                // Render docks using server-provided spawn points
+                const team1Dock = this.gameState.spawnPoints?.team1 || { x: 100, y: 620 };
+                const team2Dock = this.gameState.spawnPoints?.team2 || { x: 900, y: 80 };
                 
                 // Team 1 dock (blue)
                 this.ctx.save();
